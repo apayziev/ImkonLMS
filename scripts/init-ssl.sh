@@ -10,6 +10,15 @@ PROJECT="imkon-lms"
 
 echo "=== SSL sertifikat olish: $DOMAIN ==="
 
+# DNS tekshirish
+echo "0/4 DNS tekshirish..."
+IP=$(dig +short "$DOMAIN" 2>/dev/null || echo "")
+if [ -z "$IP" ]; then
+    echo "DNS hali faol emas! $DOMAIN IP ga ulanmagan."
+    exit 1
+fi
+echo "    $DOMAIN -> $IP"
+
 # Avval barcha containerlarni to'xtatish
 echo "0/4 Barcha containerlar to'xtatilmoqda..."
 docker compose -f docker-compose.prod.yml down 2>/dev/null || true

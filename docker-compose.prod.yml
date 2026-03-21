@@ -45,6 +45,11 @@ services:
       - "80"
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
   nginx:
     image: nginx:1.27-alpine
@@ -59,6 +64,16 @@ services:
     depends_on:
       - frontend
       - api
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   certbot:
     image: certbot/certbot:latest
@@ -66,6 +81,32 @@ services:
       - certbot_www:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  # Daily database backup at 3:00 AM
+  db-backup:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      PGHOST: db
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache curl
+        env > /etc/environment
+        echo "0 3 * * * . /etc/environment; /backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+        /backup.sh
+        crond -f -l 2
 
 volumes:
   postgres_data:
