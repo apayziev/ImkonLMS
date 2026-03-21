@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { ErrorBoundary } from "react-error-boundary"
-import { LogOut, BookOpen, Menu } from "lucide-react"
+import { LogOut, BookOpen } from "lucide-react"
 
 import { isLoggedIn } from "@/hooks/useAuth"
 import useAuth from "@/hooks/useAuth"
