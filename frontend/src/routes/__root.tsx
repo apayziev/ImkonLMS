@@ -2,6 +2,10 @@ import { createRootRoute, HeadContent, Outlet } from "@tanstack/react-router"
 import { lazy } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 
+import { ErrorComponent } from "@/components/Common/ErrorComponent"
+import { NotFound } from "@/components/Common/NotFound"
+import { TooltipProvider } from "@/components/ui/tooltip"
+
 const TanStackRouterDevtools = import.meta.env.DEV
   ? lazy(() =>
       import("@tanstack/react-router-devtools").then((m) => ({
@@ -42,31 +46,17 @@ function RootErrorFallback({
   )
 }
 
-function NotFound() {
-  return (
-    <div className="flex min-h-screen items-center justify-center flex-col p-4">
-      <span className="text-6xl font-bold leading-none mb-4">404</span>
-      <p className="text-lg text-muted-foreground mb-4">
-        Sahifa topilmadi
-      </p>
-      <a
-        href="/"
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
-      >
-        Bosh sahifaga qaytish
-      </a>
-    </div>
-  )
-}
-
 export const Route = createRootRoute({
   component: () => (
     <ErrorBoundary FallbackComponent={RootErrorFallback}>
-      <HeadContent />
-      <Outlet />
-      {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      <TooltipProvider>
+        <HeadContent />
+        <Outlet />
+        {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      </TooltipProvider>
     </ErrorBoundary>
   ),
-  notFoundComponent: NotFound,
+  notFoundComponent: () => <NotFound />,
+  errorComponent: ({ error }) => <ErrorComponent error={error} />,
 })

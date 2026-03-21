@@ -1,9 +1,15 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { ErrorBoundary } from "react-error-boundary"
-import { LogOut, BookOpen } from "lucide-react"
 
+import { ErrorComponent } from "@/components/Common/ErrorComponent"
+import { Footer } from "@/components/Common/Footer"
+import { AppSidebar } from "@/components/Sidebar/AppSidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
 import { isLoggedIn } from "@/hooks/useAuth"
-import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
@@ -12,54 +18,38 @@ export const Route = createFileRoute("/_layout")({
       throw redirect({ to: "/login" })
     }
   },
+  errorComponent: ({ error }) => <ErrorComponent error={error} />,
 })
 
+const BG_PATTERN_STYLE = {
+  backgroundImage: "url(/images/patterns/Patterns-02.png)",
+  backgroundSize: "cover",
+  backgroundPosition: "left center",
+  backgroundRepeat: "no-repeat",
+} as const
+
 function Layout() {
-  const { user, logout } = useAuth()
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-6">
-        <div className="flex items-center gap-3">
-          <BookOpen className="h-6 w-6 text-primary" />
-          <span className="font-display text-2xl tracking-wide text-primary">
-            IMKON LMS
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {user && (
-            <span className="text-sm text-muted-foreground">
-              {user.full_name}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Chiqish
-          </button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6 md:p-8">
-        <div className="mx-auto max-w-7xl">
-          <ErrorBoundary
-            fallback={
-              <div className="flex items-center justify-center p-8">
-                <p className="text-destructive">Xatolik yuz berdi</p>
-              </div>
-            }
-          >
-            <Outlet />
-          </ErrorBoundary>
-        </div>
-      </main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <div
+          className="fixed top-0 right-0 w-full sm:w-[400px] h-full opacity-[0.03] pointer-events-none z-0"
+          style={BG_PATTERN_STYLE}
+        />
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-sm">
+          <SidebarTrigger className="-ml-1 text-muted-foreground" aria-label="Sidebar ochish/yopish" />
+        </header>
+        <main className="flex-1 p-6 md:p-8 relative z-[1]">
+          <div className="mx-auto max-w-7xl">
+            <ErrorBoundary fallback={<ErrorComponent />}>
+              <Outlet />
+            </ErrorBoundary>
+          </div>
+        </main>
+        <Footer />
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 
