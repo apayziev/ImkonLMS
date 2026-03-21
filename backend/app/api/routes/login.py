@@ -22,7 +22,7 @@ def _set_auth_cookie(response: Response, refresh_token: str) -> None:
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=settings.ENVIRONMENT != "local",
+        secure=any(o.startswith("https://") for o in settings.CORS_ORIGINS),
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
