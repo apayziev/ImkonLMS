@@ -49,3 +49,11 @@ prod-logs: ## View production logs
 .PHONY: prod-restart
 prod-restart: ## Rebuild and restart production
 	$(COMPOSE) -f docker-compose.prod.yml up -d --build api frontend
+
+.PHONY: ssl-init
+ssl-init: ## Get SSL certificate for the first time
+	bash scripts/init-ssl.sh
+
+.PHONY: ssl-renew
+ssl-renew: ## Manually renew SSL certificate
+	$(COMPOSE) -f docker-compose.prod.yml run --rm certbot renew
