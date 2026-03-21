@@ -1,0 +1,1 @@
+"""IMKON LMS - Pydantic Schemas."""
