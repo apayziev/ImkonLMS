@@ -3,6 +3,8 @@
 import asyncio
 import logging
 
+from sqlalchemy import select
+
 from app.core.config import settings
 from app.core.db import async_get_db
 from app.core.security import get_password_hash
@@ -12,26 +14,33 @@ logger = logging.getLogger(__name__)
 
 
 async def create_first_superuser() -> None:
-    async for db in async_get_db():
-        from app.crud.users import crud_users
+    phone_number = settings.FIRST_SUPERUSER_PHONE
+    document_id = settings.FIRST_SUPERUSER_DOCUMENT_ID
 
-        existing = await crud_users.get_by_document_id(db, document_id=settings.ADMIN_DOCUMENT_ID)
-        if existing:
-            logger.info("Superuser already exists: %s", settings.ADMIN_DOCUMENT_ID)
+    async for db in async_get_db():
+        # Check if admin already exists (by phone or document_id)
+        result = await db.execute(
+            select(User).where(
+                (User.phone_number == phone_number) | (User.document_id == document_id)
+            )
+        )
+        if result.scalars().first():
+            logger.info("Superuser already exists.")
             return
 
         superuser = User(
-            document_id=settings.ADMIN_DOCUMENT_ID,
-            first_name=settings.ADMIN_FIRST_NAME,
-            last_name=settings.ADMIN_LAST_NAME,
-            hashed_password=get_password_hash(settings.ADMIN_PASSWORD.get_secret_value()),
+            phone_number=phone_number,
+            document_id=document_id,
+            first_name=settings.FIRST_SUPERUSER_FIRST_NAME,
+            last_name=settings.FIRST_SUPERUSER_LAST_NAME,
+            hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD.get_secret_value()),
             role=UserRole.ADMIN.value,
             is_superuser=True,
             is_active=True,
         )
         db.add(superuser)
         await db.commit()
-        logger.info("Superuser created: %s", settings.ADMIN_DOCUMENT_ID)
+        logger.info("Superuser created: %s", phone_number)
 
 
 if __name__ == "__main__":

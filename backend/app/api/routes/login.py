@@ -42,7 +42,7 @@ async def login(
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> TokenResponse:
     """Tizimga kirish (document_id va parol bilan)."""
-    user = await crud_users.authenticate(db=db, document_id=login_data.document_id, password=login_data.password)
+    user = await crud_users.authenticate(db=db, username=login_data.document_id, password=login_data.password)
     if not user:
         raise UnauthorizedException("Noto'g'ri hujjat raqami yoki parol.")
     if not user.is_active:
@@ -58,7 +58,7 @@ async def login_for_access_token(
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> dict[str, str]:
     """OAuth2 compatible token login (username = document_id)."""
-    user = await crud_users.authenticate(db=db, document_id=form_data.username, password=form_data.password)
+    user = await crud_users.authenticate(db=db, username=form_data.username, password=form_data.password)
     if not user:
         raise UnauthorizedException("Noto'g'ri hujjat raqami yoki parol.")
     if not user.is_active:

@@ -36,10 +36,11 @@ class DatabaseSettings(BaseSettings):
 
 
 class FirstUserSettings(BaseSettings):
-    ADMIN_FIRST_NAME: str = "Admin"
-    ADMIN_LAST_NAME: str = "User"
-    ADMIN_DOCUMENT_ID: str = "ADMIN001"
-    ADMIN_PASSWORD: SecretStr
+    FIRST_SUPERUSER_PHONE: str  # Required — no default, must be set via .env
+    FIRST_SUPERUSER_PASSWORD: SecretStr  # Required — no default, must be set via .env
+    FIRST_SUPERUSER_DOCUMENT_ID: str = "ADMIN000"
+    FIRST_SUPERUSER_FIRST_NAME: str = "Admin"
+    FIRST_SUPERUSER_LAST_NAME: str = "User"
 
 
 class EnvironmentOption(str, Enum):

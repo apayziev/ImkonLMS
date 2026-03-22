@@ -12,15 +12,33 @@ from app.schemas.users import UserCreate, UserUpdate
 
 from .base import BaseCRUD
 
+_DUMMY_HASH = get_password_hash("dummy-password-for-timing-safety")
+
 
 class CRUDUser(BaseCRUD[User]):
+
+    async def get_by_phone_number(
+        self,
+        db: AsyncSession,
+        phone_number: str,
+    ) -> User | None:
+        """Get user by phone number."""
+        normalized = phone_number.replace(" ", "").replace("-", "")
+        result = await db.execute(
+            select(User).where(User.phone_number == normalized, User.is_deleted == False)  # noqa: E712
+        )
+        return result.scalar_one_or_none()
 
     async def get_by_document_id(
         self,
         db: AsyncSession,
         document_id: str,
     ) -> User | None:
-        return await self.get(db, document_id=document_id)
+        normalized = document_id.upper().replace(" ", "")
+        result = await db.execute(
+            select(User).where(User.document_id == normalized, User.is_deleted == False)  # noqa: E712
+        )
+        return result.scalar_one_or_none()
 
     async def create(self, db: AsyncSession, user_create: UserCreate) -> User:
         hashed_password = get_password_hash(user_create.password) if user_create.password else None
@@ -57,15 +75,23 @@ class CRUDUser(BaseCRUD[User]):
     async def authenticate(
         self,
         db: AsyncSession,
-        document_id: str,
+        *,
+        username: str,
         password: str,
     ) -> User | None:
-        db_user = await self.get_by_document_id(db, document_id=document_id)
-        if db_user is None or not db_user.hashed_password:
+        """Authenticate by phone or document_id."""
+        user = None
+        if username.startswith("+") or username.isdigit():
+            user = await self.get_by_phone_number(db, phone_number=username)
+        if not user:
+            user = await self.get_by_document_id(db, document_id=username)
+
+        hashed = user.hashed_password if user and user.hashed_password else _DUMMY_HASH
+        if not verify_password(password, hashed):
             return None
-        if not verify_password(password, db_user.hashed_password):
+        if not user:
             return None
-        return db_user
+        return user
 
     async def authenticate_student(
         self,
