@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
-import { ArrowRight, Eye, EyeOff, FileText, Lock, Loader2 } from "lucide-react"
+import { ArrowRight, Eye, EyeOff, Lock, Phone, Loader2 } from "lucide-react"
 import { useState } from "react"
 
 import { AuthLayout } from "@/components/Common/AuthLayout"
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/login")({
 })
 
 interface LoginForm {
-  document_id: string
+  phone_number: string
   password: string
 }
 
@@ -38,7 +38,7 @@ function LoginPage() {
 
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate({
-      document_id: data.document_id.toUpperCase(),
+      document_id: data.phone_number,
       password: data.password,
     })
   }
@@ -61,28 +61,29 @@ function LoginPage() {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Document ID */}
+          {/* Phone Number */}
           <div className="space-y-2">
-            <Label htmlFor="document_id" className="text-sm font-medium">
-              Hujjat raqami
+            <Label htmlFor="phone_number" className="text-sm font-medium">
+              Telefon raqam
             </Label>
             <div className="relative">
-              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                id="document_id"
-                type="text"
-                placeholder="AA1234567"
+                id="phone_number"
+                type="tel"
+                placeholder="+998 90 123 45 67"
                 autoComplete="username"
                 className="pl-12 h-12"
                 autoFocus
-                {...register("document_id", {
-                  required: "Hujjat raqami kiritilishi shart",
-                  minLength: { value: 5, message: "Kamida 5 ta belgi" },
+                {...register("phone_number", {
+                  required: "Telefon raqamni kiriting",
+                  minLength: { value: 9, message: "Kamida 9 ta belgi" },
+                  pattern: { value: /^[0-9+]+$/, message: "Faqat raqamlar kiriting" },
                 })}
               />
             </div>
-            {errors.document_id && (
-              <p className="text-sm text-destructive">{errors.document_id.message}</p>
+            {errors.phone_number && (
+              <p className="text-sm text-destructive">{errors.phone_number.message}</p>
             )}
           </div>
 
