@@ -1,10 +1,9 @@
 """User model — represents all system users with role-based fields."""
 
 from datetime import date
-from decimal import Decimal
 from enum import Enum
 
-from sqlalchemy import Date, ForeignKey, Index, Numeric, String, Text, text
+from sqlalchemy import Date, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -86,9 +85,6 @@ class User(BaseModel):
     address: Mapped[str | None] = mapped_column(Text, nullable=True, default=None, kw_only=True)
     enrollment_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
     withdrawal_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
-    monthly_fee: Mapped[Decimal | None] = mapped_column(
-        Numeric(12, 2), nullable=True, default=None, kw_only=True,
-    )
 
     # === Freeze fields ===
     is_frozen: Mapped[bool] = mapped_column(default=False, index=True, kw_only=True)

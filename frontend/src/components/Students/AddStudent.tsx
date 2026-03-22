@@ -296,40 +296,19 @@ export function AddStudent({ grades }: AddStudentProps) {
               )}
             />
 
-            {/* Enrollment & Fee */}
-            <div className="grid gap-4 grid-cols-2">
-              <FormField
-                control={form.control}
-                name="enrollment_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Qabul qilingan sana</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="monthly_fee"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Oylik to'lov (so'm)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="500000"
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="enrollment_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Qabul qilingan sana</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>

@@ -17,7 +17,6 @@ export const studentBaseSchema = z.object({
   mother_phone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   enrollment_date: z.string().optional().nullable(),
-  monthly_fee: z.number().optional().nullable(),
 })
 
 export const studentEditSchema = studentBaseSchema
@@ -42,7 +41,6 @@ export const studentDefaultValues: StudentBaseFormData = {
   mother_phone: "",
   address: "",
   enrollment_date: null,
-  monthly_fee: null,
 }
 
 export function toStudentPayload(data: StudentBaseFormData | StudentEditFormData) {
@@ -60,7 +58,6 @@ export function toStudentPayload(data: StudentBaseFormData | StudentEditFormData
     mother_phone: data.mother_phone || null,
     address: data.address || null,
     enrollment_date: data.enrollment_date || null,
-    monthly_fee: data.monthly_fee || null,
   }
 }
 

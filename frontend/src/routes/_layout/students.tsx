@@ -54,11 +54,6 @@ export const Route = createFileRoute("/_layout/students")({
 type ModalType = "edit" | "delete" | "freeze" | "unfreeze" | "restore" | "hardDelete" | "detail"
 type ModalState = { type: ModalType; student: StudentRead } | null
 
-function formatNumber(value: number | string | null | undefined): string {
-  if (value == null) return ""
-  return Number(value).toLocaleString("uz-UZ")
-}
-
 function StudentsPage() {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser
@@ -273,9 +268,6 @@ function StudentsPage() {
                     Ota-ona
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Oylik to'lov
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Holat
                   </th>
                   {isAdmin && (
@@ -372,16 +364,6 @@ function StudentsPage() {
                             "—"
                           )
                         })()}
-                      </td>
-                      <td className="p-4 align-middle text-sm">
-                        {student.monthly_fee ? (
-                          <span className="font-medium">
-                            {formatNumber(student.monthly_fee)}
-                            <span className="text-muted-foreground font-normal"> so'm</span>
-                          </span>
-                        ) : (
-                          "—"
-                        )}
                       </td>
                       <td className="p-4 align-middle">
                         {student.is_frozen ? (

@@ -37,11 +37,6 @@ export function StudentDetailDrawer({
     return `${day}.${month}.${year}`
   }
 
-  const formatMoney = (amount: number | null) => {
-    if (!amount) return "—"
-    return `${Number(amount).toLocaleString("uz-UZ")} so'm`
-  }
-
   const getStatusBadge = () => {
     if (student.is_frozen) {
       return (
@@ -193,20 +188,16 @@ export function StudentDetailDrawer({
 
           <Separator />
 
-          {/* O'qish va to'lov */}
+          {/* O'qish ma'lumotlari */}
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              O'qish va to'lov
+              O'qish ma'lumotlari
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Qabul qilingan sana</span>
                 <span className="text-sm">{formatDate(student.enrollment_date)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Oylik to'lov</span>
-                <span className="text-sm font-medium">{formatMoney(student.monthly_fee)}</span>
               </div>
               {student.is_frozen && (
                 <>

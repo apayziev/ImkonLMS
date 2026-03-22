@@ -1,7 +1,6 @@
 """Student schemas for IMKON LMS — matching imkon-payment structure."""
 
 from datetime import date
-from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -33,7 +32,6 @@ class StudentCreate(StudentBase):
     address: str | None = None
     enrollment_date: date | None = None
     withdrawal_date: date | None = None
-    monthly_fee: Decimal | None = None
 
 
 class StudentUpdate(BaseModel):
@@ -57,7 +55,6 @@ class StudentUpdate(BaseModel):
     address: str | None = None
     enrollment_date: date | None = None
     withdrawal_date: date | None = None
-    monthly_fee: Decimal | None = None
     is_active: bool | None = None
 
 
@@ -86,7 +83,6 @@ class StudentRead(BaseModel):
     address: str | None = None
     enrollment_date: date | None = None
     withdrawal_date: date | None = None
-    monthly_fee: float | None = None
 
     # Freeze fields
     is_frozen: bool = False

@@ -232,7 +232,6 @@ export interface StudentRead {
   address: string | null
   enrollment_date: string | null
   withdrawal_date: string | null
-  monthly_fee: number | null
   is_active: boolean
   is_frozen: boolean
   frozen_at: string | null
@@ -267,7 +266,6 @@ export interface StudentCreate {
   address?: string | null
   enrollment_date?: string | null
   withdrawal_date?: string | null
-  monthly_fee?: number | null
 }
 
 export interface StudentUpdate {
@@ -289,7 +287,6 @@ export interface StudentUpdate {
   address?: string | null
   enrollment_date?: string | null
   withdrawal_date?: string | null
-  monthly_fee?: number | null
   is_active?: boolean
 }
 
