@@ -206,6 +206,83 @@ export const subjectsApi = {
   delete: (id: number) => api.delete(`/api/v1/subjects/${id}`),
 }
 
+// --- Student Types & API ---
+
+export interface StudentRead {
+  id: number
+  document_id: string
+  first_name: string
+  last_name: string
+  full_name: string | null
+  student_id: string | null
+  grade_id: number | null
+  grade_name: string | null
+  birth_date: string | null
+  gender: string | null
+  phone_number: string | null
+  photo_url: string | null
+  father_name: string | null
+  father_phone: string | null
+  mother_name: string | null
+  mother_phone: string | null
+  address: string | null
+  enrollment_date: string | null
+  is_active: boolean
+  age: number | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface StudentList {
+  data: StudentRead[]
+  count: number
+}
+
+export interface StudentCreate {
+  document_id: string
+  first_name: string
+  last_name: string
+  student_id?: string | null
+  grade_id?: number | null
+  birth_date?: string | null
+  gender?: string | null
+  phone_number?: string | null
+  father_name?: string | null
+  father_phone?: string | null
+  mother_name?: string | null
+  mother_phone?: string | null
+  address?: string | null
+  enrollment_date?: string | null
+}
+
+export interface StudentUpdate {
+  first_name?: string
+  last_name?: string
+  student_id?: string | null
+  grade_id?: number | null
+  birth_date?: string | null
+  gender?: string | null
+  phone_number?: string | null
+  father_name?: string | null
+  father_phone?: string | null
+  mother_name?: string | null
+  mother_phone?: string | null
+  address?: string | null
+  enrollment_date?: string | null
+  is_active?: boolean
+}
+
+export const studentsApi = {
+  list: (params: { skip?: number; limit?: number; grade_id?: number | null; search?: string | null } = {}) =>
+    api.get<StudentList>("/api/v1/students/", { params }),
+  get: (id: number) => api.get<StudentRead>(`/api/v1/students/${id}`),
+  create: (data: StudentCreate) =>
+    api.post<StudentRead>("/api/v1/students/", data),
+  update: (id: number, data: StudentUpdate) =>
+    api.patch<StudentRead>(`/api/v1/students/${id}`, data),
+  delete: (id: number) => api.delete(`/api/v1/students/${id}`),
+}
+
 // --- Error utility ---
 
 export function extractErrorMessage(error: unknown, fallback = "Xatolik yuz berdi"): string {

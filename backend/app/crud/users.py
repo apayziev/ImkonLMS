@@ -2,7 +2,9 @@
 
 from typing import Any
 
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.security import get_password_hash, verify_password
 from app.models.user import User, UserRole
@@ -77,6 +79,44 @@ class CRUDUser(BaseCRUD[User]):
         if db_user.role != UserRole.STUDENT.value:
             return None
         return db_user
+
+    # === Student operations ===
+
+    async def get_students(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        grade_id: int | None = None,
+        search: str | None = None,
+    ) -> tuple[list[User], int]:
+        base = select(User).where(
+            User.role == UserRole.STUDENT.value,
+            User.is_deleted == False,  # noqa: E712
+        )
+
+        if grade_id is not None:
+            base = base.where(User.grade_id == grade_id)
+
+        if search:
+            term = f"%{search}%"
+            base = base.where(
+                or_(
+                    User.first_name.ilike(term),
+                    User.last_name.ilike(term),
+                    User.document_id.ilike(term),
+                    User.student_id.ilike(term),
+                )
+            )
+
+        count_q = select(func.count()).select_from(base.subquery())
+        total = (await db.execute(count_q)).scalar_one()
+
+        data_q = base.options(selectinload(User.grade)).offset(skip).limit(limit).order_by(User.id.desc())
+        rows = (await db.execute(data_q)).scalars().all()
+
+        return list(rows), total
 
 
 crud_users = CRUDUser(User)

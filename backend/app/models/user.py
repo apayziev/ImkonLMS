@@ -3,8 +3,8 @@
 from datetime import date
 from enum import Enum
 
-from sqlalchemy import Date, Index, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Date, ForeignKey, Index, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
 
@@ -47,6 +47,7 @@ class User(BaseModel):
     last_name: Mapped[str] = mapped_column(String(50), kw_only=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
     photo_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None, kw_only=True)
+    gender: Mapped[str | None] = mapped_column(String(10), nullable=True, default=None, kw_only=True)
 
     # === Role & Status ===
     role: Mapped[str] = mapped_column(
@@ -57,6 +58,29 @@ class User(BaseModel):
     )
     is_active: Mapped[bool] = mapped_column(default=True, kw_only=True)
     is_superuser: Mapped[bool] = mapped_column(default=False, kw_only=True)
+
+    # === Student-specific fields ===
+    student_id: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True, default=None, kw_only=True)
+    grade_id: Mapped[int | None] = mapped_column(
+        ForeignKey("grade.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+        kw_only=True,
+    )
+    father_name: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None, kw_only=True)
+    father_phone: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None, kw_only=True)
+    mother_name: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None, kw_only=True)
+    mother_phone: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None, kw_only=True)
+    address: Mapped[str | None] = mapped_column(Text, nullable=True, default=None, kw_only=True)
+    enrollment_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
+
+    # === Relationships ===
+    grade: Mapped["Grade | None"] = relationship(
+        foreign_keys=[grade_id],
+        default=None,
+        init=False,
+    )
 
     @property
     def full_name(self) -> str:

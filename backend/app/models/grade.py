@@ -1,5 +1,5 @@
 from sqlalchemy import Index, SmallInteger, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
 
@@ -11,6 +11,14 @@ class Grade(BaseModel):
 
     level: Mapped[int] = mapped_column(SmallInteger, index=True, kw_only=True)
     section: Mapped[str] = mapped_column(String(50), kw_only=True)
+
+    # === Relationships ===
+    students: Mapped[list["User"]] = relationship(
+        foreign_keys="[User.grade_id]",
+        back_populates="grade",
+        default_factory=list,
+        init=False,
+    )
 
     @property
     def display_name(self) -> str:

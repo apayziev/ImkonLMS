@@ -8,6 +8,7 @@ from .grades import router as grades_router
 from .health import router as health_router
 from .login import router as login_router
 from .logout import router as logout_router
+from .students import router as students_router
 from .subjects import router as subjects_router
 from .users import router as users_router
 
@@ -22,3 +23,4 @@ router.include_router(logout_router, dependencies=[Depends(get_current_user)])
 router.include_router(users_router, dependencies=[Depends(get_current_user)])
 router.include_router(grades_router, dependencies=[Depends(get_current_user)])
 router.include_router(subjects_router, dependencies=[Depends(get_current_user)])
+router.include_router(students_router, dependencies=[Depends(get_current_user)])
