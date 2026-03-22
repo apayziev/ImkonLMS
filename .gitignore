@@ -10,6 +10,7 @@ build/
 .env
 .env.local
 .env.secrets
+.env-imkon-lms
 
 # IDE
 .vscode/
