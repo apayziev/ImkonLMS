@@ -77,7 +77,7 @@ jobs:
           # Check 2: HTTP health check — 5 attempts, 10s apart
           HEALTHY=false
           for i in 1 2 3 4 5; do
-            CODE=$(ssh_run "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:8000/api/v1/health" || echo "000")
+            CODE=$(ssh_run "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost/api/v1/health" || echo "000")
             if [ "$CODE" = "200" ]; then
               HEALTHY=true
               break
