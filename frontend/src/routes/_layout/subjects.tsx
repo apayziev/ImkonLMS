@@ -1,9 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { BookOpen, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
-import type { AxiosError } from "axios"
-
+import { BookOpen, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { Suspense, useState } from "react"
+import { type SubjectRead } from "@/lib/api"
+import { PatternCard, PatternCardHeader } from "@/components/Common/PatternCard"
+import { AddSubject, DeleteSubject, EditSubject } from "@/components/Subjects"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -13,351 +14,199 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getSubjectColor, getSubjectIcon } from "@/constants/subjects"
 import useAuth from "@/hooks/useAuth"
-import useCustomToast from "@/hooks/useCustomToast"
-import {
-  type SubjectCreate,
-  type SubjectRead,
-  type SubjectUpdate,
-  subjectsApi,
-} from "@/lib/api"
+import { getSubjectsQueryOptions } from "@/hooks/useQueryOptions"
 
 export const Route = createFileRoute("/_layout/subjects")({
   component: SubjectsPage,
 })
 
-function SubjectsPage() {
-  const { user } = useAuth()
-  const isAdmin = user?.is_superuser ?? false
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["subjects"],
-    queryFn: async () => {
-      const { data } = await subjectsApi.list()
-      return data
-    },
-  })
-
-  const [addOpen, setAddOpen] = useState(false)
-  const [editSubject, setEditSubject] = useState<SubjectRead | null>(null)
-  const [deleteSubject, setDeleteSubject] = useState<SubjectRead | null>(null)
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-20" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  const subjects = data?.data ?? []
-
+function SubjectsContentSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Fanlar</h1>
-          <p className="text-sm text-muted-foreground">
-            Jami {data?.count ?? 0} ta fan
-          </p>
-        </div>
-        {isAdmin && (
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Fan qo'shish
-          </Button>
-        )}
-      </div>
-
-      {subjects.length === 0 ? (
-        <Card className="py-12 text-center">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <Card key={i}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div>
+                <Skeleton className="h-4 w-24 mb-1" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          </CardHeader>
           <CardContent>
-            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-4 text-muted-foreground">Hozircha fan qo'shilmagan</p>
+            <Skeleton className="h-5 w-16" />
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {subjects.map((subject) => {
-            const displayName = subject.name_uz || subject.name
-            const color = subject.color || "#6366f1"
-
-            return (
-              <Card
-                key={subject.id}
-                className="hover:border-primary/20 transition-colors"
-              >
-                <CardHeader className="pb-2 pt-3 px-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="flex h-8 w-8 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: `${color}20` }}
-                      >
-                        <BookOpen className="h-4 w-4" style={{ color }} />
-                      </div>
-                      <div>
-                        <CardTitle className="text-sm">{displayName}</CardTitle>
-                        {subject.name_uz && subject.name !== subject.name_uz && (
-                          <CardDescription className="text-xs">
-                            {subject.name}
-                          </CardDescription>
-                        )}
-                      </div>
-                    </div>
-                    {isAdmin && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditSubject(subject)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Tahrirlash
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setDeleteSubject(subject)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            O'chirish
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                    {!isAdmin && (
-                      <div
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                    )}
-                  </div>
-                </CardHeader>
-              </Card>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Add Dialog */}
-      <SubjectFormDialog open={addOpen} onOpenChange={setAddOpen} mode="add" />
-
-      {/* Edit Dialog */}
-      {editSubject && (
-        <SubjectFormDialog
-          open={!!editSubject}
-          onOpenChange={(open) => !open && setEditSubject(null)}
-          mode="edit"
-          subject={editSubject}
-        />
-      )}
-
-      {/* Delete Dialog */}
-      {deleteSubject && (
-        <DeleteSubjectDialog
-          open={!!deleteSubject}
-          onOpenChange={(open) => !open && setDeleteSubject(null)}
-          subject={deleteSubject}
-        />
-      )}
+      ))}
     </div>
   )
 }
 
-function SubjectFormDialog({
-  open,
-  onOpenChange,
-  mode,
-  subject,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  mode: "add" | "edit"
-  subject?: SubjectRead
-}) {
-  const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-  const [name, setName] = useState(subject?.name ?? "")
-  const [nameUz, setNameUz] = useState(subject?.name_uz ?? "")
-  const [color, setColor] = useState(subject?.color ?? "#6366f1")
+function SubjectsContent({ canManage }: { canManage: boolean }) {
+  const [editSubject, setEditSubject] = useState<SubjectRead | null>(null)
+  const [deleteSubject, setDeleteSubject] = useState<SubjectRead | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const createMutation = useMutation({
-    mutationFn: (data: SubjectCreate) => subjectsApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subjects"] })
-      showSuccessToast("Fan muvaffaqiyatli qo'shildi")
-      onOpenChange(false)
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      showErrorToast(error.response?.data?.detail ?? "Xatolik yuz berdi")
-    },
+  const { data: subjects } = useSuspenseQuery(getSubjectsQueryOptions())
+
+  const filteredSubjects = subjects.data.filter((subject: SubjectRead) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      subject.name.toLowerCase().includes(query) ||
+      subject.name_uz?.toLowerCase().includes(query)
+    )
   })
 
-  const updateMutation = useMutation({
-    mutationFn: (data: SubjectUpdate) => subjectsApi.update(subject!.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subjects"] })
-      showSuccessToast("Fan muvaffaqiyatli yangilandi")
-      onOpenChange(false)
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      showErrorToast(error.response?.data?.detail ?? "Xatolik yuz berdi")
-    },
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-
-    const payload = {
-      name: name.trim(),
-      name_uz: nameUz.trim() || null,
-      color: color || null,
-    }
-
-    if (mode === "add") {
-      createMutation.mutate(payload)
-    } else {
-      updateMutation.mutate(payload)
-    }
+  if (subjects.data.length === 0) {
+    return (
+      <Card className="text-center py-8">
+        <CardContent>
+          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">
+            Hozircha hech qanday fan qo'shilmagan
+          </p>
+        </CardContent>
+      </Card>
+    )
   }
 
-  const isPending = createMutation.isPending || updateMutation.isPending
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {mode === "add" ? "Yangi fan qo'shish" : "Fanni tahrirlash"}
-          </DialogTitle>
-          <DialogDescription>Fan ma'lumotlarini kiriting</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nomi (inglizcha)</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Mathematics"
-              maxLength={100}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name_uz">Nomi (o'zbekcha)</Label>
-            <Input
-              id="name_uz"
-              value={nameUz}
-              onChange={(e) => setNameUz(e.target.value)}
-              placeholder="Matematika"
-              maxLength={100}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="color">Rang</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                id="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-9 w-12 cursor-pointer rounded border"
-              />
-              <Input
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                placeholder="#6366f1"
-                maxLength={7}
-                className="flex-1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Bekor qilish
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saqlanmoqda..." : mode === "add" ? "Qo'shish" : "Saqlash"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      {subjects.data.length > 10 && (
+        <div className="flex items-center gap-2 mb-4">
+          <Input
+            placeholder="Fan qidirish..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-xs"
+          />
+          {searchQuery && (
+            <span className="text-sm text-muted-foreground">
+              {filteredSubjects.length} ta topildi
+            </span>
+          )}
+        </div>
+      )}
+
+      <div
+        className={`grid gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${subjects.data.length > 20 ? "max-h-[600px] overflow-y-auto pr-2" : ""}`}
+      >
+        {filteredSubjects.map((subject: SubjectRead) => {
+          const displayName = subject.name_uz || subject.name
+          const IconComponent = getSubjectIcon(subject.icon)
+          const color = getSubjectColor(subject)
+
+          return (
+            <PatternCard
+              key={subject.id}
+              className="hover:bg-primary/5 hover:shadow-sm hover:border-primary/20 transition-colors"
+            >
+              <PatternCardHeader className="pb-2 pt-3 px-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="p-1.5 rounded-lg"
+                      style={{ backgroundColor: `${color}20` }}
+                    >
+                      <IconComponent className="h-4 w-4" style={{ color }} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-medium">
+                        {displayName}
+                      </CardTitle>
+                      {subject.name_uz && subject.name !== subject.name_uz && (
+                        <CardDescription className="text-xs">
+                          {subject.name}
+                        </CardDescription>
+                      )}
+                    </div>
+                  </div>
+                  {canManage && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => setEditSubject(subject)}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Tahrirlash
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setDeleteSubject(subject)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          O'chirish
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  {!canManage && (
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                  )}
+                </div>
+              </PatternCardHeader>
+            </PatternCard>
+          )
+        })}
+      </div>
+
+      {editSubject && (
+        <EditSubject
+          subject={editSubject}
+          open={!!editSubject}
+          onOpenChange={(open) => !open && setEditSubject(null)}
+        />
+      )}
+
+      {deleteSubject && (
+        <DeleteSubject
+          subject={deleteSubject}
+          open={!!deleteSubject}
+          onOpenChange={(open) => !open && setDeleteSubject(null)}
+        />
+      )}
+    </>
   )
 }
 
-function DeleteSubjectDialog({
-  open,
-  onOpenChange,
-  subject,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  subject: SubjectRead
-}) {
-  const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-
-  const deleteMutation = useMutation({
-    mutationFn: () => subjectsApi.delete(subject.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subjects"] })
-      showSuccessToast("Fan o'chirildi")
-      onOpenChange(false)
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      showErrorToast(error.response?.data?.detail ?? "Xatolik yuz berdi")
-    },
-  })
+function SubjectsPage() {
+  const { user: currentUser } = useAuth()
+  const canManage = currentUser?.is_superuser
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Fanni o'chirish</DialogTitle>
-          <DialogDescription>
-            <strong>{subject.name_uz || subject.name}</strong> fanini o'chirishni
-            tasdiqlaysizmi?
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Bekor qilish
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? "O'chirilmoqda..." : "O'chirish"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Fanlar</h1>
+          <p className="text-muted-foreground">
+            O'quv fanlari ro'yxati
+          </p>
+        </div>
+        {canManage && <AddSubject />}
+      </div>
+
+      <Suspense fallback={<SubjectsContentSkeleton />}>
+        <SubjectsContent canManage={canManage || false} />
+      </Suspense>
+    </div>
   )
 }
