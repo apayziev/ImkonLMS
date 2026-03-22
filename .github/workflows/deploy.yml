@@ -1,0 +1,110 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ secrets.SERVER_HOST }}
+      USER: ${{ secrets.SERVER_USER }}
+      DEPLOY_PATH: /opt/imkon-lms
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy
+        run: |
+          ssh_run() { ssh -o ConnectTimeout=30 $USER@$HOST "$@"; }
+          DC="docker compose -f docker-compose.prod.yml"
+
+          ssh_run "mkdir -p $DEPLOY_PATH/backups"
+
+          # Sync files
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='__pycache__' \
+            --exclude='.venv' \
+            --exclude='.env' \
+            --exclude='backups' \
+            --exclude='uploads/students/*' \
+            ./ $USER@$HOST:$DEPLOY_PATH/
+
+          # Verify .env exists on server (managed manually via SSH, never overwritten by CI)
+          ssh_run "test -f $DEPLOY_PATH/.env" || { echo '::error::Production .env missing on server! Add it via SSH first.'; exit 1; }
+
+          # Tag old images for rollback (before build overwrites :latest)
+          ssh_run "docker tag imkon-lms-api:latest imkon-lms-api:prev 2>/dev/null || true"
+          ssh_run "docker tag imkon-lms-frontend:latest imkon-lms-frontend:prev 2>/dev/null || true"
+
+          # Build new images (old containers still running → no downtime during build)
+          ssh_run "cd $DEPLOY_PATH && $DC build api frontend"
+
+          # Deploy: recreate only app services, leave db running
+          ssh_run "cd $DEPLOY_PATH && $DC up -d --force-recreate api frontend nginx"
+
+          sleep 20
+          ssh_run "cd $DEPLOY_PATH && $DC ps"
+          ssh_run "cd $DEPLOY_PATH && $DC logs --tail=30 api" || true
+
+      - name: Health check
+        run: |
+          ssh_run() { ssh -o ConnectTimeout=30 $USER@$HOST "$@"; }
+          DC="docker compose -f docker-compose.prod.yml"
+
+          sleep 10
+
+          # Check 1: container state
+          STATE=$(ssh_run "cd $DEPLOY_PATH && $DC ps api --format '{{.State}}'")
+          echo "API container state: $STATE"
+
+          # Check 2: HTTP health check — 5 attempts, 10s apart
+          HEALTHY=false
+          for i in 1 2 3 4 5; do
+            CODE=$(ssh_run "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:8000/api/v1/health" || echo "000")
+            if [ "$CODE" = "200" ]; then
+              HEALTHY=true
+              break
+            fi
+            echo "Attempt $i: HTTP $CODE, waiting 10s..."
+            sleep 10
+          done
+
+          # Check 3: no crash loops
+          API_RESTARTS=$(ssh_run "docker inspect imkon-lms-api-1 --format='{{.RestartCount}}'" 2>/dev/null || echo "0")
+          echo "API restart count: $API_RESTARTS"
+
+          if [ "$HEALTHY" = "true" ] && [ "${API_RESTARTS:-0}" -lt 3 ]; then
+            echo "Health OK"
+            ssh_run "docker rmi imkon-lms-api:prev imkon-lms-frontend:prev 2>/dev/null; docker image prune -f" || true
+            exit 0
+          fi
+
+          # Health check failed → rollback to previous version
+          echo "Health check failed! Rolling back..."
+          echo "--- API logs ---"
+          ssh_run "cd $DEPLOY_PATH && $DC logs --tail=50 api" || true
+          echo "--- Rolling back ---"
+          ssh_run "docker tag imkon-lms-api:prev imkon-lms-api:latest 2>/dev/null || true"
+          ssh_run "docker tag imkon-lms-frontend:prev imkon-lms-frontend:latest 2>/dev/null || true"
+          ssh_run "cd $DEPLOY_PATH && $DC up -d --force-recreate api frontend nginx"
+          sleep 15
+          ssh_run "cd $DEPLOY_PATH && $DC ps"
+          echo "Rollback completed. Old version restored."
+          exit 1
