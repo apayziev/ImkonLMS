@@ -77,7 +77,7 @@ export function FreezeStudent({ student, open, onOpenChange }: FreezeStudentProp
             <Label>Maktabdan ketgan sana</Label>
             <DatePicker
               value={departureDate}
-              onChange={(date) => setDepartureDate(date ? date.toISOString().split("T")[0] : "")}
+              onChange={setDepartureDate}
             />
           </div>
           <div className="space-y-2">
@@ -116,7 +116,8 @@ interface UnfreezeStudentProps {
 }
 
 export function UnfreezeStudent({ student, open, onOpenChange }: UnfreezeStudentProps) {
-  const today = new Date().toISOString().split("T")[0]
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
   const [returnDate, setReturnDate] = useState(today)
   const queryClient = useQueryClient()
 
@@ -192,7 +193,7 @@ export function UnfreezeStudent({ student, open, onOpenChange }: UnfreezeStudent
           <Label>Maktabga qaytib kelgan sana</Label>
           <DatePicker
             value={returnDate}
-            onChange={(date) => setReturnDate(date ? date.toISOString().split("T")[0] : "")}
+            onChange={setReturnDate}
           />
           {returnDate && (
             <p className="text-sm text-muted-foreground">

@@ -200,7 +200,7 @@ export function AddStudent({ grades }: AddStudentProps) {
                     <FormControl>
                       <DatePicker
                         value={field.value}
-                        onChange={(date) => field.onChange(date ? date.toISOString().split("T")[0] : "")}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />
@@ -309,7 +309,7 @@ export function AddStudent({ grades }: AddStudentProps) {
                   <FormControl>
                     <DatePicker
                       value={field.value}
-                      onChange={(date) => field.onChange(date ? date.toISOString().split("T")[0] : "")}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

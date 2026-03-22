@@ -25,9 +25,16 @@ function formatDateUz(date: Date): string {
   return `${day}-${month} ${year}`
 }
 
+function formatLocalDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
 interface DatePickerProps {
-  value?: Date | string | null
-  onChange?: (date: Date | undefined) => void
+  value?: string | null
+  onChange?: (dateStr: string) => void
   placeholder?: string
   disabled?: boolean
   className?: string
@@ -46,16 +53,14 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
-  // Convert string to Date if needed
   const dateValue = React.useMemo(() => {
     if (!value) return undefined
-    if (value instanceof Date) return value
     const parsed = new Date(value)
     return Number.isNaN(parsed.getTime()) ? undefined : parsed
   }, [value])
 
   const handleSelect = (date: Date | undefined) => {
-    onChange?.(date)
+    onChange?.(date ? formatLocalDate(date) : "")
     setOpen(false)
   }
 

@@ -251,7 +251,7 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
                     <FormControl>
                       <DatePicker
                         value={field.value}
-                        onChange={(date) => field.onChange(date ? date.toISOString().split("T")[0] : "")}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />
@@ -360,7 +360,7 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
                   <FormControl>
                     <DatePicker
                       value={field.value}
-                      onChange={(date) => field.onChange(date ? date.toISOString().split("T")[0] : "")}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
