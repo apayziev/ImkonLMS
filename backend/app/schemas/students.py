@@ -1,110 +1,149 @@
-"""Student schemas for IMKON LMS."""
+"""Student schemas for IMKON LMS — matching imkon-payment structure."""
 
 from datetime import date
-from typing import Annotated, Self
+from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from .base import TimestampSchema
 
 
 class StudentBase(BaseModel):
-    document_id: Annotated[str, Field(min_length=5, max_length=20, examples=["I-LM2026001"])]
-    first_name: Annotated[str, Field(min_length=2, max_length=50, examples=["Aziz"])]
-    last_name: Annotated[str, Field(min_length=2, max_length=50, examples=["Toshmatov"])]
-
-    @field_validator("document_id", mode="before")
-    @classmethod
-    def uppercase_document_id(cls, v: str) -> str:
-        return v.upper() if isinstance(v, str) else v
+    document_id: Annotated[str, Field(min_length=5, max_length=20)]
+    first_name: Annotated[str, Field(min_length=2, max_length=50)]
+    last_name: Annotated[str, Field(min_length=2, max_length=50)]
+    middle_name: Annotated[str | None, Field(max_length=50)] = None
+    birth_date: date | None = None
+    gender: Annotated[str | None, Field(max_length=10)] = None
+    phone_number: Annotated[str | None, Field(max_length=20)] = None
 
 
 class StudentCreate(StudentBase):
     model_config = ConfigDict(extra="ignore")
 
-    student_id: str | None = None
+    student_id: Annotated[str | None, Field(max_length=20)] = None
     grade_id: int | None = None
-    birth_date: date | None = None
-    gender: str | None = None
-    phone_number: str | None = None
-    father_name: str | None = None
-    father_phone: str | None = None
-    mother_name: str | None = None
-    mother_phone: str | None = None
+    father_first_name: Annotated[str | None, Field(max_length=50)] = None
+    father_last_name: Annotated[str | None, Field(max_length=50)] = None
+    father_phone: Annotated[str | None, Field(max_length=20)] = None
+    mother_first_name: Annotated[str | None, Field(max_length=50)] = None
+    mother_last_name: Annotated[str | None, Field(max_length=50)] = None
+    mother_phone: Annotated[str | None, Field(max_length=20)] = None
     address: str | None = None
     enrollment_date: date | None = None
-
-    @field_validator("gender")
-    @classmethod
-    def validate_gender(cls, v: str | None) -> str | None:
-        if v is not None and v not in ("male", "female"):
-            raise ValueError("Jins faqat 'male' yoki 'female' bo'lishi mumkin")
-        return v
+    withdrawal_date: date | None = None
+    monthly_fee: Decimal | None = None
 
 
 class StudentUpdate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    first_name: Annotated[str | None, Field(min_length=2, max_length=50, default=None)]
-    last_name: Annotated[str | None, Field(min_length=2, max_length=50, default=None)]
+    document_id: Annotated[str | None, Field(max_length=20)] = None
+    first_name: Annotated[str | None, Field(max_length=50)] = None
+    last_name: Annotated[str | None, Field(max_length=50)] = None
+    middle_name: Annotated[str | None, Field(max_length=50)] = None
+    birth_date: date | None = None
+    gender: Annotated[str | None, Field(max_length=10)] = None
+    phone_number: Annotated[str | None, Field(max_length=20)] = None
     student_id: str | None = None
     grade_id: int | None = None
-    birth_date: date | None = None
-    gender: str | None = None
-    phone_number: str | None = None
-    father_name: str | None = None
-    father_phone: str | None = None
-    mother_name: str | None = None
-    mother_phone: str | None = None
+    father_first_name: Annotated[str | None, Field(max_length=50)] = None
+    father_last_name: Annotated[str | None, Field(max_length=50)] = None
+    father_phone: Annotated[str | None, Field(max_length=20)] = None
+    mother_first_name: Annotated[str | None, Field(max_length=50)] = None
+    mother_last_name: Annotated[str | None, Field(max_length=50)] = None
+    mother_phone: Annotated[str | None, Field(max_length=20)] = None
     address: str | None = None
     enrollment_date: date | None = None
+    withdrawal_date: date | None = None
+    monthly_fee: Decimal | None = None
     is_active: bool | None = None
 
-    @field_validator("gender")
-    @classmethod
-    def validate_gender(cls, v: str | None) -> str | None:
-        if v is not None and v not in ("male", "female"):
-            raise ValueError("Jins faqat 'male' yoki 'female' bo'lishi mumkin")
-        return v
 
-
-class StudentRead(TimestampSchema):
+class StudentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     document_id: str
     first_name: str
     last_name: str
-    full_name: str | None = None
-    student_id: str | None = None
-    grade_id: int | None = None
-    grade_name: str | None = None
+    middle_name: str | None = None
     birth_date: date | None = None
     gender: str | None = None
     phone_number: str | None = None
     photo_url: str | None = None
-    father_name: str | None = None
+    role: str
+    is_active: bool
+    student_id: str | None = None
+    grade_id: int | None = None
+    father_first_name: str | None = None
+    father_last_name: str | None = None
     father_phone: str | None = None
-    mother_name: str | None = None
+    mother_first_name: str | None = None
+    mother_last_name: str | None = None
     mother_phone: str | None = None
     address: str | None = None
     enrollment_date: date | None = None
-    is_active: bool
-    age: int | None = None
+    withdrawal_date: date | None = None
+    monthly_fee: float | None = None
 
-    @model_validator(mode="after")
-    def compute_fields(self) -> Self:
-        self.full_name = f"{self.first_name} {self.last_name}"
-        if self.birth_date:
-            today = date.today()
-            self.age = (
-                today.year
-                - self.birth_date.year
-                - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
-            )
-        return self
+    # Freeze fields
+    is_frozen: bool = False
+    frozen_at: date | None = None
+    frozen_reason: str | None = None
+    departure_date: date | None = None
+    return_date: date | None = None
+
+    # Soft delete fields
+    is_deleted: bool = False
+    deleted_at: date | None = None
+
+    @computed_field
+    @property
+    def full_name(self) -> str:
+        parts = [self.last_name, self.first_name]
+        if self.middle_name:
+            parts.append(self.middle_name)
+        return " ".join(parts)
+
+    @computed_field
+    @property
+    def father_full_name(self) -> str | None:
+        if not self.father_last_name and not self.father_first_name:
+            return None
+        parts = [p for p in [self.father_last_name, self.father_first_name] if p]
+        return " ".join(parts) if parts else None
+
+    @computed_field
+    @property
+    def mother_full_name(self) -> str | None:
+        if not self.mother_last_name and not self.mother_first_name:
+            return None
+        parts = [p for p in [self.mother_last_name, self.mother_first_name] if p]
+        return " ".join(parts) if parts else None
 
 
 class StudentList(BaseModel):
     data: list[StudentRead]
     count: int
+
+
+class StudentFreezeRequest(BaseModel):
+    departure_date: date | None = None
+    reason: str | None = None
+
+
+class StudentUnfreezeRequest(BaseModel):
+    return_date: date
+
+
+class StudentFreezeResponse(BaseModel):
+    id: int
+    full_name: str
+    is_frozen: bool
+    frozen_at: date | None = None
+    frozen_reason: str | None = None
+    departure_date: date | None = None
+    return_date: date | None = None
+    message: str

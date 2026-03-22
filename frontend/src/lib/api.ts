@@ -213,24 +213,34 @@ export interface StudentRead {
   document_id: string
   first_name: string
   last_name: string
-  full_name: string | null
+  middle_name: string | null
+  full_name: string
   student_id: string | null
   grade_id: number | null
-  grade_name: string | null
   birth_date: string | null
   gender: string | null
   phone_number: string | null
   photo_url: string | null
-  father_name: string | null
+  father_first_name: string | null
+  father_last_name: string | null
   father_phone: string | null
-  mother_name: string | null
+  father_full_name: string | null
+  mother_first_name: string | null
+  mother_last_name: string | null
   mother_phone: string | null
+  mother_full_name: string | null
   address: string | null
   enrollment_date: string | null
+  withdrawal_date: string | null
+  monthly_fee: number | null
   is_active: boolean
-  age: number | null
-  created_at: string
-  updated_at: string | null
+  is_frozen: boolean
+  frozen_at: string | null
+  frozen_reason: string | null
+  departure_date: string | null
+  return_date: string | null
+  is_deleted: boolean
+  deleted_at: string | null
 }
 
 export interface StudentList {
@@ -242,45 +252,105 @@ export interface StudentCreate {
   document_id: string
   first_name: string
   last_name: string
+  middle_name?: string | null
   student_id?: string | null
   grade_id?: number | null
   birth_date?: string | null
   gender?: string | null
   phone_number?: string | null
-  father_name?: string | null
+  father_first_name?: string | null
+  father_last_name?: string | null
   father_phone?: string | null
-  mother_name?: string | null
+  mother_first_name?: string | null
+  mother_last_name?: string | null
   mother_phone?: string | null
   address?: string | null
   enrollment_date?: string | null
+  withdrawal_date?: string | null
+  monthly_fee?: number | null
 }
 
 export interface StudentUpdate {
+  document_id?: string
   first_name?: string
   last_name?: string
+  middle_name?: string | null
   student_id?: string | null
   grade_id?: number | null
   birth_date?: string | null
   gender?: string | null
   phone_number?: string | null
-  father_name?: string | null
+  father_first_name?: string | null
+  father_last_name?: string | null
   father_phone?: string | null
-  mother_name?: string | null
+  mother_first_name?: string | null
+  mother_last_name?: string | null
   mother_phone?: string | null
   address?: string | null
   enrollment_date?: string | null
+  withdrawal_date?: string | null
+  monthly_fee?: number | null
   is_active?: boolean
 }
 
+export interface StudentFreezeResponse {
+  id: number
+  full_name: string
+  is_frozen: boolean
+  frozen_at?: string | null
+  frozen_reason?: string | null
+  departure_date?: string | null
+  return_date?: string | null
+  message: string
+}
+
 export const studentsApi = {
-  list: (params: { skip?: number; limit?: number; grade_id?: number | null; search?: string | null } = {}) =>
-    api.get<StudentList>("/api/v1/students/", { params }),
+  list: (params: {
+    skip?: number
+    limit?: number
+    grade_id?: number
+    search?: string
+    status?: string
+  } = {}) => api.get<StudentList>("/api/v1/students/", { params }),
+
+  deletedList: (params: {
+    skip?: number
+    limit?: number
+    search?: string
+  } = {}) => api.get<StudentList>("/api/v1/students/deleted/list", { params }),
+
   get: (id: number) => api.get<StudentRead>(`/api/v1/students/${id}`),
+
   create: (data: StudentCreate) =>
     api.post<StudentRead>("/api/v1/students/", data),
+
   update: (id: number, data: StudentUpdate) =>
     api.patch<StudentRead>(`/api/v1/students/${id}`, data),
+
   delete: (id: number) => api.delete(`/api/v1/students/${id}`),
+
+  uploadPhoto: (id: number, file: File) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    return api.post<StudentRead>(`/api/v1/students/${id}/photo`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+  },
+
+  deletePhoto: (id: number) =>
+    api.delete<StudentRead>(`/api/v1/students/${id}/photo`),
+
+  freeze: (id: number, data: { reason?: string | null; departure_date?: string | null }) =>
+    api.post<StudentFreezeResponse>(`/api/v1/students/${id}/freeze`, data),
+
+  unfreeze: (id: number, data: { return_date: string }) =>
+    api.post<StudentFreezeResponse>(`/api/v1/students/${id}/unfreeze`, data),
+
+  restore: (id: number) =>
+    api.post<StudentRead>(`/api/v1/students/${id}/restore`),
+
+  hardDelete: (id: number) =>
+    api.delete(`/api/v1/students/${id}/permanent`),
 }
 
 // --- Error utility ---

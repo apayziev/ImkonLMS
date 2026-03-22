@@ -1,7 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import type { GradeRead, StudentRead, StudentUpdate } from "@/lib/api"
+import { toast } from "sonner"
+
+import type { GradeRead, StudentRead } from "@/lib/api"
 import { extractErrorMessage, studentsApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -28,9 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { LoadingButton } from "@/components/ui/loading-button"
-import useCustomToast from "@/hooks/useCustomToast"
+import { Textarea } from "@/components/ui/textarea"
 import { queryKeys } from "@/hooks/useQueryOptions"
+
+import { ParentInfoSection } from "./ParentInfoSection"
+import { StudentAvatarInput } from "./StudentAvatarInput"
+import {
+  studentEditSchema,
+  toStudentPayload,
+  type StudentEditFormData,
+} from "./studentSchema"
 
 interface EditStudentProps {
   student: StudentRead
@@ -41,125 +52,144 @@ interface EditStudentProps {
 
 export function EditStudent({ student, grades, open, onOpenChange }: EditStudentProps) {
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false)
+  const [isPhotoDeleting, setIsPhotoDeleting] = useState(false)
+  const [isPhotoDeleted, setIsPhotoDeleted] = useState(false)
 
-  const form = useForm<StudentUpdate>({
-    defaultValues: {
-      first_name: student.first_name,
-      last_name: student.last_name,
-      student_id: student.student_id ?? "",
-      grade_id: student.grade_id,
-      birth_date: student.birth_date ?? "",
-      gender: student.gender,
-      phone_number: student.phone_number ?? "",
-      father_name: student.father_name ?? "",
-      father_phone: student.father_phone ?? "",
-      mother_name: student.mother_name ?? "",
-      mother_phone: student.mother_phone ?? "",
-      address: student.address ?? "",
-      enrollment_date: student.enrollment_date ?? "",
-    },
+  useEffect(() => {
+    if (!open) {
+      setPhotoPreview(null)
+      setIsPhotoDeleted(false)
+    }
+  }, [open])
+
+  const getDefaults = (): StudentEditFormData => ({
+    document_id: student.document_id,
+    first_name: student.first_name,
+    last_name: student.last_name,
+    middle_name: student.middle_name || "",
+    birth_date: student.birth_date || null,
+    gender: student.gender || null,
+    phone_number: student.phone_number || "",
+    grade_id: student.grade_id || null,
+    father_first_name: student.father_first_name || "",
+    father_last_name: student.father_last_name || "",
+    father_phone: student.father_phone || "",
+    mother_first_name: student.mother_first_name || "",
+    mother_last_name: student.mother_last_name || "",
+    mother_phone: student.mother_phone || "",
+    address: student.address || "",
+    enrollment_date: student.enrollment_date || null,
+    monthly_fee: student.monthly_fee ? Number(student.monthly_fee) : null,
+  })
+
+  const form = useForm<StudentEditFormData>({
+    resolver: zodResolver(studentEditSchema),
+    defaultValues: getDefaults(),
   })
 
   useEffect(() => {
-    if (open) {
-      form.reset({
-        first_name: student.first_name,
-        last_name: student.last_name,
-        student_id: student.student_id ?? "",
-        grade_id: student.grade_id,
-        birth_date: student.birth_date ?? "",
-        gender: student.gender,
-        phone_number: student.phone_number ?? "",
-        father_name: student.father_name ?? "",
-        father_phone: student.father_phone ?? "",
-        mother_name: student.mother_name ?? "",
-        mother_phone: student.mother_phone ?? "",
-        address: student.address ?? "",
-        enrollment_date: student.enrollment_date ?? "",
-      })
-    }
-  }, [open, student, form])
+    form.reset(getDefaults())
+  }, [student, form])
 
-  const mutation = useMutation({
-    mutationFn: (data: StudentUpdate) => studentsApi.update(student.id, data),
+  const photoUploadMutation = useMutation({
+    mutationFn: (file: File) => studentsApi.uploadPhoto(student.id, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students })
-      showSuccessToast("O'quvchi muvaffaqiyatli yangilandi")
-      onOpenChange(false)
+      toast.success("Rasm yuklandi")
+      setPhotoPreview(null)
+      setIsPhotoUploading(false)
+      setIsPhotoDeleted(false)
     },
     onError: (error: unknown) => {
-      showErrorToast(extractErrorMessage(error, "O'quvchi yangilashda xatolik yuz berdi"))
+      toast.error(extractErrorMessage(error, "Rasm yuklashda xatolik yuz berdi"))
+      setPhotoPreview(null)
+      setIsPhotoUploading(false)
     },
   })
 
-  const onSubmit: SubmitHandler<StudentUpdate> = (data) => {
-    const payload: StudentUpdate = {
-      ...data,
-      student_id: data.student_id || null,
-      grade_id: data.grade_id || null,
-      birth_date: data.birth_date || null,
-      gender: data.gender || null,
-      phone_number: data.phone_number || null,
-      father_name: data.father_name || null,
-      father_phone: data.father_phone || null,
-      mother_name: data.mother_name || null,
-      mother_phone: data.mother_phone || null,
-      address: data.address || null,
-      enrollment_date: data.enrollment_date || null,
+  const photoDeleteMutation = useMutation({
+    mutationFn: () => studentsApi.deletePhoto(student.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students })
+      toast.success("Rasm o'chirildi")
+      setIsPhotoDeleting(false)
+      setIsPhotoDeleted(true)
+    },
+    onError: (error: unknown) => {
+      toast.error(extractErrorMessage(error, "Rasm o'chirishda xatolik yuz berdi"))
+      setIsPhotoDeleting(false)
+    },
+  })
+
+  const mutation = useMutation({
+    mutationFn: async (data: StudentEditFormData) => {
+      const { data: updated } = await studentsApi.update(student.id, toStudentPayload(data))
+      return updated
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students })
+      toast.success("O'quvchi muvaffaqiyatli yangilandi")
+      onOpenChange(false)
+    },
+    onError: (error: unknown) => {
+      toast.error(extractErrorMessage(error, "O'quvchini yangilashda xatolik yuz berdi"))
+    },
+  })
+
+  const onSubmit: SubmitHandler<StudentEditFormData> = (data) => {
+    mutation.mutate(data)
+  }
+
+  const handlePhotoSelect = (file: File) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result as string)
     }
-    mutation.mutate(payload)
+    reader.readAsDataURL(file)
+    setIsPhotoUploading(true)
+    photoUploadMutation.mutate(file)
+  }
+
+  const handlePhotoDelete = () => {
+    setIsPhotoDeleting(true)
+    photoDeleteMutation.mutate()
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>O'quvchini tahrirlash</DialogTitle>
-          <DialogDescription>{student.full_name}</DialogDescription>
+          <DialogDescription>
+            {student.last_name} {student.first_name} ma'lumotlarini tahrirlang
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="first_name"
-                rules={{ required: "Ism kiritilishi shart" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ism</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Avatar */}
+            <StudentAvatarInput
+              photoUrl={isPhotoDeleted ? null : student.photo_url}
+              previewUrl={photoPreview}
+              firstName={form.watch("first_name")}
+              lastName={form.watch("last_name")}
+              isLoading={isPhotoUploading}
+              isDeleting={isPhotoDeleting}
+              onFileSelect={handlePhotoSelect}
+              onPhotoDelete={handlePhotoDelete}
+            />
+
+            {/* Row 1: Familiya, Ism */}
+            <div className="grid gap-4 grid-cols-2">
               <FormField
                 control={form.control}
                 name="last_name"
-                rules={{ required: "Familiya kiritilishi shart" }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Familiya</FormLabel>
+                    <FormLabel>Familiya *</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="student_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>O'quvchi IDsi</FormLabel>
-                    <FormControl>
-                      <Input placeholder="2026-001" {...field} value={field.value ?? ""} />
+                      <Input placeholder="Karimov" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -167,58 +197,51 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
               />
               <FormField
                 control={form.control}
-                name="grade_id"
+                name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sinf</FormLabel>
-                    <Select
-                      value={field.value?.toString() ?? ""}
-                      onValueChange={(v) => field.onChange(v ? Number(v) : null)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Tanlang" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {grades.map((g) => (
-                          <SelectItem key={g.id} value={g.id.toString()}>
-                            {g.display_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Ism *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ali" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            {/* Row 2: Otasining ismi, Hujjat raqami */}
+            <div className="grid gap-4 grid-cols-2">
               <FormField
                 control={form.control}
-                name="gender"
+                name="middle_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Jinsi</FormLabel>
-                    <Select
-                      value={field.value ?? ""}
-                      onValueChange={(v) => field.onChange(v || null)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Tanlang" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Erkak</SelectItem>
-                        <SelectItem value="female">Ayol</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Otasining ismi</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Valiyevich" {...field} value={field.value || ""} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="document_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hujjat raqami *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="AA1234567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Row 3: Tug'ilgan sana, Jinsi */}
+            <div className="grid gap-4 grid-cols-2">
               <FormField
                 control={form.control}
                 name="birth_date"
@@ -226,8 +249,63 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
                   <FormItem>
                     <FormLabel>Tug'ilgan sana</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} value={field.value ?? ""} />
+                      <Input type="date" {...field} value={field.value || ""} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Jinsi</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(val || null)}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tanlang" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">O'g'il</SelectItem>
+                        <SelectItem value="female">Qiz</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Row 4: Sinf, Telefon */}
+            <div className="grid gap-4 grid-cols-2">
+              <FormField
+                control={form.control}
+                name="grade_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sinf</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(val ? Number(val) : null)}
+                      value={field.value?.toString() || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sinf tanlang" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {grades.map((grade) => (
+                          <SelectItem key={grade.id} value={grade.id.toString()}>
+                            {grade.display_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -237,9 +315,9 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
                 name="phone_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telefon</FormLabel>
+                    <FormLabel>O'quvchi telefoni</FormLabel>
                     <FormControl>
-                      <Input placeholder="+998..." {...field} value={field.value ?? ""} />
+                      <Input placeholder="+998901234567" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -247,86 +325,57 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
               />
             </div>
 
-            <div className="pt-2 border-t">
-              <p className="text-sm font-medium text-muted-foreground mb-3">Ota-ona ma'lumotlari</p>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="father_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Otasi F.I.O</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="father_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Otasi telefoni</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="mother_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Onasi F.I.O</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="mother_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Onasi telefoni</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+            {/* Parent Info */}
+            <ParentInfoSection control={form.control} type="father" />
+            <ParentInfoSection control={form.control} type="mother" />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Manzil</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Manzil</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Toshkent shahri, Chilonzor tumani..."
+                      className="resize-none"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Enrollment & Fee */}
+            <div className="grid gap-4 grid-cols-2">
               <FormField
                 control={form.control}
                 name="enrollment_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Qabul sanasi</FormLabel>
+                    <FormLabel>Qabul qilingan sana</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} value={field.value ?? ""} />
+                      <Input type="date" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="monthly_fee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Oylik to'lov (so'm)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="500000"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

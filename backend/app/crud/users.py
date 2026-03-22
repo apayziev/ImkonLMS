@@ -90,6 +90,7 @@ class CRUDUser(BaseCRUD[User]):
         limit: int = 100,
         grade_id: int | None = None,
         search: str | None = None,
+        status: str | None = None,
     ) -> tuple[list[User], int]:
         base = select(User).where(
             User.role == UserRole.STUDENT.value,
@@ -98,6 +99,46 @@ class CRUDUser(BaseCRUD[User]):
 
         if grade_id is not None:
             base = base.where(User.grade_id == grade_id)
+
+        if status == "active":
+            base = base.where(User.is_active == True, User.is_frozen == False)  # noqa: E712
+        elif status == "frozen":
+            base = base.where(User.is_frozen == True)  # noqa: E712
+        elif status == "inactive":
+            base = base.where(User.is_active == False, User.is_frozen == False)  # noqa: E712
+
+        if search:
+            term = f"%{search}%"
+            base = base.where(
+                or_(
+                    User.first_name.ilike(term),
+                    User.last_name.ilike(term),
+                    User.document_id.ilike(term),
+                    User.student_id.ilike(term),
+                    User.phone_number.ilike(term),
+                )
+            )
+
+        count_q = select(func.count()).select_from(base.subquery())
+        total = (await db.execute(count_q)).scalar_one()
+
+        data_q = base.options(selectinload(User.grade)).offset(skip).limit(limit).order_by(User.id.desc())
+        rows = (await db.execute(data_q)).scalars().all()
+
+        return list(rows), total
+
+    async def get_deleted_students(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+    ) -> tuple[list[User], int]:
+        base = select(User).where(
+            User.role == UserRole.STUDENT.value,
+            User.is_deleted == True,  # noqa: E712
+        )
 
         if search:
             term = f"%{search}%"
@@ -117,6 +158,28 @@ class CRUDUser(BaseCRUD[User]):
         rows = (await db.execute(data_q)).scalars().all()
 
         return list(rows), total
+
+    async def restore(self, db: AsyncSession, *, id: int) -> User | None:
+        user = await self.get(
+            db, id=id, is_deleted=True, role=UserRole.STUDENT.value,
+            options=[selectinload(User.grade)],
+        )
+        if user is None:
+            return None
+        user.is_deleted = False
+        user.deleted_at = None
+        user.is_active = True
+        await db.commit()
+        await db.refresh(user, attribute_names=["grade"])
+        return user
+
+    async def hard_delete(self, db: AsyncSession, *, id: int) -> bool:
+        user = await self.get(db, id=id, is_deleted=True)
+        if user is None:
+            return False
+        await db.delete(user)
+        await db.commit()
+        return True
 
 
 crud_users = CRUDUser(User)

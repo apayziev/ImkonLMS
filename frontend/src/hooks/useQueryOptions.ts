@@ -30,7 +30,7 @@ export function getSubjectsQueryOptions() {
   }
 }
 
-export function getStudentsQueryOptions(params?: { grade_id?: number | null; search?: string | null }) {
+export function getStudentsQueryOptions(params?: { grade_id?: number; search?: string }) {
   return {
     queryKey: [...queryKeys.students, params ?? {}] as const,
     queryFn: async () => {
