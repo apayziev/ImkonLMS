@@ -27,6 +27,9 @@ import { getSubjectsQueryOptions } from "@/hooks/useQueryOptions"
 
 export const Route = createFileRoute("/_layout/subjects")({
   component: SubjectsPage,
+  head: () => ({
+    meta: [{ title: "Fanlar - IMKON LMS" }],
+  }),
 })
 
 function SubjectsContentSkeleton() {

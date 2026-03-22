@@ -4,7 +4,7 @@ import { Plus } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { type SubjectCreate, subjectsApi } from "@/lib/api"
+import { type SubjectCreate, extractErrorMessage, subjectsApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -56,10 +56,7 @@ export function AddSubject() {
       form.reset()
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-        "Fan qo'shishda xatolik yuz berdi"
-      showErrorToast(message)
+      showErrorToast(extractErrorMessage(error, "Fan qo'shishda xatolik yuz berdi"))
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] })

@@ -205,3 +205,10 @@ export const subjectsApi = {
     api.patch<SubjectRead>(`/api/v1/subjects/${id}`, data),
   delete: (id: number) => api.delete(`/api/v1/subjects/${id}`),
 }
+
+// --- Error utility ---
+
+export function extractErrorMessage(error: unknown, fallback = "Xatolik yuz berdi"): string {
+  const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+  return detail || fallback
+}

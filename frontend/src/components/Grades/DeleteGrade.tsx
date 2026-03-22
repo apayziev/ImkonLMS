@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { type GradeRead, gradesApi } from "@/lib/api"
+import { type GradeRead, extractErrorMessage, gradesApi } from "@/lib/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,10 +33,7 @@ export function DeleteGrade({ grade, open, onOpenChange }: DeleteGradeProps) {
       onOpenChange(false)
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-        "Sinf o'chirishda xatolik yuz berdi"
-      showErrorToast(message)
+      showErrorToast(extractErrorMessage(error, "Sinf o'chirishda xatolik yuz berdi"))
     },
   })
 

@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 
-import { type SubjectRead, type SubjectUpdate, subjectsApi } from "@/lib/api"
+import { type SubjectRead, type SubjectUpdate, extractErrorMessage, subjectsApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -57,10 +57,7 @@ export function EditSubject({ subject, open, onOpenChange }: EditSubjectProps) {
       onOpenChange(false)
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-        "Fan yangilashda xatolik yuz berdi"
-      showErrorToast(message)
+      showErrorToast(extractErrorMessage(error, "Fan yangilashda xatolik yuz berdi"))
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] })

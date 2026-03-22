@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 
-import { type SubjectRead, subjectsApi } from "@/lib/api"
+import { type SubjectRead, extractErrorMessage, subjectsApi } from "@/lib/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,10 +31,7 @@ export function DeleteSubject({ subject, open, onOpenChange }: DeleteSubjectProp
       onOpenChange(false)
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-        "Fan o'chirishda xatolik yuz berdi"
-      showErrorToast(message)
+      showErrorToast(extractErrorMessage(error, "Fan o'chirishda xatolik yuz berdi"))
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] })

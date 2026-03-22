@@ -38,8 +38,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 
+const PATTERN_GREEN = "/images/patterns/Patterns-03.png"
+
 export const Route = createFileRoute("/_layout/grades")({
   component: GradesPage,
+  head: () => ({
+    meta: [{ title: "Sinflar - IMKON LMS" }],
+  }),
 })
 
 function GradesContentSkeleton() {
@@ -164,7 +169,7 @@ function GradesContent({ isAdmin }: { isAdmin: boolean }) {
                   <div
                     className="absolute -top-2 -right-2 w-20 h-20 opacity-[0.08] pointer-events-none"
                     style={{
-                      backgroundImage: "url(/images/patterns/Patterns-03.png)",
+                      backgroundImage: `url(${PATTERN_GREEN})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }}

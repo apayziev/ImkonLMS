@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { type GradeRead, type GradeUpdate, gradesApi } from "@/lib/api"
+import { type GradeRead, type GradeUpdate, extractErrorMessage, gradesApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -62,10 +62,7 @@ export function EditGrade({ grade, open, onOpenChange }: EditGradeProps) {
       onOpenChange(false)
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-        "Sinf yangilashda xatolik yuz berdi"
-      showErrorToast(message)
+      showErrorToast(extractErrorMessage(error, "Sinf yangilashda xatolik yuz berdi"))
     },
   })
 

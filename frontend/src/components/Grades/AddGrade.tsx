@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { type GradeCreate, gradesApi } from "@/lib/api"
+import { type GradeCreate, extractErrorMessage, gradesApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -67,15 +67,13 @@ export function AddGrade({
       form.reset({ level: defaultLevel ?? 1, section: "A" })
     },
     onError: (error: unknown) => {
-      const apiError = error as { response?: { data?: { detail?: string }; status?: number } }
-      const detail = apiError?.response?.data?.detail
-      let message = "Sinf qo'shishda xatolik yuz berdi"
-      if (detail?.includes("already exists") || apiError?.response?.status === 409) {
-        message = "Bu sinf allaqachon mavjud! Boshqa bo'lim tanlang (E, F, G, H)"
-      } else if (detail) {
-        message = detail
+      const apiError = error as { response?: { status?: number } }
+      const detail = extractErrorMessage(error, "")
+      if (detail.includes("already exists") || apiError?.response?.status === 409) {
+        showErrorToast("Bu sinf allaqachon mavjud! Boshqa bo'lim tanlang (E, F, G, H)")
+      } else {
+        showErrorToast(detail || "Sinf qo'shishda xatolik yuz berdi")
       }
-      showErrorToast(message)
     },
   })
 
