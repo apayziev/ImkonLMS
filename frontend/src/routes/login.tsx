@@ -26,6 +26,15 @@ interface LoginForm {
   password: string
 }
 
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, "")
+  if (digits.length <= 3) return `+${digits}`
+  if (digits.length <= 5) return `+${digits.slice(0, 3)} ${digits.slice(3)}`
+  if (digits.length <= 8) return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`
+  if (digits.length <= 10) return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`
+  return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10, 12)}`
+}
+
 function LoginPage() {
   const { loginMutation } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
@@ -33,6 +42,7 @@ function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginForm>({
     defaultValues: {
@@ -43,7 +53,7 @@ function LoginPage() {
 
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate({
-      document_id: data.phone_number,
+      document_id: data.phone_number.replace(/\s/g, ""),
       password: data.password,
     })
   }
@@ -83,8 +93,9 @@ function LoginPage() {
                 {...register("phone_number", {
                   required: "Telefon raqamni kiriting",
                   minLength: { value: 9, message: "Kamida 9 ta belgi" },
-                  pattern: { value: /^[0-9+]+$/, message: "Faqat raqamlar kiriting" },
+                  pattern: { value: /^[\d+ ]+$/, message: "Faqat raqamlar kiriting" },
                 })}
+                onChange={(e) => setValue("phone_number", formatPhone(e.target.value))}
               />
             </div>
             {errors.phone_number && (
