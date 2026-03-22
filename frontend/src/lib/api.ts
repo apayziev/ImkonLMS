@@ -127,3 +127,81 @@ export const usersApi = {
 export const logoutApi = {
   logout: () => api.post("/api/v1/logout/"),
 }
+
+// --- Grade Types & API ---
+
+export interface GradeRead {
+  id: number
+  level: number
+  section: string
+  display_name: string
+  created_at: string
+  updated_at: string | null
+}
+
+export interface GradeList {
+  data: GradeRead[]
+  count: number
+}
+
+export interface GradeCreate {
+  level: number
+  section: string
+}
+
+export interface GradeUpdate {
+  level?: number
+  section?: string
+}
+
+export const gradesApi = {
+  list: (skip = 0, limit = 100) =>
+    api.get<GradeList>("/api/v1/grades/", { params: { skip, limit } }),
+  get: (id: number) => api.get<GradeRead>(`/api/v1/grades/${id}`),
+  create: (data: GradeCreate) => api.post<GradeRead>("/api/v1/grades/", data),
+  update: (id: number, data: GradeUpdate) =>
+    api.patch<GradeRead>(`/api/v1/grades/${id}`, data),
+  delete: (id: number) => api.delete(`/api/v1/grades/${id}`),
+}
+
+// --- Subject Types & API ---
+
+export interface SubjectRead {
+  id: number
+  name: string
+  name_uz: string | null
+  icon: string | null
+  color: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface SubjectList {
+  data: SubjectRead[]
+  count: number
+}
+
+export interface SubjectCreate {
+  name: string
+  name_uz?: string | null
+  icon?: string | null
+  color?: string | null
+}
+
+export interface SubjectUpdate {
+  name?: string
+  name_uz?: string | null
+  icon?: string | null
+  color?: string | null
+}
+
+export const subjectsApi = {
+  list: (skip = 0, limit = 100) =>
+    api.get<SubjectList>("/api/v1/subjects/", { params: { skip, limit } }),
+  get: (id: number) => api.get<SubjectRead>(`/api/v1/subjects/${id}`),
+  create: (data: SubjectCreate) =>
+    api.post<SubjectRead>("/api/v1/subjects/", data),
+  update: (id: number, data: SubjectUpdate) =>
+    api.patch<SubjectRead>(`/api/v1/subjects/${id}`, data),
+  delete: (id: number) => api.delete(`/api/v1/subjects/${id}`),
+}

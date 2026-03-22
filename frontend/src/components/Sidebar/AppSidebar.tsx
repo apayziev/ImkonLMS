@@ -1,4 +1,4 @@
-import { Home } from "lucide-react"
+import { BookOpen, GraduationCap, Home } from "lucide-react"
 
 import { Logo } from "@/components/Common/Logo"
 import {
@@ -13,6 +13,8 @@ import { User } from "./User"
 
 const menuItems: Item[] = [
   { icon: Home, title: "Bosh sahifa", path: "/" },
+  { icon: GraduationCap, title: "Sinflar", path: "/grades" },
+  { icon: BookOpen, title: "Fanlar", path: "/subjects" },
 ]
 
 export function AppSidebar() {

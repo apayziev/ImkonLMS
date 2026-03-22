@@ -4,7 +4,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import async_get_db
-from app.core.exceptions import UnauthorizedException
+from app.core.exceptions import ForbiddenException, UnauthorizedException
 from app.core.security import TokenType, oauth2_scheme, verify_token
 from app.crud.users import crud_users
 from app.models.user import User
@@ -27,3 +27,12 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_current_superuser(current_user: CurrentUser) -> User:
+    if not current_user.is_superuser:
+        raise ForbiddenException("Faqat administrator uchun.")
+    return current_user
+
+
+SuperUser = Annotated[User, Depends(get_current_superuser)]

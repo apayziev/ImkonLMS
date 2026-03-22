@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutSubjectsRouteImport } from './routes/_layout/subjects'
+import { Route as LayoutGradesRouteImport } from './routes/_layout/grades'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -27,27 +29,49 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutSubjectsRoute = LayoutSubjectsRouteImport.update({
+  id: '/subjects',
+  path: '/subjects',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutGradesRoute = LayoutGradesRouteImport.update({
+  id: '/grades',
+  path: '/grades',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
+  '/grades': typeof LayoutGradesRoute
+  '/subjects': typeof LayoutSubjectsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/grades': typeof LayoutGradesRoute
+  '/subjects': typeof LayoutSubjectsRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/_layout/grades': typeof LayoutGradesRoute
+  '/_layout/subjects': typeof LayoutSubjectsRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths: '/' | '/login' | '/grades' | '/subjects'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/'
-  id: '__root__' | '/_layout' | '/login' | '/_layout/'
+  to: '/login' | '/grades' | '/subjects' | '/'
+  id:
+    | '__root__'
+    | '/_layout'
+    | '/login'
+    | '/_layout/grades'
+    | '/_layout/subjects'
+    | '/_layout/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,14 +102,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/subjects': {
+      id: '/_layout/subjects'
+      path: '/subjects'
+      fullPath: '/subjects'
+      preLoaderRoute: typeof LayoutSubjectsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/grades': {
+      id: '/_layout/grades'
+      path: '/grades'
+      fullPath: '/grades'
+      preLoaderRoute: typeof LayoutGradesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutGradesRoute: typeof LayoutGradesRoute
+  LayoutSubjectsRoute: typeof LayoutSubjectsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutGradesRoute: LayoutGradesRoute,
+  LayoutSubjectsRoute: LayoutSubjectsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 

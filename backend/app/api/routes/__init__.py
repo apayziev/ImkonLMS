@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
 
+from .grades import router as grades_router
 from .health import router as health_router
 from .login import router as login_router
 from .logout import router as logout_router
+from .subjects import router as subjects_router
 from .users import router as users_router
 
 router = APIRouter(prefix="/v1")
@@ -18,3 +20,5 @@ router.include_router(login_router)
 # Protected routes
 router.include_router(logout_router, dependencies=[Depends(get_current_user)])
 router.include_router(users_router, dependencies=[Depends(get_current_user)])
+router.include_router(grades_router, dependencies=[Depends(get_current_user)])
+router.include_router(subjects_router, dependencies=[Depends(get_current_user)])

@@ -1,10 +1,12 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any, Generic, TypeVar
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
+from app.core.exceptions import NotFoundException
 from app.models.base import BaseModel
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -35,3 +37,78 @@ class BaseCRUD(Generic[ModelType]):
         query = self._build_query(options=options, **kwargs)
         result = await db.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_or_404(
+        self,
+        db: AsyncSession,
+        error_message: str | None = None,
+        options: Sequence[Any] | None = None,
+        **kwargs: Any,
+    ) -> ModelType:
+        record = await self.get(db, options=options, **kwargs)
+        if record is None:
+            raise NotFoundException(error_message or "Resurs topilmadi")
+        return record
+
+    async def update(
+        self,
+        db: AsyncSession,
+        db_obj: ModelType,
+        update_data: dict[str, Any],
+    ) -> ModelType:
+        for field, value in update_data.items():
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, value)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def get_multi(
+        self,
+        db: AsyncSession,
+        offset: int = 0,
+        limit: int = 100,
+        options: Sequence[Any] | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        base_query = self._build_query(**kwargs)
+
+        count_query = select(func.count()).select_from(base_query.subquery())
+        data_query = base_query.offset(offset).limit(limit)
+        if options:
+            data_query = data_query.options(*options)
+
+        total_result, data_result = await db.execute(count_query), await db.execute(data_query)
+        total_count = total_result.scalar_one()
+        data = data_result.scalars().all()
+
+        return {"data": data, "total_count": total_count}
+
+    async def delete(
+        self,
+        db: AsyncSession,
+        **kwargs: Any,
+    ) -> bool:
+        record = await self.get(db, **kwargs)
+        if record is None:
+            return False
+
+        record.is_deleted = True
+        record.deleted_at = datetime.now(UTC)
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
+        return True
+
+    async def db_delete(
+        self,
+        db: AsyncSession,
+        **kwargs: Any,
+    ) -> bool:
+        record = await self.get(db, **kwargs)
+        if record is None:
+            return False
+
+        await db.delete(record)
+        await db.commit()
+        return True

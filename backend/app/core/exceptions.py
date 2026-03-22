@@ -18,3 +18,8 @@ class UnauthorizedException(HTTPException):
             detail=detail,
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+class DuplicateValueException(HTTPException):
+    def __init__(self, detail: str = "Duplicate value") -> None:
+        super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
