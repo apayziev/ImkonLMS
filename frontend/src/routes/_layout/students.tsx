@@ -1,12 +1,9 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import {
-  AlertTriangle,
   GraduationCap,
-  MoreHorizontal,
-  Pencil,
-  Play,
-  RotateCcw,
+  Loader2,
+  RefreshCw,
   Search,
   Snowflake,
   Trash2,
@@ -14,24 +11,11 @@ import {
 import { useCallback, useEffect, useState } from "react"
 
 import type { GradeRead, StudentRead } from "@/lib/api"
-import { studentsApi } from "@/lib/api"
-import { AddStudent } from "@/components/Students/AddStudent"
-import { DeleteStudent } from "@/components/Students/DeleteStudent"
-import { EditStudent } from "@/components/Students/EditStudent"
-import { FreezeStudent, UnfreezeStudent } from "@/components/Students/FreezeStudent"
-import { HardDeleteStudent } from "@/components/Students/HardDeleteStudent"
-import { RestoreStudent } from "@/components/Students/RestoreStudent"
+import { extractErrorMessage, studentsApi } from "@/lib/api"
 import { StudentDetailDrawer } from "@/components/Students/StudentDetailDrawer"
 import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -51,12 +35,13 @@ export const Route = createFileRoute("/_layout/students")({
   }),
 })
 
-type ModalType = "edit" | "delete" | "freeze" | "unfreeze" | "restore" | "hardDelete" | "detail"
+type ModalType = "detail"
 type ModalState = { type: ModalType; student: StudentRead } | null
 
 function StudentsPage() {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser
+  const queryClient = useQueryClient()
 
   const [gradeFilter, setGradeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -65,6 +50,7 @@ function StudentsPage() {
   const pageSize = 20
   const [activeModal, setActiveModal] = useState<ModalState>(null)
   const [activeTab, setActiveTab] = useState("active")
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   const [deletedSearchQuery, setDeletedSearchQuery] = useState("")
   const [deletedCurrentPage, setDeletedCurrentPage] = useState(1)
@@ -76,6 +62,26 @@ function StudentsPage() {
     setActiveModal({ type, student })
   }, [])
   const closeModal = useCallback(() => setActiveModal(null), [])
+
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await studentsApi.sync()
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["students"] })
+      queryClient.invalidateQueries({ queryKey: ["deleted-students"] })
+      queryClient.invalidateQueries({ queryKey: ["grades"] })
+      setSyncMessage(
+        `${data.message}: ${data.students_created} ta yangi, ${data.students_updated} ta yangilandi (jami ${data.total_students})`,
+      )
+      setTimeout(() => setSyncMessage(null), 5000)
+    },
+    onError: (error) => {
+      setSyncMessage(extractErrorMessage(error, "Sinxronizatsiya xatosi"))
+      setTimeout(() => setSyncMessage(null), 5000)
+    },
+  })
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
   const grades: GradeRead[] = gradesData?.data ?? []
@@ -182,8 +188,30 @@ function StudentsPage() {
               )}
             </TabsList>
           </div>
-          {isAdmin && <AddStudent grades={grades} />}
+          {isAdmin && (
+            <Button
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+            >
+              {syncMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Payment'dan sinxronlash
+            </Button>
+          )}
         </div>
+
+        {syncMessage && (
+          <div className={`rounded-md px-4 py-3 text-sm ${
+            syncMutation.isError
+              ? "bg-destructive/10 text-destructive border border-destructive/20"
+              : "bg-green-50 text-green-700 border border-green-200"
+          }`}>
+            {syncMessage}
+          </div>
+        )}
 
         {/* Active students tab */}
         <TabsContent value="active" className="space-y-4 mt-0">
@@ -270,23 +298,18 @@ function StudentsPage() {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Holat
                   </th>
-                  {isAdmin && (
-                    <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
-                      Amallar
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={7} className="text-center py-8 text-muted-foreground">
                       Yuklanmoqda...
                     </td>
                   </tr>
                 ) : students.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 9 : 8} className="text-center py-12">
+                    <td colSpan={7} className="text-center py-12">
                       <GraduationCap className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                       <p className="text-muted-foreground">O'quvchilar topilmadi</p>
                     </td>
@@ -390,67 +413,6 @@ function StudentsPage() {
                           </span>
                         )}
                       </td>
-                      {isAdmin && (
-                        <td className="p-4 align-middle text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  openModal("edit", student)
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Tahrirlash
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {student.is_frozen ? (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    openModal("unfreeze", student)
-                                  }}
-                                  className="text-green-600"
-                                >
-                                  <Play className="mr-2 h-4 w-4" />
-                                  Faollashtirish
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    openModal("freeze", student)
-                                  }}
-                                  className="text-blue-600"
-                                >
-                                  <Snowflake className="mr-2 h-4 w-4" />
-                                  Muzlatish
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  openModal("delete", student)
-                                }}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                O'chirish
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      )}
                     </tr>
                   ))
                 )}
@@ -531,9 +493,6 @@ function StudentsPage() {
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                           O'chirilgan sana
                         </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
-                          Amallar
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -574,28 +533,6 @@ function StudentsPage() {
                           </td>
                           <td className="p-4 align-middle text-sm text-muted-foreground">
                             {student.deleted_at ?? "—"}
-                          </td>
-                          <td className="p-4 align-middle text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-green-600 border-green-600 hover:bg-green-50"
-                                onClick={() => openModal("restore", student)}
-                              >
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Tiklash
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-red-600 border-red-300 hover:bg-red-50"
-                                onClick={() => openModal("hardDelete", student)}
-                              >
-                                <AlertTriangle className="mr-2 h-4 w-4" />
-                                O'chirish
-                              </Button>
-                            </div>
                           </td>
                         </tr>
                       ))}
@@ -639,49 +576,6 @@ function StudentsPage() {
       </Tabs>
 
       {/* Modals */}
-      {activeModal?.type === "edit" && (
-        <EditStudent
-          student={activeModal.student}
-          grades={grades}
-          open
-          onOpenChange={(open) => !open && closeModal()}
-        />
-      )}
-      {activeModal?.type === "delete" && (
-        <DeleteStudent
-          student={activeModal.student}
-          open
-          onOpenChange={(open) => !open && closeModal()}
-        />
-      )}
-      {activeModal?.type === "freeze" && (
-        <FreezeStudent
-          student={activeModal.student}
-          open
-          onOpenChange={(open) => !open && closeModal()}
-        />
-      )}
-      {activeModal?.type === "unfreeze" && (
-        <UnfreezeStudent
-          student={activeModal.student}
-          open
-          onOpenChange={(open) => !open && closeModal()}
-        />
-      )}
-      {activeModal?.type === "restore" && (
-        <RestoreStudent
-          student={activeModal.student}
-          open
-          onOpenChange={(open) => !open && closeModal()}
-        />
-      )}
-      {activeModal?.type === "hardDelete" && (
-        <HardDeleteStudent
-          student={activeModal.student}
-          open
-          onOpenChange={(open) => !open && closeModal()}
-        />
-      )}
       <StudentDetailDrawer
         student={activeModal?.type === "detail" ? activeModal.student : null}
         open={activeModal?.type === "detail"}

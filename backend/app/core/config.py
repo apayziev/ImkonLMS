@@ -52,6 +52,11 @@ class EnvironmentSettings(BaseSettings):
     ENVIRONMENT: EnvironmentOption = EnvironmentOption.LOCAL
 
 
+class SyncSettings(BaseSettings):
+    PAYMENT_API_URL: str = "https://imkonschool.uz"
+    PAYMENT_SYNC_API_KEY: str = ""
+
+
 class CORSSettings(BaseSettings):
     CORS_ORIGINS_STR: str = "http://localhost:5173"
     CORS_METHODS: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
@@ -70,6 +75,7 @@ class Settings(
     FirstUserSettings,
     EnvironmentSettings,
     CORSSettings,
+    SyncSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

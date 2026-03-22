@@ -348,6 +348,15 @@ export const studentsApi = {
 
   hardDelete: (id: number) =>
     api.delete(`/api/v1/students/${id}/permanent`),
+
+  sync: () =>
+    api.post<{
+      message: string
+      grades_created: number
+      students_created: number
+      students_updated: number
+      total_students: number
+    }>("/api/v1/sync/students"),
 }
 
 // --- Error utility ---
