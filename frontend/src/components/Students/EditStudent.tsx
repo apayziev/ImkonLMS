@@ -5,6 +5,7 @@ import { type SubmitHandler, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import type { GradeRead, StudentRead } from "@/lib/api"
+import { DatePicker } from "@/components/ui/date-picker"
 import { extractErrorMessage, studentsApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
@@ -248,7 +249,10 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
                   <FormItem>
                     <FormLabel>Tug'ilgan sana</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} value={field.value || ""} />
+                      <DatePicker
+                        value={field.value}
+                        onChange={(date) => field.onChange(date ? date.toISOString().split("T")[0] : "")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -354,7 +358,10 @@ export function EditStudent({ student, grades, open, onOpenChange }: EditStudent
                 <FormItem>
                   <FormLabel>Qabul qilingan sana</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} value={field.value || ""} />
+                    <DatePicker
+                      value={field.value}
+                      onChange={(date) => field.onChange(date ? date.toISOString().split("T")[0] : "")}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

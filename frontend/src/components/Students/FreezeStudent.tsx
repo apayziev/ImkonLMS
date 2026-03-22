@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { Textarea } from "@/components/ui/textarea"
@@ -75,10 +75,9 @@ export function FreezeStudent({ student, open, onOpenChange }: FreezeStudentProp
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Maktabdan ketgan sana</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={departureDate}
-              onChange={(e) => setDepartureDate(e.target.value)}
+              onChange={(date) => setDepartureDate(date ? date.toISOString().split("T")[0] : "")}
             />
           </div>
           <div className="space-y-2">
@@ -191,10 +190,9 @@ export function UnfreezeStudent({ student, open, onOpenChange }: UnfreezeStudent
 
         <div className="space-y-2">
           <Label>Maktabga qaytib kelgan sana</Label>
-          <Input
-            type="date"
+          <DatePicker
             value={returnDate}
-            onChange={(e) => setReturnDate(e.target.value)}
+            onChange={(date) => setReturnDate(date ? date.toISOString().split("T")[0] : "")}
           />
           {returnDate && (
             <p className="text-sm text-muted-foreground">
