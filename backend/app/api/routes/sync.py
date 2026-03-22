@@ -1,6 +1,7 @@
 """Sync students and grades from Payment system (single source of truth)."""
 
 import logging
+from datetime import date, datetime
 
 import httpx
 from fastapi import APIRouter, HTTPException, status
@@ -17,6 +18,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sync", tags=["sync"])
 
 SYNC_TIMEOUT = 30.0
+
+# Fields that need date string -> date object conversion
+_DATE_FIELDS = {
+    "birth_date", "enrollment_date", "withdrawal_date",
+    "frozen_at", "departure_date", "return_date", "deleted_at",
+}
+
+
+def _parse_date(value: str | None) -> date | None:
+    """Convert ISO date string to date object."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
 
 
 @router.post("/students")
@@ -108,7 +125,7 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
             changed = False
             for field in sync_fields:
                 if field in ps:
-                    new_val = ps[field]
+                    new_val = _parse_date(ps[field]) if field in _DATE_FIELDS else ps[field]
                     if getattr(existing, field, None) != new_val:
                         setattr(existing, field, new_val)
                         changed = True
@@ -119,7 +136,10 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
                 students_updated += 1
         else:
             # Create new student
-            student_data = {f: ps.get(f) for f in sync_fields if f in ps}
+            student_data = {}
+            for f in sync_fields:
+                if f in ps:
+                    student_data[f] = _parse_date(ps[f]) if f in _DATE_FIELDS else ps[f]
             student_data["document_id"] = doc_id
             student_data["grade_id"] = lms_grade_id
             student_data["role"] = UserRole.STUDENT.value
