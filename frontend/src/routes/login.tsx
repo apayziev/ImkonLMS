@@ -34,7 +34,12 @@ function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>()
+  } = useForm<LoginForm>({
+    defaultValues: {
+      phone_number: "+998",
+      password: "",
+    },
+  })
 
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate({
