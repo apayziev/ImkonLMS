@@ -182,7 +182,7 @@ async def _sync_teachers(
 
     sync_fields = [
         "first_name", "last_name", "middle_name", "birth_date", "gender",
-        "phone_number", "photo_url", "is_active", "subjects",
+        "phone_number", "photo_url", "is_active", "is_deleted", "subjects",
     ]
 
     created = updated = 0
@@ -242,7 +242,7 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
 
     await db.commit()
 
-    return {
+    result = {
         "message": "Sinxronizatsiya muvaffaqiyatli yakunlandi",
         "grades_created": grades_created,
         "subjects_created": subjects_created,
@@ -253,3 +253,14 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
         "total_students": len(data.get("students", [])),
         "total_teachers": len(data.get("teachers", [])),
     }
+
+    logger.info(
+        "Sync completed by %s: grades=%d, subjects=%d, "
+        "students=%d/%d, teachers=%d/%d",
+        _current_user.document_id,
+        grades_created, subjects_created,
+        students_created, students_updated,
+        teachers_created, teachers_updated,
+    )
+
+    return result
