@@ -72,10 +72,15 @@ function StudentsPage() {
       queryClient.invalidateQueries({ queryKey: ["students"] })
       queryClient.invalidateQueries({ queryKey: ["deleted-students"] })
       queryClient.invalidateQueries({ queryKey: ["grades"] })
-      setSyncMessage(
-        `${data.message}: ${data.students_created} ta yangi, ${data.students_updated} ta yangilandi (jami ${data.total_students})`,
-      )
-      setTimeout(() => setSyncMessage(null), 5000)
+      queryClient.invalidateQueries({ queryKey: ["subjects"] })
+      const parts = [
+        `O'quvchilar: ${data.students_created} yangi, ${data.students_updated} yangilandi (${data.total_students})`,
+        `O'qituvchilar: ${data.teachers_created} yangi, ${data.teachers_updated} yangilandi (${data.total_teachers})`,
+        `Sinflar: ${data.grades_created} yangi`,
+        `Fanlar: ${data.subjects_created} yangi`,
+      ]
+      setSyncMessage(parts.join(" | "))
+      setTimeout(() => setSyncMessage(null), 8000)
     },
     onError: (error) => {
       setSyncMessage(extractErrorMessage(error, "Sinxronizatsiya xatosi"))

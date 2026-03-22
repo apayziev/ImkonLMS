@@ -4,6 +4,7 @@ from datetime import date
 from enum import Enum
 
 from sqlalchemy import Date, ForeignKey, Index, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -11,6 +12,7 @@ from .base import BaseModel
 
 class UserRole(str, Enum):
     ADMIN = "admin"
+    TEACHER = "teacher"
     STUDENT = "student"
 
 
@@ -86,6 +88,16 @@ class User(BaseModel):
     enrollment_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
     withdrawal_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
 
+    # === Teacher-specific fields ===
+    subjects: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None, kw_only=True)
+    class_teacher_grade_id: Mapped[int | None] = mapped_column(
+        ForeignKey("grade.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+        kw_only=True,
+    )
+
     # === Freeze fields ===
     is_frozen: Mapped[bool] = mapped_column(default=False, index=True, kw_only=True)
     frozen_at: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
@@ -97,6 +109,11 @@ class User(BaseModel):
     grade: Mapped["Grade | None"] = relationship(
         foreign_keys=[grade_id],
         back_populates="students",
+        default=None,
+        init=False,
+    )
+    class_teacher_grade: Mapped["Grade | None"] = relationship(
+        foreign_keys=[class_teacher_grade_id],
         default=None,
         init=False,
     )

@@ -1,4 +1,4 @@
-"""Sync students and grades from Payment system (single source of truth)."""
+"""Sync all shared data from Payment system (single source of truth)."""
 
 import logging
 from datetime import date, datetime
@@ -11,6 +11,7 @@ from app.api.deps import SessionDep, SuperUser
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.grade import Grade
+from app.models.subject import Subject
 from app.models.user import User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -36,22 +37,20 @@ def _parse_date(value: str | None) -> date | None:
         return None
 
 
-@router.post("/students")
-async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
-    """Pull grades and students from Payment and upsert into LMS."""
+async def _fetch_payment_data() -> dict:
+    """Fetch export data from Payment system."""
     if not settings.PAYMENT_SYNC_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Sinxronizatsiya sozlanmagan",
         )
 
-    # Fetch data from Payment
     url = f"{settings.PAYMENT_API_URL.rstrip('/')}/api/v1/sync/export"
     try:
         async with httpx.AsyncClient(timeout=SYNC_TIMEOUT) as client:
             resp = await client.get(url, headers={"X-Sync-Api-Key": settings.PAYMENT_SYNC_API_KEY})
             resp.raise_for_status()
-            data = resp.json()
+            return resp.json()
     except httpx.HTTPStatusError as e:
         logger.error("Payment sync HTTP error: %s", e.response.status_code)
         raise HTTPException(
@@ -65,17 +64,14 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
             detail="Payment tizimiga ulanib bo'lmadi",
         ) from e
 
-    payment_grades: list[dict] = data.get("grades", [])
-    payment_students: list[dict] = data.get("students", [])
 
-    # === Upsert Grades ===
-    # Build lookup: (level, section) -> LMS Grade
-    existing_grades = (await db.execute(select(Grade))).scalars().all()
-    grade_map: dict[tuple[int, str], Grade] = {(g.level, g.section): g for g in existing_grades}
+async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int, dict[int, int]]:
+    """Upsert grades and return (created_count, payment_id_to_lms_id_map)."""
+    existing = (await db.execute(select(Grade))).scalars().all()
+    grade_map: dict[tuple[int, str], Grade] = {(g.level, g.section): g for g in existing}
 
-    grades_created = 0
-    # Map Payment grade_id -> LMS grade_id
-    payment_to_lms_grade: dict[int, int] = {}
+    created = 0
+    payment_to_lms: dict[int, int] = {}
 
     for pg in payment_grades:
         key = (pg["level"], pg["section"])
@@ -86,20 +82,43 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
             db.add(lms_grade)
             await db.flush()
             grade_map[key] = lms_grade
-            grades_created += 1
-        payment_to_lms_grade[pg["id"]] = lms_grade.id
+            created += 1
+        payment_to_lms[pg["id"]] = lms_grade.id
 
-    # === Upsert Students ===
-    # Build lookup: document_id -> LMS User
-    existing_students_result = await db.execute(
+    return created, payment_to_lms
+
+
+async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> int:
+    """Upsert subjects by name. Returns created count."""
+    existing = (await db.execute(select(Subject))).scalars().all()
+    subject_map: dict[str, Subject] = {s.name: s for s in existing}
+
+    created = 0
+    for ps in payment_subjects:
+        name = ps.get("name")
+        if not name:
+            continue
+        if name not in subject_map:
+            new_subject = Subject(name=name)
+            db.add(new_subject)
+            subject_map[name] = new_subject
+            created += 1
+
+    await db.flush()
+    return created
+
+
+async def _sync_students(
+    db: SessionDep,
+    payment_students: list[dict],
+    grade_map: dict[int, int],
+) -> tuple[int, int]:
+    """Upsert students by document_id. Returns (created, updated)."""
+    existing_result = await db.execute(
         select(User).where(User.role == UserRole.STUDENT.value)
     )
-    student_map: dict[str, User] = {s.document_id: s for s in existing_students_result.scalars().all()}
+    student_map: dict[str, User] = {s.document_id: s for s in existing_result.scalars().all()}
 
-    students_created = 0
-    students_updated = 0
-
-    # Fields to sync from Payment -> LMS
     sync_fields = [
         "first_name", "last_name", "middle_name", "birth_date", "gender",
         "phone_number", "student_id",
@@ -110,18 +129,17 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
         "departure_date", "return_date", "is_deleted", "deleted_at",
     ]
 
+    created = updated = 0
+
     for ps in payment_students:
         doc_id = ps.get("document_id")
         if not doc_id:
             continue
 
-        # Resolve LMS grade_id from Payment grade_id
-        payment_grade_id = ps.get("grade_id")
-        lms_grade_id = payment_to_lms_grade.get(payment_grade_id) if payment_grade_id else None
-
+        lms_grade_id = grade_map.get(ps.get("grade_id")) if ps.get("grade_id") else None
         existing = student_map.get(doc_id)
+
         if existing:
-            # Update existing student
             changed = False
             for field in sync_fields:
                 if field in ps:
@@ -133,9 +151,8 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
                 existing.grade_id = lms_grade_id
                 changed = True
             if changed:
-                students_updated += 1
+                updated += 1
         else:
-            # Create new student
             student_data = {}
             for f in sync_fields:
                 if f in ps:
@@ -147,14 +164,92 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
             new_student = User(**student_data)
             db.add(new_student)
             student_map[doc_id] = new_student
-            students_created += 1
+            created += 1
+
+    return created, updated
+
+
+async def _sync_teachers(
+    db: SessionDep,
+    payment_teachers: list[dict],
+    grade_map: dict[int, int],
+) -> tuple[int, int]:
+    """Upsert teachers by document_id. Returns (created, updated)."""
+    existing_result = await db.execute(
+        select(User).where(User.role == UserRole.TEACHER.value)
+    )
+    teacher_map: dict[str, User] = {t.document_id: t for t in existing_result.scalars().all()}
+
+    sync_fields = [
+        "first_name", "last_name", "middle_name", "birth_date", "gender",
+        "phone_number", "photo_url", "is_active", "subjects",
+    ]
+
+    created = updated = 0
+
+    for pt in payment_teachers:
+        doc_id = pt.get("document_id")
+        if not doc_id:
+            continue
+
+        payment_ct_grade_id = pt.get("class_teacher_grade_id")
+        lms_ct_grade_id = grade_map.get(payment_ct_grade_id) if payment_ct_grade_id else None
+        existing = teacher_map.get(doc_id)
+
+        if existing:
+            changed = False
+            for field in sync_fields:
+                if field in pt:
+                    new_val = _parse_date(pt[field]) if field in _DATE_FIELDS else pt[field]
+                    if getattr(existing, field, None) != new_val:
+                        setattr(existing, field, new_val)
+                        changed = True
+            if existing.class_teacher_grade_id != lms_ct_grade_id:
+                existing.class_teacher_grade_id = lms_ct_grade_id
+                changed = True
+            if changed:
+                updated += 1
+        else:
+            teacher_data = {}
+            for f in sync_fields:
+                if f in pt:
+                    teacher_data[f] = _parse_date(pt[f]) if f in _DATE_FIELDS else pt[f]
+            teacher_data["document_id"] = doc_id
+            teacher_data["class_teacher_grade_id"] = lms_ct_grade_id
+            teacher_data["role"] = UserRole.TEACHER.value
+            teacher_data["hashed_password"] = get_password_hash(doc_id)
+            new_teacher = User(**teacher_data)
+            db.add(new_teacher)
+            teacher_map[doc_id] = new_teacher
+            created += 1
+
+    return created, updated
+
+
+@router.post("/all")
+async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
+    """Pull all shared data from Payment and upsert into LMS."""
+    data = await _fetch_payment_data()
+
+    grades_created, grade_map = await _sync_grades(db, data.get("grades", []))
+    subjects_created = await _sync_subjects(db, data.get("subjects", []))
+    students_created, students_updated = await _sync_students(
+        db, data.get("students", []), grade_map,
+    )
+    teachers_created, teachers_updated = await _sync_teachers(
+        db, data.get("teachers", []), grade_map,
+    )
 
     await db.commit()
 
     return {
         "message": "Sinxronizatsiya muvaffaqiyatli yakunlandi",
         "grades_created": grades_created,
+        "subjects_created": subjects_created,
         "students_created": students_created,
         "students_updated": students_updated,
-        "total_students": len(payment_students),
+        "teachers_created": teachers_created,
+        "teachers_updated": teachers_updated,
+        "total_students": len(data.get("students", [])),
+        "total_teachers": len(data.get("teachers", [])),
     }

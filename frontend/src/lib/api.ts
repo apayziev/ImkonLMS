@@ -353,10 +353,14 @@ export const studentsApi = {
     api.post<{
       message: string
       grades_created: number
+      subjects_created: number
       students_created: number
       students_updated: number
+      teachers_created: number
+      teachers_updated: number
       total_students: number
-    }>("/api/v1/sync/students"),
+      total_teachers: number
+    }>("/api/v1/sync/all"),
 }
 
 // --- Error utility ---
