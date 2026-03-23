@@ -4,19 +4,19 @@ import {
   GraduationCap,
   Loader2,
   RefreshCw,
-  Search,
   Snowflake,
   Trash2,
 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 
 import type { GradeRead, StudentRead } from "@/lib/api"
 import { extractErrorMessage, studentsApi } from "@/lib/api"
+import { SearchInput } from "@/components/Common/SearchInput"
+import { TablePagination } from "@/components/Common/TablePagination"
 import { StudentDetailDrawer } from "@/components/Students/StudentDetailDrawer"
 import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -26,7 +26,9 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
+import { formatDate } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
   component: StudentsPage,
@@ -47,16 +49,27 @@ function StudentsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 20
+  const [pageSize, setPageSize] = useState(10)
   const [activeModal, setActiveModal] = useState<ModalState>(null)
   const [activeTab, setActiveTab] = useState("active")
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   const [deletedSearchQuery, setDeletedSearchQuery] = useState("")
   const [deletedCurrentPage, setDeletedCurrentPage] = useState(1)
+  const [deletedPageSize, setDeletedPageSize] = useState(10)
 
-  const debouncedSearch = useDebounce(searchQuery, 300)
-  const debouncedDeletedSearch = useDebounce(deletedSearchQuery, 300)
+  const debouncedSearch = useDebouncedValue(searchQuery, 300)
+  const debouncedDeletedSearch = useDebouncedValue(deletedSearchQuery, 300)
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setCurrentPage(1)
+  }
+
+  const handleDeletedPageSizeChange = (size: number) => {
+    setDeletedPageSize(size)
+    setDeletedCurrentPage(1)
+  }
 
   const openModal = useCallback((type: ModalType, student: StudentRead) => {
     setActiveModal({ type, student })
@@ -110,11 +123,11 @@ function StudentsPage() {
   })
 
   const { data: deletedData, isLoading: isLoadingDeleted } = useQuery({
-    queryKey: ["deleted-students", debouncedDeletedSearch, deletedCurrentPage, pageSize],
+    queryKey: ["deleted-students", debouncedDeletedSearch, deletedCurrentPage, deletedPageSize],
     queryFn: async () => {
       const { data } = await studentsApi.deletedList({
-        skip: (deletedCurrentPage - 1) * pageSize,
-        limit: pageSize,
+        skip: (deletedCurrentPage - 1) * deletedPageSize,
+        limit: deletedPageSize,
         search: debouncedDeletedSearch || undefined,
       })
       return data
@@ -129,7 +142,7 @@ function StudentsPage() {
 
   const deletedStudents = deletedData?.data ?? []
   const deletedCount = deletedData?.count ?? 0
-  const deletedTotalPages = Math.ceil(deletedCount / pageSize)
+  const deletedTotalPages = Math.ceil(deletedCount / deletedPageSize)
 
   const getGradeName = (gradeId: number | null): string => {
     if (!gradeId) return "—"
@@ -156,7 +169,7 @@ function StudentsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -222,15 +235,12 @@ function StudentsPage() {
         <TabsContent value="active" className="space-y-4 mt-0">
           {/* Filters */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Ism, hujjat raqami yoki telefon..."
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            <SearchInput
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Ism, hujjat raqami yoki telefon..."
+              className="flex-1"
+            />
             <Select value={gradeFilter} onValueChange={handleGradeFilterChange}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Sinf tanlang" />
@@ -330,7 +340,7 @@ function StudentsPage() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                            <AvatarFallback className="bg-[#6720FF] text-white text-sm">
                               {student.full_name
                                 .split(" ")
                                 .map((n) => n[0])
@@ -352,11 +362,11 @@ function StudentsPage() {
                       </td>
                       <td className="p-4 align-middle">
                         {student.gender === "male" ? (
-                          <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">
+                          <span className="inline-flex items-center rounded-full bg-[#6720FF]/10 px-2.5 py-0.5 text-xs font-medium text-[#6720FF]">
                             O'g'il
                           </span>
                         ) : student.gender === "female" ? (
-                          <span className="inline-flex items-center rounded-full bg-pink-500/10 px-2.5 py-0.5 text-xs font-medium text-pink-600">
+                          <span className="inline-flex items-center rounded-full bg-[#4B0924]/10 px-2.5 py-0.5 text-xs font-medium text-[#4B0924]">
                             Qiz
                           </span>
                         ) : (
@@ -364,10 +374,12 @@ function StudentsPage() {
                         )}
                       </td>
                       <td className="p-4 align-middle text-sm text-muted-foreground">
-                        {student.birth_date ?? "—"}
+                        {student.birth_date
+                          ? formatDate(student.birth_date)
+                          : "—"}
                       </td>
                       <td className="p-4 align-middle">
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        <span className="inline-flex items-center rounded-full bg-[#6720FF]/20 px-2.5 py-0.5 text-xs font-medium text-[#6720FF]">
                           <GraduationCap className="mr-1 h-3 w-3" />
                           {getGradeName(student.grade_id)}
                         </span>
@@ -426,49 +438,27 @@ function StudentsPage() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Jami {totalCount} ta o'quvchi
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage((p) => p - 1)}
-                >
-                  Oldingi
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => p + 1)}
-                >
-                  Keyingi
-                </Button>
-              </div>
-            </div>
-          )}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
+            itemLabel="o'quvchi"
+          />
         </TabsContent>
 
         {/* Deleted students tab */}
         {isAdmin && (
           <TabsContent value="deleted" className="space-y-4 mt-0">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="O'chirilgan o'quvchini qidirish..."
-                  value={deletedSearchQuery}
-                  onChange={(e) => handleDeletedSearchChange(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+              <SearchInput
+                value={deletedSearchQuery}
+                onChange={handleDeletedSearchChange}
+                placeholder="O'chirilgan o'quvchini qidirish..."
+                className="flex-1"
+              />
             </div>
 
             {isLoadingDeleted ? (
@@ -546,34 +536,15 @@ function StudentsPage() {
                 </div>
 
                 {/* Deleted pagination */}
-                {deletedTotalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Jami {deletedCount} ta o'chirilgan o'quvchi
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deletedCurrentPage <= 1}
-                        onClick={() => setDeletedCurrentPage((p) => p - 1)}
-                      >
-                        Oldingi
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        {deletedCurrentPage} / {deletedTotalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deletedCurrentPage >= deletedTotalPages}
-                        onClick={() => setDeletedCurrentPage((p) => p + 1)}
-                      >
-                        Keyingi
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <TablePagination
+                  currentPage={deletedCurrentPage}
+                  totalPages={deletedTotalPages}
+                  totalItems={deletedCount}
+                  pageSize={deletedPageSize}
+                  onPageChange={setDeletedCurrentPage}
+                  onPageSizeChange={handleDeletedPageSizeChange}
+                  itemLabel="o'chirilgan o'quvchi"
+                />
               </>
             )}
           </TabsContent>
@@ -589,15 +560,4 @@ function StudentsPage() {
       />
     </div>
   )
-}
-
-function useDebounce(value: string, delay: number) {
-  const [debounced, setDebounced] = useState(value)
-
-  useEffect(() => {
-    const handler = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(handler)
-  }, [value, delay])
-
-  return debounced
 }
