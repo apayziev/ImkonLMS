@@ -238,7 +238,7 @@ function StudentsPage() {
             <SearchInput
               value={searchQuery}
               onChange={handleSearchChange}
-              placeholder="Ism, hujjat raqami yoki telefon..."
+              placeholder="Ism, familiya yoki hujjat raqami..."
               className="flex-1"
             />
             <Select value={gradeFilter} onValueChange={handleGradeFilterChange}>
@@ -494,7 +494,8 @@ function StudentsPage() {
                       {deletedStudents.map((student) => (
                         <tr
                           key={student.id}
-                          className="border-b transition-colors hover:bg-muted/50"
+                          className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                          onClick={() => openModal("detail", student)}
                         >
                           <td className="p-4 align-middle">
                             <div className="flex items-center gap-3">
@@ -527,7 +528,7 @@ function StudentsPage() {
                             </span>
                           </td>
                           <td className="p-4 align-middle text-sm text-muted-foreground">
-                            {student.deleted_at ?? "—"}
+                            {formatDate(student.deleted_at)}
                           </td>
                         </tr>
                       ))}
