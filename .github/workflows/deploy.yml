@@ -108,3 +108,27 @@ jobs:
           ssh_run "cd $DEPLOY_PATH && $DC ps"
           echo "Rollback completed. Old version restored."
           exit 1
+
+      - name: Notify success
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && exit 0
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d parse_mode="HTML" \
+            -d text="✅ <b>Imkon LMS deployed</b>%0A🌐 https://lms.imkonschool.uz%0A⏰ $(TZ=Asia/Tashkent date '+%H:%M %d/%m')" || true
+
+      - name: Notify failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && exit 0
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d parse_mode="HTML" \
+            -d text="❌ <b>Imkon LMS deploy failed!</b>%0A🔗 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}%0A⏰ $(TZ=Asia/Tashkent date '+%H:%M %d/%m')" || true
