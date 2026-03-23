@@ -115,9 +115,6 @@ export const loginApi = {
 
   loginStudent: (data: StudentLoginRequest) =>
     api.post<TokenResponse>("/api/v1/login/student", data),
-
-  refresh: () =>
-    api.post<{ access_token: string }>("/api/v1/login/refresh"),
 }
 
 export const usersApi = {
@@ -144,24 +141,9 @@ export interface GradeList {
   count: number
 }
 
-export interface GradeCreate {
-  level: number
-  section: string
-}
-
-export interface GradeUpdate {
-  level?: number
-  section?: string
-}
-
 export const gradesApi = {
   list: (skip = 0, limit = 100) =>
     api.get<GradeList>("/api/v1/grades/", { params: { skip, limit } }),
-  get: (id: number) => api.get<GradeRead>(`/api/v1/grades/${id}`),
-  create: (data: GradeCreate) => api.post<GradeRead>("/api/v1/grades/", data),
-  update: (id: number, data: GradeUpdate) =>
-    api.patch<GradeRead>(`/api/v1/grades/${id}`, data),
-  delete: (id: number) => api.delete(`/api/v1/grades/${id}`),
 }
 
 // --- Subject Types & API ---
@@ -181,29 +163,9 @@ export interface SubjectList {
   count: number
 }
 
-export interface SubjectCreate {
-  name: string
-  name_uz?: string | null
-  icon?: string | null
-  color?: string | null
-}
-
-export interface SubjectUpdate {
-  name?: string
-  name_uz?: string | null
-  icon?: string | null
-  color?: string | null
-}
-
 export const subjectsApi = {
   list: (skip = 0, limit = 100) =>
     api.get<SubjectList>("/api/v1/subjects/", { params: { skip, limit } }),
-  get: (id: number) => api.get<SubjectRead>(`/api/v1/subjects/${id}`),
-  create: (data: SubjectCreate) =>
-    api.post<SubjectRead>("/api/v1/subjects/", data),
-  update: (id: number, data: SubjectUpdate) =>
-    api.patch<SubjectRead>(`/api/v1/subjects/${id}`, data),
-  delete: (id: number) => api.delete(`/api/v1/subjects/${id}`),
 }
 
 // --- Student Types & API ---
@@ -247,60 +209,6 @@ export interface StudentList {
   count: number
 }
 
-export interface StudentCreate {
-  document_id: string
-  first_name: string
-  last_name: string
-  middle_name?: string | null
-  student_id?: string | null
-  grade_id?: number | null
-  birth_date?: string | null
-  gender?: string | null
-  phone_number?: string | null
-  father_first_name?: string | null
-  father_last_name?: string | null
-  father_phone?: string | null
-  mother_first_name?: string | null
-  mother_last_name?: string | null
-  mother_phone?: string | null
-  address?: string | null
-  enrollment_date?: string | null
-  withdrawal_date?: string | null
-}
-
-export interface StudentUpdate {
-  document_id?: string
-  first_name?: string
-  last_name?: string
-  middle_name?: string | null
-  student_id?: string | null
-  grade_id?: number | null
-  birth_date?: string | null
-  gender?: string | null
-  phone_number?: string | null
-  father_first_name?: string | null
-  father_last_name?: string | null
-  father_phone?: string | null
-  mother_first_name?: string | null
-  mother_last_name?: string | null
-  mother_phone?: string | null
-  address?: string | null
-  enrollment_date?: string | null
-  withdrawal_date?: string | null
-  is_active?: boolean
-}
-
-export interface StudentFreezeResponse {
-  id: number
-  full_name: string
-  is_frozen: boolean
-  frozen_at?: string | null
-  frozen_reason?: string | null
-  departure_date?: string | null
-  return_date?: string | null
-  message: string
-}
-
 export const studentsApi = {
   list: (params: {
     skip?: number
@@ -315,39 +223,6 @@ export const studentsApi = {
     limit?: number
     search?: string
   } = {}) => api.get<StudentList>("/api/v1/students/deleted/list", { params }),
-
-  get: (id: number) => api.get<StudentRead>(`/api/v1/students/${id}`),
-
-  create: (data: StudentCreate) =>
-    api.post<StudentRead>("/api/v1/students/", data),
-
-  update: (id: number, data: StudentUpdate) =>
-    api.patch<StudentRead>(`/api/v1/students/${id}`, data),
-
-  delete: (id: number) => api.delete(`/api/v1/students/${id}`),
-
-  uploadPhoto: (id: number, file: File) => {
-    const formData = new FormData()
-    formData.append("file", file)
-    return api.post<StudentRead>(`/api/v1/students/${id}/photo`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    })
-  },
-
-  deletePhoto: (id: number) =>
-    api.delete<StudentRead>(`/api/v1/students/${id}/photo`),
-
-  freeze: (id: number, data: { reason?: string | null; departure_date?: string | null }) =>
-    api.post<StudentFreezeResponse>(`/api/v1/students/${id}/freeze`, data),
-
-  unfreeze: (id: number, data: { return_date: string }) =>
-    api.post<StudentFreezeResponse>(`/api/v1/students/${id}/unfreeze`, data),
-
-  restore: (id: number) =>
-    api.post<StudentRead>(`/api/v1/students/${id}/restore`),
-
-  hardDelete: (id: number) =>
-    api.delete(`/api/v1/students/${id}/permanent`),
 
   sync: () =>
     api.post<{
