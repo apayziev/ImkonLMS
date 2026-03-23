@@ -1,21 +1,18 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import {
   GraduationCap,
-  Loader2,
-  RefreshCw,
   Snowflake,
 } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import type { GradeRead, StudentRead } from "@/lib/api"
-import { extractErrorMessage, studentsApi } from "@/lib/api"
+import { studentsApi } from "@/lib/api"
 import { SearchInput } from "@/components/Common/SearchInput"
 import { TablePagination } from "@/components/Common/TablePagination"
 import { StudentDetailDrawer } from "@/components/Students/StudentDetailDrawer"
 import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -23,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import useAuth from "@/hooks/useAuth"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 import { formatDate } from "@/lib/utils"
@@ -39,17 +35,12 @@ type ModalType = "detail"
 type ModalState = { type: ModalType; student: StudentRead } | null
 
 function StudentsPage() {
-  const { user } = useAuth()
-  const isAdmin = user?.is_superuser
-  const queryClient = useQueryClient()
-
   const [gradeFilter, setGradeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [activeModal, setActiveModal] = useState<ModalState>(null)
-  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(searchQuery, 300)
 
@@ -62,30 +53,6 @@ function StudentsPage() {
     setActiveModal({ type, student })
   }, [])
   const closeModal = useCallback(() => setActiveModal(null), [])
-
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await studentsApi.sync()
-      return data
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["students"] })
-      queryClient.invalidateQueries({ queryKey: ["grades"] })
-      queryClient.invalidateQueries({ queryKey: ["subjects"] })
-      const parts = [
-        `O'quvchilar: ${data.students_created} yangi, ${data.students_updated} yangilandi (${data.total_students})`,
-        `O'qituvchilar: ${data.teachers_created} yangi, ${data.teachers_updated} yangilandi (${data.total_teachers})`,
-        `Sinflar: ${data.grades_created} yangi`,
-        `Fanlar: ${data.subjects_created} yangi`,
-      ]
-      setSyncMessage(parts.join(" | "))
-      setTimeout(() => setSyncMessage(null), 8000)
-    },
-    onError: (error) => {
-      setSyncMessage(extractErrorMessage(error, "Sinxronizatsiya xatosi"))
-      setTimeout(() => setSyncMessage(null), 5000)
-    },
-  })
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
   const grades: GradeRead[] = gradesData?.data ?? []
@@ -134,45 +101,20 @@ function StudentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            O'quvchilar
-            {totalCount > 0 && (
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-                {totalCount}
-              </span>
-            )}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Sinf va o'quvchilar ma'lumotlari
-          </p>
-        </div>
-        {isAdmin && (
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-          >
-            {syncMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Payment'dan sinxronlash
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <GraduationCap className="h-6 w-6 text-primary" />
+          O'quvchilar
+          {totalCount > 0 && (
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
+              {totalCount}
+            </span>
+          )}
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Sinf va o'quvchilar ma'lumotlari
+        </p>
       </div>
-
-      {syncMessage && (
-        <div className={`rounded-md px-4 py-3 text-sm ${
-          syncMutation.isError
-            ? "bg-destructive/10 text-destructive border border-destructive/20"
-            : "bg-green-50 text-green-700 border border-green-200"
-        }`}>
-          {syncMessage}
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">

@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutStudentsRouteImport } from './routes/_layout/students'
+import { Route as LayoutTeachersRouteImport } from './routes/_layout/teachers'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -33,15 +34,22 @@ const LayoutStudentsRoute = LayoutStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutTeachersRoute = LayoutTeachersRouteImport.update({
+  id: '/teachers',
+  path: '/teachers',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/students': typeof LayoutStudentsRoute
+  '/teachers': typeof LayoutTeachersRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/students': typeof LayoutStudentsRoute
+  '/teachers': typeof LayoutTeachersRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
@@ -49,18 +57,20 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
   '/_layout/students': typeof LayoutStudentsRoute
+  '/_layout/teachers': typeof LayoutTeachersRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/students'
+  fullPaths: '/' | '/login' | '/students' | '/teachers'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/students' | '/'
+  to: '/login' | '/students' | '/teachers' | '/'
   id:
     | '__root__'
     | '/_layout'
     | '/login'
     | '/_layout/students'
+    | '/_layout/teachers'
     | '/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -99,16 +109,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutStudentsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/teachers': {
+      id: '/_layout/teachers'
+      path: '/teachers'
+      fullPath: '/teachers'
+      preLoaderRoute: typeof LayoutTeachersRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
   LayoutStudentsRoute: typeof LayoutStudentsRoute
+  LayoutTeachersRoute: typeof LayoutTeachersRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutStudentsRoute: LayoutStudentsRoute,
+  LayoutTeachersRoute: LayoutTeachersRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 

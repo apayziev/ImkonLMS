@@ -168,6 +168,37 @@ export const subjectsApi = {
     api.get<SubjectList>("/api/v1/subjects/", { params: { skip, limit } }),
 }
 
+// --- Teacher Types & API ---
+
+export interface TeacherRead {
+  id: number
+  document_id: string
+  first_name: string
+  last_name: string
+  middle_name: string | null
+  full_name: string
+  birth_date: string | null
+  gender: string | null
+  phone_number: string | null
+  photo_url: string | null
+  is_active: boolean
+  subjects: string[] | null
+  class_teacher_grade_id: number | null
+}
+
+export interface TeacherList {
+  data: TeacherRead[]
+  count: number
+}
+
+export const teachersApi = {
+  list: (params: {
+    skip?: number
+    limit?: number
+    search?: string
+  } = {}) => api.get<TeacherList>("/api/v1/teachers/", { params }),
+}
+
 // --- Student Types & API ---
 
 export interface StudentRead {
@@ -217,24 +248,4 @@ export const studentsApi = {
     search?: string
     status?: string
   } = {}) => api.get<StudentList>("/api/v1/students/", { params }),
-
-  sync: () =>
-    api.post<{
-      message: string
-      grades_created: number
-      subjects_created: number
-      students_created: number
-      students_updated: number
-      teachers_created: number
-      teachers_updated: number
-      total_students: number
-      total_teachers: number
-    }>("/api/v1/sync/all"),
-}
-
-// --- Error utility ---
-
-export function extractErrorMessage(error: unknown, fallback = "Xatolik yuz berdi"): string {
-  const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-  return detail || fallback
 }

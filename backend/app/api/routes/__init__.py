@@ -11,6 +11,7 @@ from .logout import router as logout_router
 from .students import router as students_router
 from .subjects import router as subjects_router
 from .sync import router as sync_router
+from .teachers import router as teachers_router
 from .users import router as users_router
 
 router = APIRouter(prefix="/v1")
@@ -25,4 +26,5 @@ router.include_router(users_router, dependencies=[Depends(get_current_user)])
 router.include_router(grades_router, dependencies=[Depends(get_current_user)])
 router.include_router(subjects_router, dependencies=[Depends(get_current_user)])
 router.include_router(students_router, dependencies=[Depends(get_current_user)])
+router.include_router(teachers_router, dependencies=[Depends(get_current_user)])
 router.include_router(sync_router, dependencies=[Depends(get_current_user)])

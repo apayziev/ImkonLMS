@@ -207,5 +207,44 @@ class CRUDUser(BaseCRUD[User]):
         await db.commit()
         return True
 
+    # === Teacher operations ===
+
+    async def get_teachers(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+    ) -> tuple[list[User], int]:
+        base = select(User).where(
+            User.role == UserRole.TEACHER.value,
+            User.is_deleted == False,  # noqa: E712
+        )
+
+        if search:
+            term = f"%{search}%"
+            base = base.where(
+                or_(
+                    User.first_name.ilike(term),
+                    User.last_name.ilike(term),
+                    User.document_id.ilike(term),
+                    User.phone_number.ilike(term),
+                )
+            )
+
+        count_q = select(func.count()).select_from(base.subquery())
+        total = (await db.execute(count_q)).scalar_one()
+
+        data_q = (
+            base.options(selectinload(User.class_teacher_grade))
+            .offset(skip)
+            .limit(limit)
+            .order_by(User.last_name, User.first_name)
+        )
+        rows = (await db.execute(data_q)).scalars().all()
+
+        return list(rows), total
+
 
 crud_users = CRUDUser(User)
