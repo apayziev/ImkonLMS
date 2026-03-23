@@ -78,7 +78,7 @@ function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Xush kelibsiz{user?.first_name ? `, ${user.first_name}` : ""}!
+          Salom, {user?.full_name || user?.first_name || "Foydalanuvchi"} 👋
         </h1>
         <p className="text-muted-foreground">
           IMKON LMS — O'quv boshqaruv tizimi

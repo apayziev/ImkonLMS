@@ -10,6 +10,7 @@ import type { GradeRead, StudentRead } from "@/lib/api"
 import { studentsApi } from "@/lib/api"
 import { SearchInput } from "@/components/Common/SearchInput"
 import { TablePagination } from "@/components/Common/TablePagination"
+import { Skeleton } from "@/components/ui/skeleton"
 import { StudentDetailDrawer } from "@/components/Students/StudentDetailDrawer"
 import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -200,11 +201,17 @@ function StudentsPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Yuklanmoqda...
-                </td>
-              </tr>
+              Array.from({ length: 5 }, (_, i) => (
+                <tr key={i} className="border-b">
+                  <td className="p-4"><Skeleton className="h-4 w-8" /></td>
+                  <td className="p-4"><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-32" /></div></td>
+                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                  <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                  <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                  <td className="p-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                </tr>
+              ))
             ) : students.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-12">
