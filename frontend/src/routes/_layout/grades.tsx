@@ -1,13 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  Edit,
-  GraduationCap,
-  MoreHorizontal,
-  Trash2,
-  Users,
-} from "lucide-react"
-import { Suspense, useState } from "react"
+import { GraduationCap, Users } from "lucide-react"
+import { Suspense } from "react"
 import { type GradeRead } from "@/lib/api"
 import { AnimatedNumber } from "@/components/Common/AnimatedNumber"
 import {
@@ -16,11 +10,7 @@ import {
   PatternCardHeader,
   PatternCardTitle,
 } from "@/components/Common/PatternCard"
-import { AddGrade } from "@/components/Grades/AddGrade"
-import { DeleteGrade } from "@/components/Grades/DeleteGrade"
-import { EditGrade } from "@/components/Grades/EditGrade"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -28,14 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
-import useAuth from "@/hooks/useAuth"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 
 const PATTERN_GREEN = "/images/patterns/Patterns-03.png"
@@ -80,10 +63,7 @@ function GradesContentSkeleton() {
   )
 }
 
-function GradesContent({ isAdmin }: { isAdmin: boolean }) {
-  const [editingGrade, setEditingGrade] = useState<GradeRead | null>(null)
-  const [deletingGrade, setDeletingGrade] = useState<GradeRead | null>(null)
-
+function GradesContent() {
   const { data: grades } = useSuspenseQuery(getGradesQueryOptions())
 
   if (grades.data.length === 0) {
@@ -115,7 +95,6 @@ function GradesContent({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2">
         <PatternCard>
           <PatternCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -149,7 +128,6 @@ function GradesContent({ isAdmin }: { isAdmin: boolean }) {
         </PatternCard>
       </div>
 
-      {/* Compact Grades Grid */}
       <Card>
         <CardHeader>
           <CardTitle>Sinflar ro'yxati</CardTitle>
@@ -200,97 +178,28 @@ function GradesContent({ isAdmin }: { isAdmin: boolean }) {
                         </Badge>
                       ))}
                   </div>
-                  {isAdmin && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <AddGrade defaultLevel={level} variant="compact" />
-                        <DropdownMenuSeparator />
-                        {levelGrades.map((grade) => {
-                          const sectionName =
-                            level === 0
-                              ? `Bog'cha ${grade.section}`
-                              : `${level}-${grade.section}`
-                          return (
-                            <div
-                              key={grade.id}
-                              className="flex items-center px-2 py-1 gap-1"
-                            >
-                              <span className="text-sm font-medium w-16">
-                                {sectionName}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setEditingGrade(grade)}
-                              >
-                                <Edit className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => setDeletingGrade(grade)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
                 </div>
               )
             })}
           </div>
         </CardContent>
       </Card>
-
-      {/* Edit Dialog */}
-      {editingGrade && (
-        <EditGrade
-          grade={editingGrade}
-          open={!!editingGrade}
-          onOpenChange={(open) => !open && setEditingGrade(null)}
-        />
-      )}
-
-      {/* Delete Dialog */}
-      {deletingGrade && (
-        <DeleteGrade
-          grade={deletingGrade}
-          open={!!deletingGrade}
-          onOpenChange={(open) => !open && setDeletingGrade(null)}
-        />
-      )}
     </>
   )
 }
 
 function GradesPage() {
-  const { user: currentUser } = useAuth()
-  const isAdmin = currentUser?.is_superuser
-
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Sinflar</h1>
-          <p className="text-muted-foreground">
-            Maktab sinflari va o'quvchilar soni
-          </p>
-        </div>
-        {isAdmin && <AddGrade />}
+      <div>
+        <h1 className="text-2xl font-bold">Sinflar</h1>
+        <p className="text-muted-foreground">
+          Maktab sinflari va o'quvchilar soni
+        </p>
       </div>
 
       <Suspense fallback={<GradesContentSkeleton />}>
-        <GradesContent isAdmin={isAdmin || false} />
+        <GradesContent />
       </Suspense>
     </div>
   )

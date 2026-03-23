@@ -11,9 +11,12 @@ from sqlalchemy import text
 from app.models import *  # noqa: F403
 
 from .config import EnvironmentOption, settings
-from .db import async_engine as engine
+from .db import async_engine as engine, local_session
 
 logger = logging.getLogger(__name__)
+
+AUTO_SYNC_INTERVAL = 15 * 60  # 15 minutes
+AUTO_SYNC_INITIAL_DELAY = 60  # 1 minute after startup
 
 
 async def check_database_connection() -> None:
@@ -38,10 +41,47 @@ async def check_database_connection() -> None:
             await anyio.sleep(retry_delay)
 
 
+async def _auto_sync_loop() -> None:
+    """Background loop that syncs from Payment every AUTO_SYNC_INTERVAL seconds."""
+    from app.api.routes.sync import run_sync, _save_sync_log
+
+    await asyncio.sleep(AUTO_SYNC_INITIAL_DELAY)
+    logger.info("Auto-sync started (interval=%ds)", AUTO_SYNC_INTERVAL)
+
+    while True:
+        try:
+            async with local_session() as db:
+                await run_sync(db, triggered_by="auto")
+        except asyncio.CancelledError:
+            logger.info("Auto-sync stopped")
+            return
+        except Exception as e:
+            logger.error("Auto-sync failed: %s", e)
+            try:
+                async with local_session() as db:
+                    await _save_sync_log(db, status="failed", error_message=str(e)[:500], triggered_by="auto")
+            except Exception:
+                logger.error("Failed to save sync error log", exc_info=True)
+
+        await asyncio.sleep(AUTO_SYNC_INTERVAL)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     await check_database_connection()
+
+    sync_task = None
+    if settings.PAYMENT_SYNC_API_KEY:
+        sync_task = asyncio.create_task(_auto_sync_loop())
+
     yield
+
+    if sync_task:
+        sync_task.cancel()
+        try:
+            await sync_task
+        except asyncio.CancelledError:
+            pass
 
 
 def create_application(router: APIRouter) -> FastAPI:

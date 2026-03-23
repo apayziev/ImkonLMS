@@ -1,17 +1,19 @@
 """Sync all shared data from Payment system (single source of truth)."""
 
 import logging
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 import httpx
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import SessionDep, SuperUser
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.grade import Grade
 from app.models.subject import Subject
+from app.models.sync_log import SyncLog
 from app.models.user import User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -37,8 +39,8 @@ def _parse_date(value: str | None) -> date | None:
         return None
 
 
-async def _fetch_payment_data() -> dict:
-    """Fetch export data from Payment system."""
+async def _fetch_payment_data(updated_after: datetime | None = None) -> dict:
+    """Fetch export data from Payment system. Pass updated_after for incremental sync."""
     if not settings.PAYMENT_SYNC_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -46,9 +48,17 @@ async def _fetch_payment_data() -> dict:
         )
 
     url = f"{settings.PAYMENT_API_URL.rstrip('/')}/api/v1/sync/export"
+    params = {}
+    if updated_after:
+        params["updated_after"] = updated_after.isoformat()
+
     try:
         async with httpx.AsyncClient(timeout=SYNC_TIMEOUT) as client:
-            resp = await client.get(url, headers={"X-Sync-Api-Key": settings.PAYMENT_SYNC_API_KEY})
+            resp = await client.get(
+                url,
+                headers={"X-Sync-Api-Key": settings.PAYMENT_SYNC_API_KEY},
+                params=params,
+            )
             resp.raise_for_status()
             return resp.json()
     except httpx.HTTPStatusError as e:
@@ -226,10 +236,35 @@ async def _sync_teachers(
     return created, updated
 
 
-@router.post("/all")
-async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
-    """Pull all shared data from Payment and upsert into LMS."""
-    data = await _fetch_payment_data()
+async def _get_last_successful_sync(db: AsyncSession) -> datetime | None:
+    """Get the timestamp of the last successful sync."""
+    result = await db.execute(
+        select(SyncLog.synced_at)
+        .where(SyncLog.status == "success")
+        .order_by(SyncLog.synced_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _save_sync_log(
+    db: AsyncSession,
+    *,
+    status: str,
+    stats: dict | None = None,
+    error_message: str | None = None,
+    triggered_by: str = "manual",
+) -> None:
+    """Save sync attempt to log."""
+    log = SyncLog(status=status, stats=stats, error_message=error_message, triggered_by=triggered_by)
+    db.add(log)
+    await db.commit()
+
+
+async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
+    """Core sync logic — reused by manual endpoint and auto-sync task."""
+    last_sync = await _get_last_successful_sync(db)
+    data = await _fetch_payment_data(updated_after=last_sync)
 
     grades_created, grade_map = await _sync_grades(db, data.get("grades", []))
     subjects_created = await _sync_subjects(db, data.get("subjects", []))
@@ -244,6 +279,8 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
 
     result = {
         "message": "Sinxronizatsiya muvaffaqiyatli yakunlandi",
+        "incremental": last_sync is not None,
+        "updated_after": last_sync.isoformat() if last_sync else None,
         "grades_created": grades_created,
         "subjects_created": subjects_created,
         "students_created": students_created,
@@ -254,13 +291,46 @@ async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
         "total_teachers": len(data.get("teachers", [])),
     }
 
+    await _save_sync_log(db, status="success", stats=result, triggered_by=triggered_by)
+
     logger.info(
-        "Sync completed by %s: grades=%d, subjects=%d, "
+        "Sync completed (%s, %s): grades=%d, subjects=%d, "
         "students=%d/%d, teachers=%d/%d",
-        _current_user.document_id,
+        triggered_by,
+        "incremental" if last_sync else "full",
         grades_created, subjects_created,
         students_created, students_updated,
         teachers_created, teachers_updated,
     )
 
     return result
+
+
+@router.post("/all")
+async def sync_from_payment(db: SessionDep, _current_user: SuperUser) -> dict:
+    """Pull all shared data from Payment and upsert into LMS."""
+    return await run_sync(db, triggered_by=f"manual:{_current_user.document_id}")
+
+
+@router.get("/status")
+async def sync_status(db: SessionDep, _current_user: SuperUser) -> dict:
+    """Get last sync status and history."""
+    result = await db.execute(
+        select(SyncLog).order_by(SyncLog.synced_at.desc()).limit(5)
+    )
+    logs = result.scalars().all()
+
+    return {
+        "last_synced_at": logs[0].synced_at.isoformat() if logs else None,
+        "last_status": logs[0].status if logs else None,
+        "history": [
+            {
+                "synced_at": log.synced_at.isoformat(),
+                "status": log.status,
+                "triggered_by": log.triggered_by,
+                "stats": log.stats,
+                "error_message": log.error_message,
+            }
+            for log in logs
+        ],
+    }
