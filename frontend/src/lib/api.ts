@@ -218,12 +218,6 @@ export const studentsApi = {
     status?: string
   } = {}) => api.get<StudentList>("/api/v1/students/", { params }),
 
-  deletedList: (params: {
-    skip?: number
-    limit?: number
-    search?: string
-  } = {}) => api.get<StudentList>("/api/v1/students/deleted/list", { params }),
-
   sync: () =>
     api.post<{
       message: string
