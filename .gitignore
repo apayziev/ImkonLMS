@@ -29,4 +29,5 @@ app/logs/
 node_modules/
 
 # Docker
-backups/
+backups/*.sql
+backups/*.sql.gz
