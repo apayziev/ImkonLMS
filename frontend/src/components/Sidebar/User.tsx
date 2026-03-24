@@ -1,7 +1,7 @@
 import { ChevronsUpDown, LogOut } from "lucide-react"
 
 import type { UserRead } from "@/lib/api"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,20 +17,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
+import { getInitials } from "@/lib/utils"
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-function UserInfo({ fullName }: { fullName?: string | null }) {
+function UserInfo({ fullName, photoUrl }: { fullName?: string | null; photoUrl?: string | null }) {
   return (
     <div className="flex items-center gap-2.5 w-full min-w-0">
       <Avatar className="size-8 ring-2 ring-white/20">
+        <AvatarImage src={photoUrl || undefined} alt={fullName || "User"} />
         <AvatarFallback className="bg-white/20 text-white font-semibold">
           {getInitials(fullName || "User")}
         </AvatarFallback>
@@ -63,13 +56,14 @@ export function User({ user }: { user: UserRead }) {
             >
               {isCollapsed ? (
                 <Avatar className="size-8 ring-2 ring-white/20">
+                  <AvatarImage src={user.photo_url || undefined} alt={user.full_name || "User"} />
                   <AvatarFallback className="bg-white/20 text-white font-semibold">
                     {getInitials(user.full_name || "User")}
                   </AvatarFallback>
                 </Avatar>
               ) : (
                 <>
-                  <UserInfo fullName={user.full_name} />
+                  <UserInfo fullName={user.full_name} photoUrl={user.photo_url} />
                   <ChevronsUpDown className="ml-auto size-4 text-white/60" />
                 </>
               )}
@@ -82,7 +76,7 @@ export function User({ user }: { user: UserRead }) {
             sideOffset={4}
           >
             <DropdownMenuLabel className="p-0 font-normal">
-              <UserInfo fullName={user.full_name} />
+              <UserInfo fullName={user.full_name} photoUrl={user.photo_url} />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
