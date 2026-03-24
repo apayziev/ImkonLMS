@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column("long_break_after_period", sa.SmallInteger(), nullable=False, server_default="3"),
         sa.Column("periods_per_day", sa.SmallInteger(), nullable=False, server_default="6"),
         sa.Column("working_days", sa.ARRAY(sa.SmallInteger()), nullable=False, server_default="{1,2,3,4,5,6}"),
+        sa.Column("break_names", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("current_timestamp(0)"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("current_timestamp(0)"), nullable=True),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),

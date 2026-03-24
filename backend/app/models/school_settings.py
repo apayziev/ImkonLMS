@@ -1,4 +1,4 @@
-from sqlalchemy import SmallInteger, String
+from sqlalchemy import JSON, SmallInteger, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,4 +18,7 @@ class SchoolSettings(BaseModel):
     periods_per_day: Mapped[int] = mapped_column(SmallInteger, default=6, kw_only=True)
     working_days: Mapped[list[int]] = mapped_column(
         ARRAY(SmallInteger), default_factory=lambda: [1, 2, 3, 4, 5, 6], kw_only=True
+    )
+    break_names: Mapped[dict] = mapped_column(
+        JSON, default_factory=dict, kw_only=True
     )

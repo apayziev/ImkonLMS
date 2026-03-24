@@ -22,7 +22,6 @@ from app.schemas.timetable import (
     SchoolSettingsRead,
     SchoolSettingsUpdate,
     TimeSlotCreate,
-    TimeSlotGenerate,
     TimeSlotList,
     TimeSlotRead,
 )
@@ -151,65 +150,6 @@ async def delete_time_slot(slot_id: int, db: SessionDep, admin: SuperUser) -> No
     deleted = await crud_time_slots.delete(db, id=slot_id, is_deleted=False)
     if not deleted:
         raise NotFoundException("Dars vaqti topilmadi")
-
-
-@router.post("/time-slots/generate", response_model=TimeSlotList, status_code=201)
-async def generate_time_slots(
-    body: TimeSlotGenerate, db: SessionDep, admin: SuperUser,
-) -> Any:
-    """Auto-generate time slots from school settings."""
-    settings = await _get_or_create_settings(db)
-
-    # Soft-delete existing time slots for this academic year
-    existing = await crud_time_slots.get_multi(
-        db, academic_year_id=body.academic_year_id, is_deleted=False, limit=20,
-    )
-    for slot in existing["data"]:
-        await crud_time_slots.delete(db, id=slot.id, is_deleted=False)
-
-    # Calculate new time slots
-    h, m = (int(x) for x in body.start_time.split(":"))
-    current = h * 60 + m
-    slots: list[TimeSlot] = []
-
-    for period in range(1, settings.periods_per_day + 1):
-        sh, sm = divmod(current, 60)
-        end = current + settings.lesson_duration_minutes
-        eh, em = divmod(end, 60)
-
-        slot = TimeSlot(
-            academic_year_id=body.academic_year_id,
-            period_number=period,
-            start_time=time(sh, sm),
-            end_time=time(eh, em),
-        )
-        db.add(slot)
-        slots.append(slot)
-
-        if period == settings.long_break_after_period:
-            current = end + settings.long_break_minutes
-        else:
-            current = end + settings.short_break_minutes
-
-    await db.commit()
-    for s in slots:
-        await db.refresh(s)
-
-    return TimeSlotList(
-        data=[
-            TimeSlotRead(
-                id=s.id,
-                academic_year_id=s.academic_year_id,
-                period_number=s.period_number,
-                start_time=_format_time(s.start_time),
-                end_time=_format_time(s.end_time),
-                created_at=s.created_at,
-                updated_at=s.updated_at,
-            )
-            for s in slots
-        ],
-        count=len(slots),
-    )
 
 
 # ─── Schedule Entries ────────────────────────────────────────────────────────

@@ -278,6 +278,7 @@ export interface SchoolSettingsRead {
   long_break_after_period: number
   periods_per_day: number
   working_days: number[]
+  break_names: Record<string, string>
   created_at: string
   updated_at: string | null
 }
@@ -289,6 +290,7 @@ export interface SchoolSettingsUpdate {
   long_break_after_period?: number
   periods_per_day?: number
   working_days?: number[]
+  break_names?: Record<string, string>
 }
 
 // --- TimeSlot Types & API ---
@@ -349,8 +351,6 @@ export const timetableApi = {
     }),
   createTimeSlot: (data: { academic_year_id: number; period_number: number; start_time: string; end_time: string }) =>
     api.post<TimeSlotRead>("/api/v1/timetable/time-slots", data),
-  generateTimeSlots: (data: { academic_year_id: number; start_time: string }) =>
-    api.post<TimeSlotList>("/api/v1/timetable/time-slots/generate", data),
   deleteTimeSlot: (id: number) =>
     api.delete(`/api/v1/timetable/time-slots/${id}`),
 

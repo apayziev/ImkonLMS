@@ -15,6 +15,7 @@ class SchoolSettingsUpdate(BaseModel):
     long_break_after_period: int | None = Field(default=None, ge=1, le=10)
     periods_per_day: int | None = Field(default=None, ge=1, le=12)
     working_days: list[int] | None = Field(default=None, min_length=1, max_length=7)
+    break_names: dict[str, str] | None = None
 
 
 class SchoolSettingsRead(TimestampSchema):
@@ -27,6 +28,7 @@ class SchoolSettingsRead(TimestampSchema):
     long_break_after_period: int
     periods_per_day: int
     working_days: list[int]
+    break_names: dict[str, str]
 
 
 # --- TimeSlot ---
@@ -39,9 +41,6 @@ class TimeSlotCreate(BaseModel):
     end_time: str = Field(pattern=r"^\d{2}:\d{2}$")
 
 
-class TimeSlotGenerate(BaseModel):
-    academic_year_id: int
-    start_time: str = Field(default="08:00", pattern=r"^\d{2}:\d{2}$")
 
 
 class TimeSlotRead(TimestampSchema):
