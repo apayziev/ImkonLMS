@@ -103,31 +103,24 @@ function TimetablePage() {
       }
     }
 
-    // Barchasi — o'qituvchilar kesimida, sinflarga ajratilgan
-    const teacherMap = new Map<string, Map<string, number>>()
-    const gradeSet = new Set<string>()
+    // Barchasi — umumiy statistika: sinflar kesimida
+    const gradeMap = new Map<string, number>()
+    const teacherSet = new Set<string>()
     for (const e of entries) {
-      const teacher = e.teacher_name ?? "Noma'lum"
       const grade = e.grade_display ?? "—"
-      gradeSet.add(grade)
-      if (!teacherMap.has(teacher)) teacherMap.set(teacher, new Map())
-      const gMap = teacherMap.get(teacher)!
-      gMap.set(grade, (gMap.get(grade) ?? 0) + 1)
+      gradeMap.set(grade, (gradeMap.get(grade) ?? 0) + 1)
+      if (e.teacher_name) teacherSet.add(e.teacher_name)
     }
-    const gradeColumns = [...gradeSet].sort()
-    const rows = [...teacherMap.entries()]
-      .map(([name, gMap]) => {
-        const byGrade = gradeColumns.map((g) => gMap.get(g) ?? 0)
-        const total = byGrade.reduce((s, v) => s + v, 0)
-        return { name, byGrade, total }
-      })
-      .sort((a, b) => b.total - a.total)
+    const gradeRows = [...gradeMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }))
 
     return {
       mode: "all" as const,
       total: entries.length,
-      gradeColumns,
-      rows,
+      teacherCount: teacherSet.size,
+      gradeCount: gradeMap.size,
+      gradeRows,
     }
   }, [entries, gradeFilter, grades])
 
@@ -201,6 +194,16 @@ function TimetablePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {statsData && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStatsOpen(true)}
+            >
+              <Info className="h-4 w-4 mr-1.5" />
+              Batafsil
+            </Button>
+          )}
           {isAdmin && (
             <Button
               variant="outline"
@@ -273,32 +276,19 @@ function TimetablePage() {
         ))}
       </div>
 
-      {/* ─── Batafsil ma'lumot tugmasi ─── */}
-      {statsData && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setStatsOpen(true)}
-        >
-          <Info className="h-4 w-4 mr-1.5" />
-          Batafsil ma'lumot
-          <span className="text-xs text-muted-foreground font-normal ml-1.5">
-            ({statsData.total} ta dars)
-          </span>
-        </Button>
-      )}
-
       {/* ─── Batafsil Sheet ─── */}
       <Sheet open={statsOpen} onOpenChange={setStatsOpen}>
         <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
               {statsData?.mode === "grade"
-                ? `${statsData.gradeName} — Haftalik dars soatlari`
-                : "O'qituvchilar dars yuklama jadvali"}
+                ? `${statsData.gradeName} — Haftalik jadval`
+                : "Umumiy statistika"}
             </SheetTitle>
             <SheetDescription>
-              Jami {statsData?.total ?? 0} ta dars
+              {statsData?.mode === "all"
+                ? `${statsData.total} ta dars · ${statsData.teacherCount} o'qituvchi · ${statsData.gradeCount} sinf`
+                : `Jami ${statsData?.total ?? 0} ta dars`}
             </SheetDescription>
           </SheetHeader>
 
@@ -329,30 +319,26 @@ function TimetablePage() {
               </table>
             </div>
           ) : statsData?.mode === "all" ? (
-            /* ── Barchasi: o'qituvchilar × sinflar jadvali ── */
-            <div className="rounded-lg border overflow-hidden overflow-x-auto">
+            /* ── Barchasi: sinflar kesimida ── */
+            <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/40 border-b">
-                    <th className="text-left px-3 py-2 font-medium sticky left-0 bg-muted/40">O'qituvchi</th>
-                    {statsData.gradeColumns.map((g) => (
-                      <th key={g} className="text-center px-2 py-2 font-medium whitespace-nowrap">{g}</th>
-                    ))}
-                    <th className="text-center px-3 py-2 font-medium">Jami</th>
+                    <th className="text-left px-3 py-2 font-medium">Sinf</th>
+                    <th className="text-center px-3 py-2 font-medium w-32">Haftalik dars soni</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {statsData.rows.map((r) => (
+                  {statsData.gradeRows.map((r) => (
                     <tr key={r.name} className="border-b last:border-0">
-                      <td className="px-3 py-1.5 whitespace-nowrap sticky left-0 bg-background">{r.name}</td>
-                      {r.byGrade.map((v, i) => (
-                        <td key={statsData.gradeColumns[i]} className="text-center px-2 py-1.5 text-muted-foreground">
-                          {v || "—"}
-                        </td>
-                      ))}
-                      <td className="text-center px-3 py-1.5 font-medium">{r.total}</td>
+                      <td className="px-3 py-1.5">{r.name}</td>
+                      <td className="px-3 py-1.5 text-center font-medium">{r.count}</td>
                     </tr>
                   ))}
+                  <tr className="bg-muted/30 font-medium">
+                    <td className="px-3 py-1.5">Jami</td>
+                    <td className="px-3 py-1.5 text-center">{statsData.total}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
