@@ -28,9 +28,12 @@ export function AnimatedNumber({
       const elapsed = currentTime - startTime
       const progress = Math.min(elapsed / duration, 1)
 
-      const easeOut = 1 - Math.pow(1 - progress, 3)
+      // Easing function - ease out cubic
+      const easeOut = 1 - (1 - progress) ** 3
 
-      const currentValue = Math.round(startValue + (endValue - startValue) * easeOut)
+      const currentValue = Math.round(
+        startValue + (endValue - startValue) * easeOut,
+      )
       setDisplayValue(currentValue)
 
       if (progress < 1) {
@@ -51,7 +54,9 @@ export function AnimatedNumber({
 
   return (
     <span className={className}>
-      {prefix}{displayValue.toLocaleString()}{suffix}
+      {prefix}
+      {displayValue.toLocaleString()}
+      {suffix}
     </span>
   )
 }
