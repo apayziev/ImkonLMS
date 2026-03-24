@@ -72,16 +72,6 @@ def _entry_to_read(entry: ScheduleEntry) -> ScheduleEntryRead:
     )
 
 
-def _parse_conflict_message(exc: Exception) -> str:
-    """Extract constraint name from DB error to give a clear message."""
-    msg = str(exc)
-    if "uq_schedule_teacher_day_slot" in msg:
-        return "Bu o'qituvchi shu kuni shu vaqtda boshqa sinfda band"
-    if "uq_schedule_grade_day_slot" in msg:
-        return "Bu sinfda shu kuni shu vaqtda allaqachon dars mavjud"
-    return "Bu vaqtda sinf yoki o'qituvchi band"
-
-
 # ─── School Settings ───────────────────────────────────────────────────────
 
 
@@ -350,7 +340,7 @@ async def create_schedule_entry(
         await db.flush()
     except Exception as exc:
         await db.rollback()
-        raise DuplicateValueException(_parse_conflict_message(exc)) from exc
+        raise DuplicateValueException("Bu vaqtda sinf yoki o'qituvchi band") from exc
 
     await db.commit()
 
@@ -389,7 +379,7 @@ async def update_schedule_entry(
         await db.flush()
     except Exception as exc:
         await db.rollback()
-        raise DuplicateValueException(_parse_conflict_message(exc)) from exc
+        raise DuplicateValueException("Bu vaqtda sinf yoki o'qituvchi band") from exc
 
     await db.commit()
 
