@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CalendarDays, ChevronDown, Info, Loader2, Settings, Trash2 } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import type React from "react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -272,81 +273,92 @@ function TimetablePage() {
         ))}
       </div>
 
-      {/* ─── Batafsil ma'lumot ─── */}
+      {/* ─── Batafsil ma'lumot tugmasi ─── */}
       {statsData && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setStatsOpen((o) => !o)}
-            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Info className="h-4 w-4" />
-            Batafsil ma'lumot
-            <ChevronDown className={`h-4 w-4 transition-transform ${statsOpen ? "rotate-180" : ""}`} />
-            <span className="text-xs font-normal ml-1">
-              (Jami {statsData.total} ta dars)
-            </span>
-          </button>
-
-          {statsOpen && (
-            <div className="mt-3 rounded-lg border overflow-hidden">
-              {statsData.mode === "grade" ? (
-                /* ── Sinf tanlangan: fanlar jadvali ── */
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-muted/40 border-b">
-                      <th className="text-left px-3 py-2 font-medium">Fan</th>
-                      <th className="text-left px-3 py-2 font-medium">O'qituvchi</th>
-                      <th className="text-center px-3 py-2 font-medium w-24">Haftalik soat</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {statsData.subjects.map((s) => (
-                      <tr key={s.name} className="border-b last:border-0">
-                        <td className="px-3 py-1.5">{s.name}</td>
-                        <td className="px-3 py-1.5 text-muted-foreground">{s.teacher}</td>
-                        <td className="px-3 py-1.5 text-center font-medium">{s.count}</td>
-                      </tr>
-                    ))}
-                    <tr className="bg-muted/30 font-medium">
-                      <td className="px-3 py-1.5" colSpan={2}>Jami</td>
-                      <td className="px-3 py-1.5 text-center">{statsData.total}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              ) : (
-                /* ── Barchasi: o'qituvchilar × sinflar jadvali ── */
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-muted/40 border-b">
-                        <th className="text-left px-3 py-2 font-medium sticky left-0 bg-muted/40">O'qituvchi</th>
-                        {statsData.gradeColumns.map((g) => (
-                          <th key={g} className="text-center px-2 py-2 font-medium whitespace-nowrap">{g}</th>
-                        ))}
-                        <th className="text-center px-3 py-2 font-medium">Jami</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {statsData.rows.map((r) => (
-                        <tr key={r.name} className="border-b last:border-0">
-                          <td className="px-3 py-1.5 whitespace-nowrap sticky left-0 bg-background">{r.name}</td>
-                          {r.byGrade.map((v, i) => (
-                            <td key={statsData.gradeColumns[i]} className="text-center px-2 py-1.5 text-muted-foreground">
-                              {v || "—"}
-                            </td>
-                          ))}
-                          <td className="text-center px-3 py-1.5 font-medium">{r.total}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setStatsOpen(true)}
+        >
+          <Info className="h-4 w-4 mr-1.5" />
+          Batafsil ma'lumot
+          <span className="text-xs text-muted-foreground font-normal ml-1.5">
+            ({statsData.total} ta dars)
+          </span>
+        </Button>
       )}
+
+      {/* ─── Batafsil Sheet ─── */}
+      <Sheet open={statsOpen} onOpenChange={setStatsOpen}>
+        <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>
+              {statsData?.mode === "grade"
+                ? `${statsData.gradeName} — Haftalik dars soatlari`
+                : "O'qituvchilar dars yuklama jadvali"}
+            </SheetTitle>
+            <SheetDescription>
+              Jami {statsData?.total ?? 0} ta dars
+            </SheetDescription>
+          </SheetHeader>
+
+          {statsData?.mode === "grade" ? (
+            /* ── Sinf tanlangan: fanlar jadvali ── */
+            <div className="rounded-lg border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/40 border-b">
+                    <th className="text-left px-3 py-2 font-medium">Fan</th>
+                    <th className="text-left px-3 py-2 font-medium">O'qituvchi</th>
+                    <th className="text-center px-3 py-2 font-medium w-20">Soat</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsData.subjects.map((s) => (
+                    <tr key={s.name} className="border-b last:border-0">
+                      <td className="px-3 py-1.5">{s.name}</td>
+                      <td className="px-3 py-1.5 text-muted-foreground">{s.teacher}</td>
+                      <td className="px-3 py-1.5 text-center font-medium">{s.count}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-muted/30 font-medium">
+                    <td className="px-3 py-1.5" colSpan={2}>Jami</td>
+                    <td className="px-3 py-1.5 text-center">{statsData.total}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : statsData?.mode === "all" ? (
+            /* ── Barchasi: o'qituvchilar × sinflar jadvali ── */
+            <div className="rounded-lg border overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/40 border-b">
+                    <th className="text-left px-3 py-2 font-medium sticky left-0 bg-muted/40">O'qituvchi</th>
+                    {statsData.gradeColumns.map((g) => (
+                      <th key={g} className="text-center px-2 py-2 font-medium whitespace-nowrap">{g}</th>
+                    ))}
+                    <th className="text-center px-3 py-2 font-medium">Jami</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsData.rows.map((r) => (
+                    <tr key={r.name} className="border-b last:border-0">
+                      <td className="px-3 py-1.5 whitespace-nowrap sticky left-0 bg-background">{r.name}</td>
+                      {r.byGrade.map((v, i) => (
+                        <td key={statsData.gradeColumns[i]} className="text-center px-2 py-1.5 text-muted-foreground">
+                          {v || "—"}
+                        </td>
+                      ))}
+                      <td className="text-center px-3 py-1.5 font-medium">{r.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       {/* ─── Settings Section ─── */}
       {isAdmin && settingsOpen && (
