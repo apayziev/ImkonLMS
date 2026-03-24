@@ -49,6 +49,7 @@ export function SettingsSection({
   const [breaks, setBreaks] = useState<BreakItem[]>(current.breaks)
   const [workingDays, setWorkingDays] = useState(current.working_days)
   const [newBreak, setNewBreak] = useState({ start: "", end: "", name: "" })
+  const [showAddBreak, setShowAddBreak] = useState(false)
 
   const preview = generatePreviewSlots(dayStart, dayEnd, lessonDur, defaultBreak, breaks)
 
@@ -182,10 +183,20 @@ export function SettingsSection({
 
           {/* Special breaks */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">Maxsus tanaffuslar</Label>
-            <p className="text-[10px] text-muted-foreground">
-              Tushlik, Dam olish kabi vaqtga asoslangan tanaffuslar
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-semibold">Maxsus tanaffuslar</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Tushlik, Dam olish kabi vaqtga asoslangan tanaffuslar
+                </p>
+              </div>
+              {!showAddBreak && (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowAddBreak(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Qo'shish
+                </Button>
+              )}
+            </div>
             {breaks.length > 0 && (
               <div className="space-y-1.5">
                 {breaks.map((b) => (
@@ -198,7 +209,7 @@ export function SettingsSection({
                       {b.name && (
                         <>
                           <span className="mx-1.5">·</span>
-                          <span className="text-[#6720FF] font-medium">{b.name}</span>
+                          <span className="text-accent font-medium">{b.name}</span>
                         </>
                       )}
                     </span>
@@ -213,41 +224,46 @@ export function SettingsSection({
                 ))}
               </div>
             )}
-            {/* Add new break */}
-            <div className="flex items-end gap-2">
-              <div className="w-20">
-                <Label className="text-[10px] text-muted-foreground">Boshlanishi</Label>
-                <Input
-                  placeholder="12:30"
-                  value={newBreak.start}
-                  onChange={(e) => setNewBreak((p) => ({ ...p, start: formatTimeInput(e.target.value) }))}
-                  maxLength={5}
-                  className="h-8 text-sm"
-                />
+            {/* Add new break — toggled */}
+            {showAddBreak && (
+              <div className="flex items-end gap-2">
+                <div className="w-20">
+                  <Label className="text-xs text-muted-foreground">Boshlanishi</Label>
+                  <Input
+                    placeholder="12:30"
+                    value={newBreak.start}
+                    onChange={(e) => setNewBreak((p) => ({ ...p, start: formatTimeInput(e.target.value) }))}
+                    maxLength={5}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="w-20">
+                  <Label className="text-xs text-muted-foreground">Tugashi</Label>
+                  <Input
+                    placeholder="13:00"
+                    value={newBreak.end}
+                    onChange={(e) => setNewBreak((p) => ({ ...p, end: formatTimeInput(e.target.value) }))}
+                    maxLength={5}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-xs text-muted-foreground">Nomi (ixtiyoriy)</Label>
+                  <Input
+                    placeholder="Tushlik"
+                    value={newBreak.name}
+                    onChange={(e) => setNewBreak((p) => ({ ...p, name: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => { addBreak(); setShowAddBreak(false) }}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 px-2 text-muted-foreground" onClick={() => { setShowAddBreak(false); setNewBreak({ start: "", end: "", name: "" }) }}>
+                  Bekor
+                </Button>
               </div>
-              <div className="w-20">
-                <Label className="text-[10px] text-muted-foreground">Tugashi</Label>
-                <Input
-                  placeholder="13:00"
-                  value={newBreak.end}
-                  onChange={(e) => setNewBreak((p) => ({ ...p, end: formatTimeInput(e.target.value) }))}
-                  maxLength={5}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="flex-1">
-                <Label className="text-[10px] text-muted-foreground">Nomi (ixtiyoriy)</Label>
-                <Input
-                  placeholder="Tushlik"
-                  value={newBreak.name}
-                  onChange={(e) => setNewBreak((p) => ({ ...p, name: e.target.value }))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <Button size="sm" variant="outline" className="h-8 px-2" onClick={addBreak}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            )}
           </div>
 
           {/* Working days + Actions */}

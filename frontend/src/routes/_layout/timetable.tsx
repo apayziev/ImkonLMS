@@ -219,7 +219,7 @@ function TimetablePage() {
       {/* ─── Settings Section ─── */}
       {isAdmin && settingsOpen && (
         <SettingsSection
-          key={settings?.id ?? 0}
+          key={settings?.updated_at ?? "new"}
           settings={settings}
           academicYearId={academicYearId}
           onClose={() => setSettingsOpen(false)}
