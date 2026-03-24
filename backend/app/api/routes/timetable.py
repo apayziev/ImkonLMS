@@ -4,7 +4,7 @@ from datetime import time
 from typing import Any
 
 from fastapi import APIRouter
-from sqlalchemy import and_, delete, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -72,66 +72,14 @@ def _entry_to_read(entry: ScheduleEntry) -> ScheduleEntryRead:
     )
 
 
-DAY_NAMES = {1: "Dushanba", 2: "Seshanba", 3: "Chorshanba", 4: "Payshanba", 5: "Juma", 6: "Shanba", 7: "Yakshanba"}
-
-
-async def _check_schedule_conflicts(
-    db: AsyncSession,
-    *,
-    academic_year_id: int,
-    grade_id: int,
-    teacher_id: int,
-    time_slot_id: int,
-    day_of_week: int,
-    exclude_id: int | None = None,
-) -> None:
-    """Raise DuplicateValueException with detailed message if slot is taken."""
-    base = and_(
-        ScheduleEntry.academic_year_id == academic_year_id,
-        ScheduleEntry.day_of_week == day_of_week,
-        ScheduleEntry.time_slot_id == time_slot_id,
-        ScheduleEntry.is_deleted == False,  # noqa: E712
-    )
-    if exclude_id:
-        base = and_(base, ScheduleEntry.id != exclude_id)
-
-    # Check grade conflict
-    grade_q = await db.execute(
-        select(ScheduleEntry)
-        .where(and_(base, ScheduleEntry.grade_id == grade_id))
-        .options(selectinload(ScheduleEntry.grade), selectinload(ScheduleEntry.teacher), selectinload(ScheduleEntry.subject))
-        .limit(1)
-    )
-    grade_conflict = grade_q.scalar_one_or_none()
-
-    # Check teacher conflict
-    teacher_q = await db.execute(
-        select(ScheduleEntry)
-        .where(and_(base, ScheduleEntry.teacher_id == teacher_id))
-        .options(selectinload(ScheduleEntry.grade), selectinload(ScheduleEntry.teacher), selectinload(ScheduleEntry.subject))
-        .limit(1)
-    )
-    teacher_conflict = teacher_q.scalar_one_or_none()
-
-    messages = []
-    day_name = DAY_NAMES.get(day_of_week, str(day_of_week))
-
-    if grade_conflict:
-        g = grade_conflict
-        messages.append(
-            f"{g.grade.display_name} sinfida {day_name} kuni shu vaqtda "
-            f"allaqachon {g.subject.name} ({g.teacher.full_name}) mavjud"
-        )
-
-    if teacher_conflict:
-        t = teacher_conflict
-        messages.append(
-            f"O'qituvchi {day_name} kuni shu vaqtda "
-            f"{t.grade.display_name} sinfida {t.subject.name} dars beradi"
-        )
-
-    if messages:
-        raise DuplicateValueException("; ".join(messages))
+def _parse_conflict_message(exc: Exception) -> str:
+    """Extract constraint name from DB error to give a clear message."""
+    msg = str(exc)
+    if "uq_schedule_teacher_day_slot" in msg:
+        return "Bu o'qituvchi shu kuni shu vaqtda boshqa sinfda band"
+    if "uq_schedule_grade_day_slot" in msg:
+        return "Bu sinfda shu kuni shu vaqtda allaqachon dars mavjud"
+    return "Bu vaqtda sinf yoki o'qituvchi band"
 
 
 # ─── School Settings ───────────────────────────────────────────────────────
@@ -389,15 +337,6 @@ async def list_schedule(
 async def create_schedule_entry(
     body: ScheduleEntryCreate, db: SessionDep, admin: SuperUser,
 ) -> Any:
-    await _check_schedule_conflicts(
-        db,
-        academic_year_id=body.academic_year_id,
-        grade_id=body.grade_id,
-        teacher_id=body.teacher_id,
-        time_slot_id=body.time_slot_id,
-        day_of_week=body.day_of_week,
-    )
-
     entry = ScheduleEntry(
         academic_year_id=body.academic_year_id,
         grade_id=body.grade_id,
@@ -411,7 +350,7 @@ async def create_schedule_entry(
         await db.flush()
     except Exception as exc:
         await db.rollback()
-        raise DuplicateValueException("Bu vaqtda sinf yoki o'qituvchi band") from exc
+        raise DuplicateValueException(_parse_conflict_message(exc)) from exc
 
     await db.commit()
 
@@ -446,21 +385,11 @@ async def update_schedule_entry(
     for field, value in update_data.items():
         setattr(entry, field, value)
 
-    await _check_schedule_conflicts(
-        db,
-        academic_year_id=entry.academic_year_id,
-        grade_id=entry.grade_id,
-        teacher_id=entry.teacher_id,
-        time_slot_id=entry.time_slot_id,
-        day_of_week=entry.day_of_week,
-        exclude_id=entry.id,
-    )
-
     try:
         await db.flush()
     except Exception as exc:
         await db.rollback()
-        raise DuplicateValueException("Bu vaqtda sinf yoki o'qituvchi band") from exc
+        raise DuplicateValueException(_parse_conflict_message(exc)) from exc
 
     await db.commit()
 
