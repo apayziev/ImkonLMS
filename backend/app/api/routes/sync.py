@@ -317,6 +317,15 @@ async def _sync_teachers(
 
         payment_ct_grade_id = pt.get("class_teacher_grade_id")
         lms_ct_grade_id = grade_map.get(payment_ct_grade_id) if payment_ct_grade_id else None
+
+        # Convert Payment teaching_grade_ids -> LMS teaching_grade_ids (map PMS IDs to LMS IDs)
+        payment_teaching_ids = pt.get("teaching_grade_ids") or []
+        lms_teaching_ids = [
+            grade_map[gid]
+            for gid in payment_teaching_ids
+            if gid in grade_map
+        ] or None
+
         existing = teacher_map.get(doc_id)
 
         if existing:
@@ -330,6 +339,9 @@ async def _sync_teachers(
             if existing.class_teacher_grade_id != lms_ct_grade_id:
                 existing.class_teacher_grade_id = lms_ct_grade_id
                 changed = True
+            if existing.teaching_grade_ids != lms_teaching_ids:
+                existing.teaching_grade_ids = lms_teaching_ids
+                changed = True
             if changed:
                 updated += 1
         else:
@@ -339,6 +351,7 @@ async def _sync_teachers(
                     teacher_data[f] = _parse_date(pt[f]) if f in _DATE_FIELDS else pt[f]
             teacher_data["document_id"] = doc_id
             teacher_data["class_teacher_grade_id"] = lms_ct_grade_id
+            teacher_data["teaching_grade_ids"] = lms_teaching_ids
             teacher_data["role"] = UserRole.TEACHER.value
             loop = asyncio.get_running_loop()
             teacher_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)

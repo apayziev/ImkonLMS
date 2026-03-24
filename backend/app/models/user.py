@@ -90,6 +90,13 @@ class User(BaseModel):
 
     # === Teacher-specific fields ===
     subjects: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None, kw_only=True)
+    teaching_grade_ids: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        default=None,
+        comment="Dars beradigan sinflar ID ro'yxati",
+        kw_only=True,
+    )
     class_teacher_grade_id: Mapped[int | None] = mapped_column(
         ForeignKey("grade.id", ondelete="SET NULL"),
         nullable=True,
