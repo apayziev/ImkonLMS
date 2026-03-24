@@ -253,13 +253,13 @@ function TimetablePage() {
           <table className="w-full min-w-[700px]">
             <thead>
               <tr className="bg-muted/50 border-b">
-                <th className="h-11 px-3 text-center align-middle text-[11px] font-semibold text-muted-foreground uppercase tracking-wider w-[130px]">
+                <th className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[130px]">
                   Vaqt
                 </th>
                 {days.map((day) => (
                   <th
                     key={day}
-                    className="h-11 px-3 text-center align-middle text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+                    className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                   >
                     {DAY_NAMES[day]}
                   </th>
@@ -275,10 +275,10 @@ function TimetablePage() {
                     <tr key={slot.id} className="border-b last:border-0">
                       {/* Period + Time */}
                       <td className="px-3 py-2 align-middle border-r bg-muted/30" style={{ minHeight: 76 }}>
-                        <div className="text-[11px] font-semibold text-primary font-mono">
+                        <div className="text-xs font-semibold text-primary">
                           {slot.period_number}-soat
                         </div>
-                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                        <div className="text-xs text-muted-foreground mt-0.5">
                           {slot.start_time} – {slot.end_time}
                         </div>
                       </td>
@@ -299,7 +299,7 @@ function TimetablePage() {
                                 type="button"
                                 className={`h-16 w-full rounded-lg flex items-center justify-center transition-colors ${
                                   canClick
-                                    ? "hover:bg-[#FFF0EE] cursor-pointer group"
+                                    ? "hover:bg-primary/5 cursor-pointer group"
                                     : "cursor-default"
                                 }`}
                                 onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
@@ -317,17 +317,17 @@ function TimetablePage() {
 
                     {/* Break row */}
                     {brk && (
-                      <tr key={`brk-${slot.id}`} className="border-b" style={{ background: "#FDF8F0" }}>
-                        <td className="px-3 py-1.5 text-center border-r" style={{ background: "#FDF8F0" }}>
-                          <div className="text-[11px] font-medium" style={{ color: "#D97706" }}>
+                      <tr key={`brk-${slot.id}`} className="border-b bg-muted/30">
+                        <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                          <div className="text-xs font-medium text-muted-foreground">
                             {brk.name || "Tanaffus"}
                           </div>
-                          <div className="text-[10px] text-muted-foreground font-mono">
+                          <div className="text-xs text-muted-foreground/70">
                             {brk.minutes} min
                           </div>
                         </td>
                         {days.map((day) => (
-                          <td key={day} className="border-r last:border-r-0" style={{ background: "#FDF8F0" }} />
+                          <td key={day} className="border-r last:border-r-0 bg-muted/30" />
                         ))}
                       </tr>
                     )}
@@ -400,10 +400,10 @@ function ScheduleCell({
       tabIndex={onClick ? 0 : undefined}
     >
       <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" />
-      <div className="text-[13px] font-semibold truncate">
+      <div className="text-sm font-semibold truncate">
         {entry.subject_name ?? "—"}
       </div>
-      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+      <div className="text-xs text-muted-foreground truncate mt-0.5">
         {entry.teacher_name ?? "—"}
       </div>
     </div>
