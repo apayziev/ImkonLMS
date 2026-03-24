@@ -10,17 +10,19 @@ class ScheduleEntry(BaseModel):
     __tablename__ = "schedule_entry"
 
     __table_args__ = (
-        # One lesson per grade per day per slot
+        # One lesson per grade per day per slot (only active records)
         Index(
             "uq_schedule_grade_day_slot",
             "grade_id", "day_of_week", "time_slot_id", "academic_year_id",
             unique=True,
+            postgresql_where="is_deleted = false",
         ),
-        # One teacher per day per slot
+        # One teacher per day per slot (only active records)
         Index(
             "uq_schedule_teacher_day_slot",
             "teacher_id", "day_of_week", "time_slot_id", "academic_year_id",
             unique=True,
+            postgresql_where="is_deleted = false",
         ),
     )
 
