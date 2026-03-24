@@ -30,7 +30,9 @@ class ScheduleEntry(BaseModel):
     grade_id: Mapped[int] = mapped_column(ForeignKey("grade.id"), index=True, kw_only=True)
     subject_id: Mapped[int] = mapped_column(ForeignKey("subject.id"), index=True, kw_only=True)
     teacher_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True, kw_only=True)
-    time_slot_id: Mapped[int] = mapped_column(ForeignKey("time_slot.id"), index=True, kw_only=True)
+    time_slot_id: Mapped[int] = mapped_column(
+        ForeignKey("time_slot.id", ondelete="CASCADE"), index=True, kw_only=True
+    )
     day_of_week: Mapped[int] = mapped_column(SmallInteger, kw_only=True)  # 1=Mon … 7=Sun
 
     # === Relationships ===

@@ -5,6 +5,17 @@ import { toast } from "sonner"
 
 import type { BreakItem, SchoolSettingsRead, SchoolSettingsUpdate } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -266,14 +277,29 @@ export function SettingsSection({
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               Saqlash
             </Button>
-            <Button
-              onClick={handleSaveAndGenerate}
-              disabled={isPending || !isSettingsValid || preview.length === 0 || !academicYearId}
-            >
-              {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-              <RefreshCw className="h-4 w-4 mr-1.5" />
-              Generatsiya
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button disabled={isPending || !isSettingsValid || preview.length === 0 || !academicYearId}>
+                  {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                  <RefreshCw className="h-4 w-4 mr-1.5" />
+                  Generatsiya
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Soatlarni qayta generatsiya qilish</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Barcha mavjud soatlar va ularga biriktirilgan darslar o'chiriladi. Yangi {preview.length} ta soat yaratiladi.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSaveAndGenerate}>
+                    Ha, generatsiya qilish
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
     </div>

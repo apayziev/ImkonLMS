@@ -156,7 +156,7 @@ async def delete_time_slot(slot_id: int, db: SessionDep, admin: SuperUser) -> No
 async def delete_all_time_slots(
     academic_year_id: int, db: SessionDep, admin: SuperUser,
 ) -> None:
-    """Delete all time slots for an academic year."""
+    """Delete all time slots (and cascade-deletes schedule entries) for an academic year."""
     await db.execute(
         delete(TimeSlot).where(TimeSlot.academic_year_id == academic_year_id)
     )
@@ -251,7 +251,7 @@ async def generate_time_slots(
     if not slots_data:
         return TimeSlotList(data=[], count=0)
 
-    # Hard-delete existing slots for this academic year (regenerate replaces all)
+    # Hard-delete existing slots (CASCADE removes schedule entries too)
     await db.execute(
         delete(TimeSlot).where(TimeSlot.academic_year_id == academic_year_id)
     )
