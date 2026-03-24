@@ -74,7 +74,7 @@ function TimetablePage() {
   const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
   const settingsBreaks = settings?.breaks ?? []
 
-  const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
+  const { sorted, cellMap, cellMapMulti, days } = buildGrid(timeSlots, entries, workingDays)
 
   // ─── Stats ────────────────────────────────────────────────────────
   const statsData = useMemo(() => {
@@ -415,14 +415,33 @@ function TimetablePage() {
 
                       {/* Day cells */}
                       {days.map((day) => {
-                        const entry = cellMap.get(`${day}-${slot.id}`)
+                        const key = `${day}-${slot.id}`
                         const canClick = isAdmin && gradeFilter !== "all"
+
+                        if (gradeFilter === "all") {
+                          const multiEntries = cellMapMulti.get(key)
+                          return (
+                            <td key={day} className="px-1.5 py-1.5 align-top border-r last:border-r-0">
+                              {multiEntries?.length ? (
+                                <div className="flex flex-col gap-1">
+                                  {multiEntries.map((e) => (
+                                    <ScheduleCellMini key={e.id} entry={e} />
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="h-16" />
+                              )}
+                            </td>
+                          )
+                        }
+
+                        const entry = cellMap.get(key)
                         return (
                           <td key={day} className="px-1.5 py-1.5 align-top border-r last:border-r-0">
                             {entry ? (
                               <ScheduleCell
                                 entry={entry}
-                                subtitle={gradeFilter === "all" ? entry.grade_display : entry.teacher_name}
+                                subtitle={entry.teacher_name}
                                 onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
                               />
                             ) : (
@@ -538,6 +557,21 @@ function ScheduleCell({
       </div>
       <div className="text-xs text-muted-foreground truncate mt-0.5">
         {subtitle ?? "—"}
+      </div>
+    </div>
+  )
+}
+
+/** Compact cell for "Barchasi" mode — shows grade, subject, teacher in one mini card */
+function ScheduleCellMini({ entry }: { entry: ScheduleEntryRead }) {
+  return (
+    <div className="rounded-md relative overflow-hidden pl-2.5 pr-1.5 py-1 bg-primary/5 border border-primary/15">
+      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
+      <div className="text-xs font-semibold truncate">
+        {entry.grade_display ?? "—"} · {entry.subject_name ?? "—"}
+      </div>
+      <div className="text-[11px] text-muted-foreground truncate">
+        {entry.teacher_name ?? "—"}
       </div>
     </div>
   )
