@@ -15,7 +15,6 @@ class SchoolSettings(BaseModel):
     day_end_time: Mapped[str] = mapped_column(String(5), default="16:00", kw_only=True)
     lesson_duration_minutes: Mapped[int] = mapped_column(SmallInteger, default=45, kw_only=True)
     default_break_minutes: Mapped[int] = mapped_column(SmallInteger, default=5, kw_only=True)
-    periods_per_day: Mapped[int] = mapped_column(SmallInteger, default=6, kw_only=True)
     working_days: Mapped[list[int]] = mapped_column(
         ARRAY(SmallInteger), default_factory=lambda: [1, 2, 3, 4, 5, 6], kw_only=True
     )

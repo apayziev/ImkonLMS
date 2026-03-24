@@ -87,6 +87,24 @@ interface EntryDialogState {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/** Parse "HH:MM" → total minutes */
+function parseHHMM(v: string): number {
+  const [h, m] = v.split(":").map(Number)
+  return h * 60 + m
+}
+
+/** Format total minutes → "HH:MM" */
+function fmtHHMM(m: number): string {
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
+}
+
+/** Validate HH:MM string is a real time (00:00–23:59) */
+function isValidTime(v: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(v)) return false
+  const [h, m] = v.split(":").map(Number)
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59
+}
+
 function buildGrid(
   timeSlots: TimeSlotRead[],
   entries: ScheduleEntryRead[],
@@ -106,16 +124,12 @@ function getBreakInfo(
   breaks: BreakItem[],
 ): { minutes: number; name: string } | null {
   if (!nextSlot) return null
-  const [ch, cm] = currentSlot.end_time.split(":").map(Number)
-  const [nh, nm] = nextSlot.start_time.split(":").map(Number)
-  const gapStart = ch * 60 + cm
-  const gapEnd = nh * 60 + nm
+  const gapStart = parseHHMM(currentSlot.end_time)
+  const gapEnd = parseHHMM(nextSlot.start_time)
   const diff = gapEnd - gapStart
   if (diff <= 0) return null
-  // Find a named break that falls within this gap
   const brk = breaks.find((b) => {
-    const [bsh, bsm] = b.start_time.split(":").map(Number)
-    const bs = bsh * 60 + bsm
+    const bs = parseHHMM(b.start_time)
     return bs >= gapStart && bs < gapEnd
   })
   return { minutes: diff, name: brk?.name || "" }
@@ -129,27 +143,17 @@ function generatePreviewSlots(
   defaultBreak: number,
   breaks: BreakItem[],
 ): { period_number: number; start_time: string; end_time: string }[] {
-  // Parse breaks into sorted list
   const parsed = breaks
-    .map((b) => {
-      const [sh, sm] = b.start_time.split(":").map(Number)
-      const [eh, em] = b.end_time.split(":").map(Number)
-      return { start: sh * 60 + sm, end: eh * 60 + em, name: b.name }
-    })
+    .map((b) => ({ start: parseHHMM(b.start_time), end: parseHHMM(b.end_time), name: b.name }))
     .sort((a, b) => a.start - b.start)
 
-  const [sh, sm] = dayStart.split(":").map(Number)
-  const [eh, em] = dayEnd.split(":").map(Number)
-  let cursor = sh * 60 + sm
-  const endMin = eh * 60 + em
-
-  const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
+  let cursor = parseHHMM(dayStart)
+  const endMin = parseHHMM(dayEnd)
 
   const result: { period_number: number; start_time: string; end_time: string }[] = []
   let period = 1
 
   while (cursor + lessonDur <= endMin) {
-    // Skip breaks at cursor
     const activeBreak = parsed.find((b) => b.start <= cursor && cursor < b.end)
     if (activeBreak) {
       cursor = activeBreak.end
@@ -158,7 +162,6 @@ function generatePreviewSlots(
 
     let slotEnd = cursor + lessonDur
 
-    // Check overlap with break
     let overlaps = false
     for (const b of parsed) {
       if (cursor < b.start && b.start < slotEnd) {
@@ -173,7 +176,7 @@ function generatePreviewSlots(
       continue
     }
 
-    result.push({ period_number: period, start_time: fmt(cursor), end_time: fmt(slotEnd) })
+    result.push({ period_number: period, start_time: fmtHHMM(cursor), end_time: fmtHHMM(slotEnd) })
     cursor = slotEnd + (overlaps ? 0 : defaultBreak)
     period++
   }
@@ -310,6 +313,7 @@ function TimetablePage() {
       {/* ─── Settings Section ─── */}
       {isAdmin && settingsOpen && (
         <SettingsSection
+          key={settings?.id ?? 0}
           settings={settings}
           academicYearId={academicYearId}
           onClose={() => setSettingsOpen(false)}
@@ -463,19 +467,14 @@ function SettingsSection({
 }) {
   const queryClient = useQueryClient()
 
-  const defaults: SchoolSettingsRead = {
-    id: 0,
+  const current = settings ?? {
     day_start_time: "08:00",
     day_end_time: "16:00",
     lesson_duration_minutes: 45,
     default_break_minutes: 5,
-    periods_per_day: 6,
     working_days: [1, 2, 3, 4, 5, 6],
     breaks: [],
-    created_at: "",
-    updated_at: null,
   }
-  const current = settings ?? defaults
 
   const [dayStart, setDayStart] = useState(current.day_start_time)
   const [dayEnd, setDayEnd] = useState(current.day_end_time)
@@ -484,18 +483,6 @@ function SettingsSection({
   const [breaks, setBreaks] = useState<BreakItem[]>(current.breaks)
   const [workingDays, setWorkingDays] = useState(current.working_days)
   const [newBreak, setNewBreak] = useState({ start: "", end: "", name: "" })
-
-  // Sync state when settings load/change
-  const [lastSettingsId, setLastSettingsId] = useState(current.id)
-  if (settings && settings.id !== lastSettingsId) {
-    setDayStart(settings.day_start_time)
-    setDayEnd(settings.day_end_time)
-    setLessonDur(settings.lesson_duration_minutes)
-    setDefaultBreak(settings.default_break_minutes)
-    setBreaks(settings.breaks)
-    setWorkingDays(settings.working_days)
-    setLastSettingsId(settings.id)
-  }
 
   const preview = generatePreviewSlots(dayStart, dayEnd, lessonDur, defaultBreak, breaks)
 
@@ -528,18 +515,31 @@ function SettingsSection({
     working_days: workingDays,
   }
 
+  const isSettingsValid = isValidTime(dayStart) && isValidTime(dayEnd) && parseHHMM(dayStart) < parseHHMM(dayEnd)
+
   const handleSaveAndGenerate = () => {
-    if (!academicYearId) return
+    if (!academicYearId || !isSettingsValid) return
     updateMutation.mutate(settingsPayload, { onSuccess: () => generateMutation.mutate() })
   }
 
   const handleSaveOnly = () => {
+    if (!isSettingsValid) {
+      toast.error("Noto'g'ri vaqt formati")
+      return
+    }
     updateMutation.mutate(settingsPayload)
   }
 
   const addBreak = () => {
     if (!newBreak.start || !newBreak.end) return
-    // Don't add duplicate start_time
+    if (!isValidTime(newBreak.start) || !isValidTime(newBreak.end)) {
+      toast.error("Noto'g'ri vaqt formati (HH:MM)")
+      return
+    }
+    if (parseHHMM(newBreak.start) >= parseHHMM(newBreak.end)) {
+      toast.error("Tugash vaqti boshlanishdan keyin bo'lishi kerak")
+      return
+    }
     if (breaks.some((b) => b.start_time === newBreak.start)) {
       toast.error("Bu vaqtda tanaffus allaqachon mavjud")
       return
@@ -721,13 +721,13 @@ function SettingsSection({
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={handleSaveOnly} disabled={isPending}>
+            <Button variant="outline" onClick={handleSaveOnly} disabled={isPending || !isSettingsValid}>
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               Saqlash
             </Button>
             <Button
               onClick={handleSaveAndGenerate}
-              disabled={isPending || preview.length === 0 || !academicYearId}
+              disabled={isPending || !isSettingsValid || preview.length === 0 || !academicYearId}
             >
               {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               <RefreshCw className="h-4 w-4 mr-1.5" />

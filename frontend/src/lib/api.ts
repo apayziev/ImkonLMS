@@ -282,7 +282,6 @@ export interface SchoolSettingsRead {
   day_end_time: string
   lesson_duration_minutes: number
   default_break_minutes: number
-  periods_per_day: number
   working_days: number[]
   breaks: BreakItem[]
   created_at: string
@@ -294,7 +293,6 @@ export interface SchoolSettingsUpdate {
   day_end_time?: string
   lesson_duration_minutes?: number
   default_break_minutes?: number
-  periods_per_day?: number
   working_days?: number[]
   breaks?: BreakItem[]
 }

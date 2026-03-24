@@ -19,7 +19,6 @@ class SchoolSettingsUpdate(BaseModel):
     day_end_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     lesson_duration_minutes: int | None = Field(default=None, ge=15, le=120)
     default_break_minutes: int | None = Field(default=None, ge=1, le=30)
-    periods_per_day: int | None = Field(default=None, ge=1, le=12)
     working_days: list[int] | None = Field(default=None, min_length=1, max_length=7)
     breaks: list[BreakItem] | None = None
 
@@ -32,7 +31,6 @@ class SchoolSettingsRead(TimestampSchema):
     day_end_time: str
     lesson_duration_minutes: int
     default_break_minutes: int
-    periods_per_day: int
     working_days: list[int]
     breaks: list[BreakItem]
 
