@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CalendarDays, ChevronDown, Loader2, Settings, Trash2 } from "lucide-react"
 import type React from "react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
@@ -73,6 +73,39 @@ function TimetablePage() {
   const settingsBreaks = settings?.breaks ?? []
 
   const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
+
+  // ─── Stats ────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    if (!entries.length) return null
+    if (gradeFilter !== "all") {
+      // Sinf tanlangan: haftalik dars soatlari
+      const selectedGrade = grades.find((g) => g.id.toString() === gradeFilter)
+      return {
+        label: `${selectedGrade?.display_name ?? "Sinf"}`,
+        value: `Haftalik ${entries.length} ta dars`,
+      }
+    }
+    // Barchasi: har bir o'qituvchining umumiy soatlari
+    const teacherMap = new Map<string, { count: number; grades: Set<string> }>()
+    for (const e of entries) {
+      const name = e.teacher_name ?? "Noma'lum"
+      const existing = teacherMap.get(name)
+      if (existing) {
+        existing.count++
+        if (e.grade_display) existing.grades.add(e.grade_display)
+      } else {
+        teacherMap.set(name, { count: 1, grades: new Set(e.grade_display ? [e.grade_display] : []) })
+      }
+    }
+    const teacherStats = [...teacherMap.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([name, { count, grades: g }]) => `${name}: ${count} dars (${g.size} sinf)`)
+    return {
+      label: "Barcha o'qituvchilar",
+      value: `Jami ${entries.length} ta dars`,
+      details: teacherStats,
+    }
+  }, [entries, gradeFilter, grades])
 
   // ─── Mutations ──────────────────────────────────────────────────────
 
@@ -216,6 +249,23 @@ function TimetablePage() {
         ))}
       </div>
 
+      {/* ─── Stats ─── */}
+      {stats && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium">{stats.label}:</span>
+            <span className="text-muted-foreground">{stats.value}</span>
+          </div>
+          {"details" in stats && stats.details && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {stats.details.map((d) => (
+                <span key={d}>{d}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ─── Settings Section ─── */}
       {isAdmin && settingsOpen && (
         <SettingsSection
@@ -292,6 +342,7 @@ function TimetablePage() {
                             {entry ? (
                               <ScheduleCell
                                 entry={entry}
+                                subtitle={gradeFilter === "all" ? entry.grade_display : entry.teacher_name}
                                 onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
                               />
                             ) : (
@@ -384,9 +435,11 @@ function TimetablePage() {
 
 function ScheduleCell({
   entry,
+  subtitle,
   onClick,
 }: {
   entry: ScheduleEntryRead
+  subtitle?: string | null
   onClick?: () => void
 }) {
   return (
@@ -404,7 +457,7 @@ function ScheduleCell({
         {entry.subject_name ?? "—"}
       </div>
       <div className="text-xs text-muted-foreground truncate mt-0.5">
-        {entry.teacher_name ?? "—"}
+        {subtitle ?? "—"}
       </div>
     </div>
   )
