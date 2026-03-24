@@ -202,6 +202,7 @@ function TimetablePage() {
   const [gradeFilter, setGradeFilter] = useState("all")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [entryDialog, setEntryDialog] = useState<EntryDialogState | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   // Data queries
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -264,6 +265,17 @@ function TimetablePage() {
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
+  const clearSlotsMutation = useMutation({
+    mutationFn: () => timetableApi.deleteAllTimeSlots(academicYearId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
+      toast.success("Jadval tozalandi")
+      setConfirmClear(false)
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
+
   // ─── Handlers ───────────────────────────────────────────────────────
 
   const handleCellClick = (day: number, slotId: number) => {
@@ -314,6 +326,34 @@ function TimetablePage() {
               <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
             </Button>
           )}
+          {isAdmin && sorted.length > 0 && (
+            confirmClear ? (
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" onClick={() => setConfirmClear(false)}>
+                  Bekor
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => clearSlotsMutation.mutate()}
+                  disabled={clearSlotsMutation.isPending}
+                >
+                  {clearSlotsMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  Ha, tozalash
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setConfirmClear(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Tozalash
+              </Button>
+            )
+          )}
         </div>
       </div>
 
@@ -343,7 +383,13 @@ function TimetablePage() {
           ) : undefined}
         />
       ) : (
-        <div className="rounded-lg border overflow-x-auto">
+        <div className="space-y-3">
+          {gradeFilter === "all" && isAdmin && (
+            <div className="rounded-md bg-muted/50 border border-dashed px-4 py-2.5 text-sm text-muted-foreground">
+              Sinf tanlang, keyin katakka bosib <span className="font-medium text-foreground">fan va o'qituvchi</span> biriktiring
+            </div>
+          )}
+          <div className="rounded-lg border overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b bg-muted/40">
@@ -419,6 +465,7 @@ function TimetablePage() {
               })}
             </tbody>
           </table>
+        </div>
         </div>
       )}
 

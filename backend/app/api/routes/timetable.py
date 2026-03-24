@@ -152,6 +152,17 @@ async def delete_time_slot(slot_id: int, db: SessionDep, admin: SuperUser) -> No
         raise NotFoundException("Dars vaqti topilmadi")
 
 
+@router.delete("/time-slots", status_code=204)
+async def delete_all_time_slots(
+    academic_year_id: int, db: SessionDep, admin: SuperUser,
+) -> None:
+    """Delete all time slots for an academic year."""
+    await db.execute(
+        delete(TimeSlot).where(TimeSlot.academic_year_id == academic_year_id)
+    )
+    await db.commit()
+
+
 def _generate_slots(
     day_start: str,
     day_end: str,

@@ -357,6 +357,8 @@ export const timetableApi = {
     api.post<TimeSlotRead>("/api/v1/timetable/time-slots", data),
   deleteTimeSlot: (id: number) =>
     api.delete(`/api/v1/timetable/time-slots/${id}`),
+  deleteAllTimeSlots: (academicYearId: number) =>
+    api.delete(`/api/v1/timetable/time-slots?academic_year_id=${academicYearId}`),
   generateTimeSlots: (academicYearId: number) =>
     api.post<TimeSlotList>(`/api/v1/timetable/time-slots/generate?academic_year_id=${academicYearId}`),
 
