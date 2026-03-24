@@ -848,9 +848,11 @@ function EntryDialog({
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const selectedSubjectName = subjects.find((s) => s.id.toString() === subjectId)?.name
-  const filteredTeachers = selectedSubjectName
+  const bySubject = selectedSubjectName
     ? teachers.filter((t) => t.subjects?.includes(selectedSubjectName))
-    : teachers
+    : []
+  // Fallback to all teachers if none match the selected subject
+  const filteredTeachers = subjectId ? (bySubject.length > 0 ? bySubject : teachers) : teachers
 
   return (
     <Dialog open={state.open} onOpenChange={onOpenChange}>
