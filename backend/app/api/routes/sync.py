@@ -1,5 +1,6 @@
 """Sync all shared data from Payment system (single source of truth)."""
 
+import asyncio
 import logging
 from datetime import UTC, date, datetime
 
@@ -135,6 +136,8 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
     created = 0
     payment_to_lms: dict[int, int] = {}
     pms_keys: set[tuple[int, str]] = set()
+    # Track new Grade objects so we can build payment_to_lms after a single flush
+    new_grades: list[tuple[int, Grade]] = []  # (payment_id, Grade)
 
     for pg in payment_grades:
         key = (pg["level"], pg["section"])
@@ -144,13 +147,13 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
             # Restore if previously soft-deleted
             if lms_grade.is_deleted:
                 lms_grade.is_deleted = False
+            payment_to_lms[pg["id"]] = lms_grade.id
         else:
             lms_grade = Grade(level=pg["level"], section=pg["section"])
             db.add(lms_grade)
-            await db.flush()
             grade_map[key] = lms_grade
+            new_grades.append((pg["id"], lms_grade))
             created += 1
-        payment_to_lms[pg["id"]] = lms_grade.id
 
     # Soft-delete LMS grades no longer present in PMS export
     deactivated = 0
@@ -159,7 +162,11 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
             lms_grade.is_deleted = True
             deactivated += 1
 
+    # Single flush — auto-increment IDs are populated for all new Grade rows at once
     await db.flush()
+    for payment_id, lms_grade in new_grades:
+        payment_to_lms[payment_id] = lms_grade.id
+
     return created, deactivated, payment_to_lms
 
 
@@ -251,7 +258,8 @@ async def _sync_students(
             student_data["document_id"] = doc_id
             student_data["grade_id"] = lms_grade_id
             student_data["role"] = UserRole.STUDENT.value
-            student_data["hashed_password"] = get_password_hash(doc_id)
+            loop = asyncio.get_running_loop()
+            student_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)
             new_student = User(**student_data)
             db.add(new_student)
             student_map[doc_id] = new_student
@@ -324,7 +332,8 @@ async def _sync_teachers(
             teacher_data["document_id"] = doc_id
             teacher_data["class_teacher_grade_id"] = lms_ct_grade_id
             teacher_data["role"] = UserRole.TEACHER.value
-            teacher_data["hashed_password"] = get_password_hash(doc_id)
+            loop = asyncio.get_running_loop()
+            teacher_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)
             new_teacher = User(**teacher_data)
             db.add(new_teacher)
             teacher_map[doc_id] = new_teacher

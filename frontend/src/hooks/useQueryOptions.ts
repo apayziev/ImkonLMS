@@ -1,4 +1,4 @@
-import { gradesApi, studentsApi, subjectsApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, studentsApi, subjectsApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -8,6 +8,7 @@ export const queryKeys = {
   grades: ["grades"] as const,
   subjects: ["subjects"] as const,
   students: ["students"] as const,
+  currentAcademicYear: ["academic-years", "current"] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -37,5 +38,17 @@ export function getStudentsQueryOptions(params?: { grade_id?: number; search?: s
       const { data } = await studentsApi.list({ limit: MAX_STUDENTS, ...params })
       return data
     },
+  }
+}
+
+export function getCurrentAcademicYearQueryOptions() {
+  return {
+    queryKey: queryKeys.currentAcademicYear,
+    queryFn: async () => {
+      const { data } = await academicYearsApi.current()
+      return data
+    },
+    staleTime: 5 * 60 * 1000, // 5 min — changes very rarely
+    retry: false,
   }
 }

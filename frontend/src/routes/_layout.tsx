@@ -1,14 +1,18 @@
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { GraduationCap } from "lucide-react"
 import { ErrorBoundary } from "react-error-boundary"
 
 import { ErrorComponent } from "@/components/Common/ErrorComponent"
 import { Footer } from "@/components/Common/Footer"
 import { AppSidebar } from "@/components/Sidebar/AppSidebar"
+import { Badge } from "@/components/ui/badge"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { getCurrentAcademicYearQueryOptions } from "@/hooks/useQueryOptions"
 import { isLoggedIn } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout")({
@@ -29,6 +33,8 @@ const BG_PATTERN_STYLE = {
 } as const
 
 function Layout() {
+  const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -39,6 +45,14 @@ function Layout() {
         />
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-sm">
           <SidebarTrigger className="-ml-1 text-muted-foreground" aria-label="Sidebar ochish/yopish" />
+          <div className="ml-auto">
+            {currentYear && (
+              <Badge variant="outline" className="gap-1.5 text-sm font-medium">
+                <GraduationCap className="size-4" />
+                {currentYear.name}
+              </Badge>
+            )}
+          </div>
         </header>
         <main className="flex-1 p-6 md:p-8 relative z-[1]">
           <div className="mx-auto max-w-7xl">

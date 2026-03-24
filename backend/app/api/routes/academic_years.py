@@ -23,8 +23,7 @@ async def list_academic_years(db: SessionDep) -> Any:
 
 @router.get("/current", response_model=AcademicYearRead)
 async def get_current_academic_year(db: SessionDep) -> Any:
-    result = await crud_academic_years.get_multi(db, is_deleted=False)
-    current = next((a for a in result["data"] if a.is_current), None)
+    current = await crud_academic_years.get(db, is_deleted=False, is_current=True)
     if not current:
         raise NotFoundException("Joriy o'quv yili topilmadi")
     return current
