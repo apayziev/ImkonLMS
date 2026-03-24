@@ -275,10 +275,10 @@ function TimetablePage() {
                     <tr key={slot.id} className="border-b last:border-0">
                       {/* Period + Time */}
                       <td className="px-3 py-2 align-middle border-r bg-muted/30" style={{ minHeight: 76 }}>
-                        <div className="text-xs font-semibold text-primary">
+                        <div className="text-sm font-semibold text-primary">
                           {slot.period_number}-soat
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
+                        <div className="text-sm text-muted-foreground mt-0.5">
                           {slot.start_time} – {slot.end_time}
                         </div>
                       </td>
