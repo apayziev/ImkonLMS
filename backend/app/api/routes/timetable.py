@@ -4,7 +4,7 @@ from datetime import time
 from typing import Any
 
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -240,12 +240,11 @@ async def generate_time_slots(
     if not slots_data:
         return TimeSlotList(data=[], count=0)
 
-    # Soft-delete existing slots for this academic year
-    existing = await crud_time_slots.get_multi(
-        db, academic_year_id=academic_year_id, is_deleted=False, limit=50,
+    # Hard-delete existing slots for this academic year (regenerate replaces all)
+    await db.execute(
+        delete(TimeSlot).where(TimeSlot.academic_year_id == academic_year_id)
     )
-    for slot in existing["data"]:
-        await crud_time_slots.delete(db, id=slot.id, is_deleted=False)
+    await db.flush()
 
     # Create new slots
     created = []
