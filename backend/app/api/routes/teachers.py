@@ -13,7 +13,7 @@ router = APIRouter(prefix="/teachers", tags=["teachers"])
 async def read_teachers(
     db: SessionDep,
     skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=200),
     search: str | None = None,
 ) -> TeacherList:
     """O'qituvchilar ro'yxati."""
