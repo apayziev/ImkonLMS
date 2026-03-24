@@ -45,7 +45,6 @@ class FirstUserSettings(BaseSettings):
 
 class EnvironmentOption(str, Enum):
     LOCAL = "local"
-    STAGING = "staging"
     PRODUCTION = "production"
 
 
