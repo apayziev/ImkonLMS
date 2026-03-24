@@ -250,7 +250,7 @@ function TimetablePage() {
           )}
           <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[700px] table-fixed">
             <thead>
               <tr className="bg-muted/50 border-b">
                 <th className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[130px]">
