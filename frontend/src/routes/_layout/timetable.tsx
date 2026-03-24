@@ -105,6 +105,13 @@ function isValidTime(v: string): boolean {
   return h >= 0 && h <= 23 && m >= 0 && m <= 59
 }
 
+/** Auto-format time input: "0812" → "08:12", strips non-digits, max 5 chars */
+function formatTimeInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 4)
+  if (digits.length > 2) return `${digits.slice(0, 2)}:${digits.slice(2)}`
+  return digits
+}
+
 function buildGrid(
   timeSlots: TimeSlotRead[],
   entries: ScheduleEntryRead[],
@@ -577,10 +584,7 @@ function SettingsSection({
               <Input
                 placeholder="08:00"
                 value={dayStart}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9:]/g, "")
-                  if (v.length <= 5) setDayStart(v)
-                }}
+                onChange={(e) => setDayStart(formatTimeInput(e.target.value))}
                 maxLength={5}
               />
             </div>
@@ -589,10 +593,7 @@ function SettingsSection({
               <Input
                 placeholder="16:00"
                 value={dayEnd}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9:]/g, "")
-                  if (v.length <= 5) setDayEnd(v)
-                }}
+                onChange={(e) => setDayEnd(formatTimeInput(e.target.value))}
                 maxLength={5}
               />
             </div>
@@ -662,10 +663,7 @@ function SettingsSection({
                 <Input
                   placeholder="12:30"
                   value={newBreak.start}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9:]/g, "")
-                    if (v.length <= 5) setNewBreak((p) => ({ ...p, start: v }))
-                  }}
+                  onChange={(e) => setNewBreak((p) => ({ ...p, start: formatTimeInput(e.target.value) }))}
                   maxLength={5}
                   className="h-8 text-sm"
                 />
@@ -675,10 +673,7 @@ function SettingsSection({
                 <Input
                   placeholder="13:00"
                   value={newBreak.end}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9:]/g, "")
-                    if (v.length <= 5) setNewBreak((p) => ({ ...p, end: v }))
-                  }}
+                  onChange={(e) => setNewBreak((p) => ({ ...p, end: formatTimeInput(e.target.value) }))}
                   maxLength={5}
                   className="h-8 text-sm"
                 />
