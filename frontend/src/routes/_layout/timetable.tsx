@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { CalendarDays, Loader2, Plus, RefreshCw, Settings, Trash2 } from "lucide-react"
+import { CalendarDays, ChevronDown, Loader2, Plus, RefreshCw, Settings, Trash2 } from "lucide-react"
 import type React from "react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -34,12 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCurrentAcademicYearQueryOptions,
@@ -259,12 +253,26 @@ function TimetablePage() {
           </p>
         </div>
         {isAdmin && (
-          <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSettingsOpen((o) => !o)}
+          >
             <Settings className="h-4 w-4 mr-1.5" />
             Sozlamalar
+            <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
           </Button>
         )}
       </div>
+
+      {/* ─── Settings Section ─── */}
+      {isAdmin && settingsOpen && (
+        <SettingsSection
+          settings={settings}
+          academicYearId={academicYearId}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -299,7 +307,7 @@ function TimetablePage() {
           action={isAdmin ? (
             <Button size="sm" className="mt-3" onClick={() => setSettingsOpen(true)}>
               <Settings className="h-4 w-4 mr-1.5" />
-              Sozlamalar orqali generatsiya qilish
+              Sozlamalar
             </Button>
           ) : undefined}
         />
@@ -331,7 +339,7 @@ function TimetablePage() {
                     {/* Period + Time */}
                     <td className="px-3 py-2 align-top">
                       <div className="text-xs font-semibold text-primary">
-                        {slot.period_number}-dars
+                        {slot.period_number}-soat
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         {slot.start_time} – {slot.end_time}
@@ -383,14 +391,6 @@ function TimetablePage() {
         </div>
       )}
 
-      {/* ─── Settings Sheet ─── */}
-      <SettingsSheet
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        academicYearId={academicYearId}
-      />
-
       {/* ─── Entry Dialog ─── */}
       {entryDialog && (
         <EntryDialog
@@ -430,18 +430,16 @@ function TimetablePage() {
   )
 }
 
-// ─── SettingsSheet ──────────────────────────────────────────────────────────
+// ─── SettingsSection ────────────────────────────────────────────────────────
 
-function SettingsSheet({
-  open,
-  onOpenChange,
+function SettingsSection({
   settings,
   academicYearId,
+  onClose,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
   settings: SchoolSettingsRead | undefined
   academicYearId: number
+  onClose: () => void
 }) {
   const queryClient = useQueryClient()
 
@@ -495,8 +493,8 @@ function SettingsSheet({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
       queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
-      toast.success(`${preview.length} ta dars vaqti yaratildi`)
-      onOpenChange(false)
+      toast.success(`${preview.length} ta soat yaratildi`)
+      onClose()
     },
     onError: () => toast.error("Xatolik yuz berdi"),
   })
@@ -549,25 +547,39 @@ function SettingsSheet({
   const isPending = updateMutation.isPending || generateMutation.isPending
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>Jadval sozlamalari</SheetTitle>
-        </SheetHeader>
-        <div className="space-y-5 mt-6">
-          {/* Time range */}
+    <div className="rounded-lg border bg-card p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
+        {/* Left: settings form */}
+        <div className="space-y-5">
+          {/* Vaqt oralig'i */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Kun boshlanishi</Label>
-              <Input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} />
+              <Label>Dars boshlanishi</Label>
+              <Input
+                placeholder="08:00"
+                value={dayStart}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9:]/g, "")
+                  if (v.length <= 5) setDayStart(v)
+                }}
+                maxLength={5}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Kun tugashi</Label>
-              <Input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} />
+              <Label>Dars tugashi</Label>
+              <Input
+                placeholder="16:00"
+                value={dayEnd}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9:]/g, "")
+                  if (v.length <= 5) setDayEnd(v)
+                }}
+                maxLength={5}
+              />
             </div>
           </div>
 
-          {/* Lesson duration + default break */}
+          {/* Dars va tanaffus */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Dars davomiyligi (min)</Label>
@@ -606,7 +618,7 @@ function SettingsSheet({
                   >
                     <span>
                       <span className="text-muted-foreground">
-                        {b.after_period === 0 ? "Darsdan oldin" : `${b.after_period}-darsdan keyin`}
+                        {b.after_period === 0 ? "Darsdan oldin" : `${b.after_period}-soatdan keyin`}
                       </span>
                       <span className="mx-1.5">·</span>
                       <span className="font-medium">{b.duration} min</span>
@@ -631,7 +643,7 @@ function SettingsSheet({
             {/* Add new break */}
             <div className="flex items-end gap-2">
               <div className="w-20">
-                <Label className="text-[10px] text-muted-foreground">Darsdan keyin</Label>
+                <Label className="text-[10px] text-muted-foreground">Soatdan keyin</Label>
                 <Input
                   type="number"
                   min={0}
@@ -669,7 +681,7 @@ function SettingsSheet({
             </div>
           </div>
 
-          {/* Working days */}
+          {/* Working days + Actions */}
           <div className="space-y-1.5">
             <Label>Ish kunlari</Label>
             <div className="flex flex-wrap gap-1.5 mt-1">
@@ -690,57 +702,15 @@ function SettingsSheet({
             </div>
           </div>
 
-          {/* Preview */}
-          <div className="border-t pt-4 space-y-2">
-            <Label className="text-sm font-semibold">
-              Ko'rinish ({preview.length} ta dars)
-            </Label>
-            {preview.length > 0 ? (
-              <div className="space-y-1">
-                {preview.map((slot, idx) => {
-                  const brk = getBreakInfo(slot, preview[idx + 1], breaks)
-                  return (
-                    <div key={slot.period_number}>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-primary font-medium w-14">
-                          {slot.period_number}-dars
-                        </span>
-                        <span className="text-muted-foreground">
-                          {slot.start_time} – {slot.end_time}
-                        </span>
-                      </div>
-                      {brk && (
-                        <div className={`text-[10px] ml-14 ${brk.name ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
-                          {brk.name || "Tanaffus"} {brk.minutes} min
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-                {(() => {
-                  const preBreak = breaks.find((b) => b.after_period === 0)
-                  return preBreak ? (
-                    <p className="text-[10px] text-[#6720FF] font-medium">
-                      * {preBreak.name || "Darsdan oldingi tanaffus"} {preBreak.duration} min ({dayStart} dan)
-                    </p>
-                  ) : null
-                })()}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Vaqt oralig'i yetarli emas</p>
-            )}
-          </div>
-
           {/* Actions */}
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={handleSaveOnly} disabled={isPending} className="flex-1">
+            <Button variant="outline" onClick={handleSaveOnly} disabled={isPending}>
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               Saqlash
             </Button>
             <Button
               onClick={handleSaveAndGenerate}
               disabled={isPending || preview.length === 0 || !academicYearId}
-              className="flex-1"
             >
               {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               <RefreshCw className="h-4 w-4 mr-1.5" />
@@ -748,8 +718,49 @@ function SettingsSheet({
             </Button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+
+        {/* Right: preview */}
+        <div className="lg:w-56 lg:border-l lg:pl-6 space-y-2">
+          <Label className="text-sm font-semibold">
+            Ko'rinish ({preview.length} ta soat)
+          </Label>
+          {preview.length > 0 ? (
+            <div className="space-y-1">
+              {preview.map((slot, idx) => {
+                const brk = getBreakInfo(slot, preview[idx + 1], breaks)
+                return (
+                  <div key={slot.period_number}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-primary font-medium w-14">
+                        {slot.period_number}-soat
+                      </span>
+                      <span className="text-muted-foreground">
+                        {slot.start_time} – {slot.end_time}
+                      </span>
+                    </div>
+                    {brk && (
+                      <div className={`text-[10px] ml-14 ${brk.name ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
+                        {brk.name || "Tanaffus"} {brk.minutes} min
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {(() => {
+                const preBreak = breaks.find((b) => b.after_period === 0)
+                return preBreak ? (
+                  <p className="text-[10px] text-[#6720FF] font-medium">
+                    * {preBreak.name || "Darsdan oldingi tanaffus"} {preBreak.duration} min ({dayStart} dan)
+                  </p>
+                ) : null
+              })()}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Vaqt oralig'i yetarli emas</p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -802,7 +813,7 @@ function EntryDialog({
             <div>
               <span className="text-muted-foreground text-xs">Vaqt</span>
               <p className="font-medium">
-                {slot ? `${slot.period_number}-dars (${slot.start_time}–${slot.end_time})` : "—"}
+                {slot ? `${slot.period_number}-soat (${slot.start_time}–${slot.end_time})` : "—"}
               </p>
             </div>
           </div>
