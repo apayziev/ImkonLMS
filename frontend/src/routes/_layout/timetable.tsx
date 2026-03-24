@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { CalendarDays, Loader2, Plus, Settings, Trash2 } from "lucide-react"
+import { CalendarDays, Loader2, Pencil, Plus, Settings, Trash2, X } from "lucide-react"
 import type React from "react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -128,6 +128,9 @@ function TimetablePage() {
   const [gradeFilter, setGradeFilter] = useState("all")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [entryDialog, setEntryDialog] = useState<EntryDialogState | null>(null)
+  const [newSlot, setNewSlot] = useState({ period: "", start: "", end: "" })
+  const [editingBreak, setEditingBreak] = useState<number | null>(null)
+  const [breakValue, setBreakValue] = useState("")
 
   // Data queries
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -189,7 +192,56 @@ function TimetablePage() {
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
+  const createSlotMutation = useMutation({
+    mutationFn: timetableApi.createTimeSlot,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
+      toast.success("Dars vaqti qo'shildi")
+      setNewSlot({ period: "", start: "", end: "" })
+    },
+    onError: () => toast.error("Bu dars raqami allaqachon mavjud"),
+  })
+
+  const deleteSlotMutation = useMutation({
+    mutationFn: timetableApi.deleteTimeSlot,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
+      toast.success("Dars vaqti o'chirildi")
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (data: SchoolSettingsUpdate) => timetableApi.updateSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schoolSettings })
+      setEditingBreak(null)
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
+
   // ─── Handlers ───────────────────────────────────────────────────────
+
+  const handleAddSlot = () => {
+    if (!newSlot.period || !newSlot.start || !newSlot.end || !academicYearId) return
+    createSlotMutation.mutate({
+      academic_year_id: academicYearId,
+      period_number: Number(newSlot.period),
+      start_time: newSlot.start,
+      end_time: newSlot.end,
+    })
+  }
+
+  const saveBreakName = (periodNumber: number) => {
+    const current = { ...(settings?.break_names ?? {}) }
+    if (breakValue.trim()) {
+      current[String(periodNumber)] = breakValue.trim()
+    } else {
+      delete current[String(periodNumber)]
+    }
+    updateSettingsMutation.mutate({ break_names: current })
+  }
 
   const handleCellClick = (day: number, slotId: number) => {
     if (!isAdmin || gradeFilter === "all") return
@@ -250,7 +302,43 @@ function TimetablePage() {
       ) : isLoading ? (
         <GridSkeleton days={days.length} rows={6} />
       ) : sorted.length === 0 ? (
-        <EmptyState message="Dars vaqtlari hali kiritilmagan." />
+        <div className="space-y-3">
+          <EmptyState message="Dars vaqtlari hali kiritilmagan." />
+          {isAdmin && (
+            <div className="flex items-center justify-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={12}
+                placeholder="Dars №"
+                value={newSlot.period}
+                onChange={(e) => setNewSlot((p) => ({ ...p, period: e.target.value }))}
+                className="h-8 w-20 text-sm"
+              />
+              <Input
+                type="time"
+                value={newSlot.start}
+                onChange={(e) => setNewSlot((p) => ({ ...p, start: e.target.value }))}
+                className="h-8 w-32 text-sm"
+              />
+              <span className="text-sm text-muted-foreground">–</span>
+              <Input
+                type="time"
+                value={newSlot.end}
+                onChange={(e) => setNewSlot((p) => ({ ...p, end: e.target.value }))}
+                className="h-8 w-32 text-sm"
+              />
+              <Button
+                size="sm"
+                onClick={handleAddSlot}
+                disabled={createSlotMutation.isPending || !newSlot.period || !newSlot.start || !newSlot.end}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Qo'shish
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="rounded-lg border overflow-x-auto">
           <table className="w-full min-w-[700px]">
@@ -277,19 +365,56 @@ function TimetablePage() {
                 const hasCustomName = !!breakName
 
                 return (
-                  <tr key={slot.id} className="border-b last:border-0">
+                  <tr key={slot.id} className="border-b last:border-0 group">
                     {/* Period + Time */}
                     <td className="px-3 py-2 align-top">
-                      <div className="text-xs font-semibold text-primary">
-                        {slot.period_number}-dars
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-primary">
+                          {slot.period_number}-dars
+                        </div>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => deleteSlotMutation.mutate(slot.id)}
+                            disabled={deleteSlotMutation.isPending}
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         {slot.start_time} – {slot.end_time}
                       </div>
                       {breakMin !== null && (
-                        <div className={`text-[10px] mt-1 ${hasCustomName ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
-                          {breakName || "Tanaffus"} {breakMin} min
-                        </div>
+                        editingBreak === slot.period_number ? (
+                          <div className="flex items-center gap-1 mt-1">
+                            <input
+                              value={breakValue}
+                              onChange={(e) => setBreakValue(e.target.value)}
+                              onBlur={() => saveBreakName(slot.period_number)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveBreakName(slot.period_number)
+                                if (e.key === "Escape") setEditingBreak(null)
+                              }}
+                              placeholder="Tanaffus"
+                              className="h-5 w-20 rounded border px-1 text-[10px] outline-none focus:border-primary"
+                              autoFocus
+                            />
+                            <span className="text-[10px] text-muted-foreground/60">{breakMin} min</span>
+                          </div>
+                        ) : (
+                          <div
+                            className={`text-[10px] mt-1 ${hasCustomName ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"} ${isAdmin ? "cursor-pointer hover:text-[#6720FF] group/break inline-flex items-center gap-0.5" : ""}`}
+                            onClick={isAdmin ? () => {
+                              setEditingBreak(slot.period_number)
+                              setBreakValue(breakName || "")
+                            } : undefined}
+                          >
+                            {breakName || "Tanaffus"} {breakMin} min
+                            {isAdmin && <Pencil className="h-2.5 w-2.5 opacity-0 group-hover/break:opacity-100 transition-opacity" />}
+                          </div>
+                        )
                       )}
                     </td>
 
@@ -328,6 +453,45 @@ function TimetablePage() {
                   </tr>
                 )
               })}
+              {isAdmin && (
+                <tr className="border-t">
+                  <td colSpan={days.length + 1} className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={12}
+                        placeholder="№"
+                        value={newSlot.period}
+                        onChange={(e) => setNewSlot((p) => ({ ...p, period: e.target.value }))}
+                        className="h-7 w-14 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={newSlot.start}
+                        onChange={(e) => setNewSlot((p) => ({ ...p, start: e.target.value }))}
+                        className="h-7 w-28 text-xs"
+                      />
+                      <span className="text-xs text-muted-foreground">–</span>
+                      <Input
+                        type="time"
+                        value={newSlot.end}
+                        onChange={(e) => setNewSlot((p) => ({ ...p, end: e.target.value }))}
+                        className="h-7 w-28 text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 p-0"
+                        onClick={handleAddSlot}
+                        disabled={createSlotMutation.isPending || !newSlot.period || !newSlot.start || !newSlot.end}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -338,8 +502,6 @@ function TimetablePage() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
-        academicYearId={academicYearId}
-        timeSlots={timeSlots}
       />
 
       {/* ─── Entry Dialog ─── */}
@@ -387,27 +549,18 @@ function SettingsSheet({
   open,
   onOpenChange,
   settings,
-  academicYearId,
-  timeSlots,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   settings: SchoolSettingsRead | undefined
-  academicYearId: number
-  timeSlots: TimeSlotRead[]
 }) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<SchoolSettingsUpdate>({})
-  const [newSlot, setNewSlot] = useState({ period: "", start: "", end: "" })
 
   const defaults = {
     lesson_duration_minutes: 45,
-    short_break_minutes: 10,
-    long_break_minutes: 25,
-    long_break_after_period: 3,
     periods_per_day: 6,
     working_days: [1, 2, 3, 4, 5, 6],
-    break_names: {} as Record<string, string>,
   }
   const current = settings ?? defaults
 
@@ -421,42 +574,12 @@ function SettingsSheet({
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
-  const createSlotMutation = useMutation({
-    mutationFn: timetableApi.createTimeSlot,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
-      toast.success("Dars vaqti qo'shildi")
-      setNewSlot({ period: "", start: "", end: "" })
-    },
-    onError: () => toast.error("Bu dars raqami allaqachon mavjud"),
-  })
-
-  const deleteSlotMutation = useMutation({
-    mutationFn: timetableApi.deleteTimeSlot,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
-      toast.success("Dars vaqti o'chirildi")
-    },
-    onError: () => toast.error("Xatolik yuz berdi"),
-  })
-
   const handleSave = () => {
     if (Object.keys(form).length === 0) {
       onOpenChange(false)
       return
     }
     updateMutation.mutate(form)
-  }
-
-  const handleAddSlot = () => {
-    if (!newSlot.period || !newSlot.start || !newSlot.end || !academicYearId) return
-    createSlotMutation.mutate({
-      academic_year_id: academicYearId,
-      period_number: Number(newSlot.period),
-      start_time: newSlot.start,
-      end_time: newSlot.end,
-    })
   }
 
   const currentDays = form.working_days ?? current.working_days
@@ -467,93 +590,13 @@ function SettingsSheet({
     if (newDays.length > 0) setForm((prev) => ({ ...prev, working_days: newDays }))
   }
 
-  const sortedSlots = [...timeSlots].sort((a, b) => a.period_number - b.period_number)
-
   return (
     <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setForm({}) }}>
-      <SheetContent className="overflow-y-auto">
+      <SheetContent>
         <SheetHeader>
-          <SheetTitle>Maktab sozlamalari</SheetTitle>
+          <SheetTitle>Jadval sozlamalari</SheetTitle>
         </SheetHeader>
         <div className="space-y-5 mt-6">
-          {/* ─── Time Slots ─── */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Dars vaqtlari</Label>
-            {sortedSlots.length > 0 ? (
-              <div className="space-y-1.5">
-                {sortedSlots.map((slot) => (
-                  <div
-                    key={slot.id}
-                    className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                  >
-                    <span>
-                      <span className="font-medium text-primary">{slot.period_number}-dars</span>
-                      <span className="text-muted-foreground ml-2">
-                        {slot.start_time} – {slot.end_time}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => deleteSlotMutation.mutate(slot.id)}
-                      disabled={deleteSlotMutation.isPending}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Hali dars vaqtlari kiritilmagan</p>
-            )}
-            {/* Add new time slot */}
-            <div className="flex items-end gap-2 pt-1">
-              <div className="w-16">
-                <Label className="text-[10px] text-muted-foreground">Dars №</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={12}
-                  placeholder="1"
-                  value={newSlot.period}
-                  onChange={(e) => setNewSlot((p) => ({ ...p, period: e.target.value }))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="flex-1">
-                <Label className="text-[10px] text-muted-foreground">Boshlanish</Label>
-                <Input
-                  type="time"
-                  value={newSlot.start}
-                  onChange={(e) => setNewSlot((p) => ({ ...p, start: e.target.value }))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="flex-1">
-                <Label className="text-[10px] text-muted-foreground">Tugash</Label>
-                <Input
-                  type="time"
-                  value={newSlot.end}
-                  onChange={(e) => setNewSlot((p) => ({ ...p, end: e.target.value }))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 px-2"
-                onClick={handleAddSlot}
-                disabled={createSlotMutation.isPending || !newSlot.period || !newSlot.start || !newSlot.end}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
-            <Label className="text-sm font-semibold">Umumiy sozlamalar</Label>
-          </div>
-
           <div className="space-y-1.5">
             <Label>Dars davomiyligi (min)</Label>
             <Input
@@ -563,45 +606,6 @@ function SettingsSheet({
               value={form.lesson_duration_minutes ?? current.lesson_duration_minutes}
               onChange={(e) => setForm((p) => ({ ...p, lesson_duration_minutes: +e.target.value }))}
             />
-          </div>
-
-          {/* Break names */}
-          <div className="space-y-2">
-            <Label>Tanaffus nomlari</Label>
-            <p className="text-[10px] text-muted-foreground">
-              Darsdan keyin maxsus tanaffus bo'lsa, nom kiriting (masalan: Nonushta, Tushlik, Tolma choy)
-            </p>
-            {sortedSlots.length > 0 ? (
-              <div className="space-y-1.5">
-                {sortedSlots.slice(0, -1).map((slot) => {
-                  const currentBreakNames = form.break_names ?? current.break_names
-                  const name = currentBreakNames[String(slot.period_number)] ?? ""
-                  return (
-                    <div key={slot.id} className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-16 shrink-0">
-                        {slot.period_number}-dars →
-                      </span>
-                      <Input
-                        placeholder="Tanaffus"
-                        value={name}
-                        onChange={(e) => {
-                          const updated = { ...(form.break_names ?? current.break_names) }
-                          if (e.target.value) {
-                            updated[String(slot.period_number)] = e.target.value
-                          } else {
-                            delete updated[String(slot.period_number)]
-                          }
-                          setForm((p) => ({ ...p, break_names: updated }))
-                        }}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Avval dars vaqtlarini qo'shing</p>
-            )}
           </div>
 
           <div className="space-y-1.5">
@@ -623,6 +627,7 @@ function SettingsSheet({
               ))}
             </div>
           </div>
+
           <div className="space-y-1.5">
             <Label>Kuniga darslar soni</Label>
             <Input
@@ -633,6 +638,7 @@ function SettingsSheet({
               onChange={(e) => setForm((p) => ({ ...p, periods_per_day: +e.target.value }))}
             />
           </div>
+
           <Button onClick={handleSave} disabled={updateMutation.isPending} className="w-full mt-4">
             {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
             Saqlash
