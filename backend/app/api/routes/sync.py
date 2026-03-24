@@ -98,32 +98,42 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
     return created, payment_to_lms
 
 
-async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> int:
-    """Upsert subjects by name. Returns created count."""
+async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[int, int]:
+    """Upsert subjects by name and sync is_deleted status. Returns (created, updated)."""
     existing = (await db.execute(select(Subject))).scalars().all()
     subject_map: dict[str, Subject] = {s.name: s for s in existing}
 
-    created = 0
+    created = updated = 0
     for ps in payment_subjects:
         name = ps.get("name")
         if not name:
             continue
-        if name not in subject_map:
-            new_subject = Subject(name=name)
+
+        # Payment: is_deleted=True OR is_active=False → LMS: is_deleted=True
+        should_delete = ps.get("is_deleted", False) or not ps.get("is_active", True)
+
+        if name in subject_map:
+            existing_subject = subject_map[name]
+            if existing_subject.is_deleted != should_delete:
+                existing_subject.is_deleted = should_delete
+                updated += 1
+        else:
+            new_subject = Subject(name=name, is_deleted=should_delete)
             db.add(new_subject)
             subject_map[name] = new_subject
             created += 1
 
     await db.flush()
-    return created
+    return created, updated
 
 
 async def _sync_students(
     db: SessionDep,
     payment_students: list[dict],
     grade_map: dict[int, int],
-) -> tuple[int, int]:
-    """Upsert students by document_id. Returns (created, updated)."""
+    all_payment_document_ids: list[str] | None = None,
+) -> tuple[int, int, int]:
+    """Upsert students by document_id. Returns (created, updated, deactivated)."""
     existing_result = await db.execute(
         select(User).where(User.role == UserRole.STUDENT.value)
     )
@@ -182,15 +192,25 @@ async def _sync_students(
             student_map[doc_id] = new_student
             created += 1
 
-    return created, updated
+    # Detect hard-deleted students (no longer in Payment)
+    deactivated = 0
+    if all_payment_document_ids is not None:
+        active_ids = set(all_payment_document_ids)
+        for doc_id, student in student_map.items():
+            if doc_id not in active_ids and not student.is_deleted:
+                student.is_deleted = True
+                deactivated += 1
+
+    return created, updated, deactivated
 
 
 async def _sync_teachers(
     db: SessionDep,
     payment_teachers: list[dict],
     grade_map: dict[int, int],
-) -> tuple[int, int]:
-    """Upsert teachers by document_id. Returns (created, updated)."""
+    all_payment_document_ids: list[str] | None = None,
+) -> tuple[int, int, int]:
+    """Upsert teachers by document_id. Returns (created, updated, deactivated)."""
     existing_result = await db.execute(
         select(User).where(User.role == UserRole.TEACHER.value)
     )
@@ -245,7 +265,16 @@ async def _sync_teachers(
             teacher_map[doc_id] = new_teacher
             created += 1
 
-    return created, updated
+    # Detect hard-deleted teachers (no longer in Payment)
+    deactivated = 0
+    if all_payment_document_ids is not None:
+        active_ids = set(all_payment_document_ids)
+        for doc_id, teacher in teacher_map.items():
+            if doc_id not in active_ids and not teacher.is_deleted:
+                teacher.is_deleted = True
+                deactivated += 1
+
+    return created, updated, deactivated
 
 
 async def _get_last_successful_sync(db: AsyncSession) -> datetime | None:
@@ -279,12 +308,14 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     data = await _fetch_payment_data(updated_after=last_sync)
 
     grades_created, grade_map = await _sync_grades(db, data.get("grades", []))
-    subjects_created = await _sync_subjects(db, data.get("subjects", []))
-    students_created, students_updated = await _sync_students(
+    subjects_created, subjects_updated = await _sync_subjects(db, data.get("subjects", []))
+    students_created, students_updated, students_deactivated = await _sync_students(
         db, data.get("students", []), grade_map,
+        all_payment_document_ids=data.get("all_student_document_ids"),
     )
-    teachers_created, teachers_updated = await _sync_teachers(
+    teachers_created, teachers_updated, teachers_deactivated = await _sync_teachers(
         db, data.get("teachers", []), grade_map,
+        all_payment_document_ids=data.get("all_teacher_document_ids"),
     )
 
     await db.commit()
@@ -295,10 +326,13 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "updated_after": last_sync.isoformat() if last_sync else None,
         "grades_created": grades_created,
         "subjects_created": subjects_created,
+        "subjects_updated": subjects_updated,
         "students_created": students_created,
         "students_updated": students_updated,
+        "students_deactivated": students_deactivated,
         "teachers_created": teachers_created,
         "teachers_updated": teachers_updated,
+        "teachers_deactivated": teachers_deactivated,
         "total_students": len(data.get("students", [])),
         "total_teachers": len(data.get("teachers", [])),
     }
@@ -306,13 +340,13 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     await _save_sync_log(db, status="success", stats=result, triggered_by=triggered_by)
 
     logger.info(
-        "Sync completed (%s, %s): grades=%d, subjects=%d, "
-        "students=%d/%d, teachers=%d/%d",
+        "Sync completed (%s, %s): grades=%d, subjects=%d/%d, "
+        "students=%d/%d/%d, teachers=%d/%d/%d",
         triggered_by,
         "incremental" if last_sync else "full",
-        grades_created, subjects_created,
-        students_created, students_updated,
-        teachers_created, teachers_updated,
+        grades_created, subjects_created, subjects_updated,
+        students_created, students_updated, students_deactivated,
+        teachers_created, teachers_updated, teachers_deactivated,
     )
 
     return result
