@@ -222,7 +222,7 @@ function TimetablePage() {
     }),
   )
 
-  const grades: GradeRead[] = (gradesData?.data ?? []).toSorted((a, b) =>
+  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
     a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
   )
   const subjects = subjectsData?.data ?? []
