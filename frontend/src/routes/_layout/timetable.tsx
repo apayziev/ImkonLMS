@@ -56,6 +56,9 @@ function TimetablePage() {
 
   const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
 
+  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
+    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
+  )
   const selectedGradeId = gradeFilter ?? grades[0]?.id?.toString() ?? null
   const gradeId = selectedGradeId ? Number(selectedGradeId) : undefined
   const { data: scheduleData, isLoading } = useQuery(
@@ -65,9 +68,6 @@ function TimetablePage() {
     }),
   )
 
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
-    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
-  )
   const subjects = subjectsData?.data ?? []
   const teachers = teachersData?.data ?? []
   const timeSlots = timeSlotsData?.data ?? []

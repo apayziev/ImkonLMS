@@ -23,6 +23,7 @@ import { DAY_NAMES, type EntryDialogState } from "./helpers"
 export function EntryDialog({
   state,
   onOpenChange,
+  gradeId,
   subjects,
   teachers,
   timeSlots,
