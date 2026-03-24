@@ -7,15 +7,18 @@ ENV UV_LINK_MODE=copy
 WORKDIR /app/backend
 
 # Install dependencies first (better layer caching)
-COPY backend/uv.lock backend/pyproject.toml ./
-RUN uv sync --frozen --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=backend/uv.lock,target=uv.lock \
+    --mount=type=bind,source=backend/pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project
 
 # Copy full project
 COPY . /app/
 
 # Install the project
 WORKDIR /app/backend
-RUN uv sync --frozen --no-editable
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-editable
 
 # --------- Final Stage ---------
 FROM python:3.13-slim-bookworm
