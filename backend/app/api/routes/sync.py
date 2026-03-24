@@ -170,16 +170,18 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
     return created, deactivated, payment_to_lms
 
 
-async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[int, int]:
-    """Upsert subjects by name and sync is_deleted status. Returns (created, updated)."""
+async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[int, int, int]:
+    """Upsert subjects by name and sync is_deleted status. Returns (created, updated, deactivated)."""
     existing = (await db.execute(select(Subject))).scalars().all()
     subject_map: dict[str, Subject] = {s.name: s for s in existing}
+    pms_names: set[str] = set()
 
-    created = updated = 0
+    created = updated = deactivated = 0
     for ps in payment_subjects:
         name = ps.get("name")
         if not name:
             continue
+        pms_names.add(name)
 
         # Payment: is_deleted=True OR is_active=False → LMS: is_deleted=True
         should_delete = ps.get("is_deleted", False) or not ps.get("is_active", True)
@@ -195,8 +197,14 @@ async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[
             subject_map[name] = new_subject
             created += 1
 
+    # Soft-delete LMS subjects no longer present in PMS
+    for name, subj in subject_map.items():
+        if name not in pms_names and not subj.is_deleted:
+            subj.is_deleted = True
+            deactivated += 1
+
     await db.flush()
-    return created, updated
+    return created, updated, deactivated
 
 
 async def _sync_students(
@@ -383,7 +391,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
 
     academic_years_created, academic_years_updated, academic_years_deactivated = await _sync_academic_years(db, data.get("academic_years", []))
     grades_created, grades_deactivated, grade_map = await _sync_grades(db, data.get("grades", []))
-    subjects_created, subjects_updated = await _sync_subjects(db, data.get("subjects", []))
+    subjects_created, subjects_updated, subjects_deactivated = await _sync_subjects(db, data.get("subjects", []))
     students_created, students_updated, students_deactivated = await _sync_students(
         db, data.get("students", []), grade_map,
         all_payment_document_ids=data.get("all_student_document_ids"),
@@ -406,6 +414,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "grades_deactivated": grades_deactivated,
         "subjects_created": subjects_created,
         "subjects_updated": subjects_updated,
+        "subjects_deactivated": subjects_deactivated,
         "students_created": students_created,
         "students_updated": students_updated,
         "students_deactivated": students_deactivated,
