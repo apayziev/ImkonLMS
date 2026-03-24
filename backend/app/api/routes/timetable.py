@@ -159,11 +159,19 @@ def _generate_slots(
     default_break: int,
     breaks: list[dict],
 ) -> list[dict]:
-    """Calculate time slots from settings. Returns list of {period_number, start_time, end_time}."""
-    # Build breaks lookup: after_period -> {duration, name}
-    breaks_map: dict[int, dict] = {}
+    """Calculate time slots from settings. Returns list of {period_number, start_time, end_time}.
+
+    Breaks are time-based: [{start_time, end_time, name}].
+    Algorithm: fill lessons sequentially; when a lesson would overlap a break,
+    end the lesson before the break and resume after the break.
+    """
+    # Parse breaks into sorted list of (start_min, end_min, name)
+    parsed_breaks = []
     for b in breaks:
-        breaks_map[b["after_period"]] = {"duration": b["duration"], "name": b.get("name", "")}
+        sh, sm = map(int, b["start_time"].split(":"))
+        eh, em = map(int, b["end_time"].split(":"))
+        parsed_breaks.append((sh * 60 + sm, eh * 60 + em, b.get("name", "")))
+    parsed_breaks.sort(key=lambda x: x[0])
 
     start_h, start_m = map(int, day_start.split(":"))
     end_h, end_m = map(int, day_end.split(":"))
@@ -173,27 +181,41 @@ def _generate_slots(
     result = []
     period = 1
 
-    # Handle break before first lesson (after_period=0)
-    if 0 in breaks_map:
-        cursor += breaks_map[0]["duration"]
-
     while cursor + lesson_dur <= day_end_min:
+        # Skip any breaks that start at or before cursor
+        skipped = False
+        for bs, be, _ in parsed_breaks:
+            if bs <= cursor < be:
+                cursor = be
+                skipped = True
+                break
+        if skipped:
+            continue
+
         slot_start = cursor
         slot_end = cursor + lesson_dur
+
+        # Check if this lesson overlaps a break
+        overlaps_break = False
+        for bs, be, _ in parsed_breaks:
+            if slot_start < bs < slot_end:
+                # Lesson would run into a break — end before break
+                slot_end = bs
+                overlaps_break = True
+                break
+
+        if slot_end - slot_start < 10:
+            cursor = slot_end
+            continue
+
         result.append({
             "period_number": period,
             "start_time": f"{slot_start // 60:02d}:{slot_start % 60:02d}",
             "end_time": f"{slot_end // 60:02d}:{slot_end % 60:02d}",
         })
 
-        cursor = slot_end
+        cursor = slot_end + (0 if overlaps_break else default_break)
         period += 1
-
-        # Add break after this period
-        if period - 1 in breaks_map:
-            cursor += breaks_map[period - 1]["duration"]
-        else:
-            cursor += default_break
 
     return result
 

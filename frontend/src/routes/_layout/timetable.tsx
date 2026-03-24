@@ -101,16 +101,23 @@ function buildGrid(
 }
 
 function getBreakInfo(
-  currentSlot: Pick<TimeSlotRead, "period_number" | "end_time" | "start_time">,
+  currentSlot: Pick<TimeSlotRead, "end_time" | "start_time">,
   nextSlot: Pick<TimeSlotRead, "start_time"> | undefined,
   breaks: BreakItem[],
 ): { minutes: number; name: string } | null {
   if (!nextSlot) return null
   const [ch, cm] = currentSlot.end_time.split(":").map(Number)
   const [nh, nm] = nextSlot.start_time.split(":").map(Number)
-  const diff = (nh * 60 + nm) - (ch * 60 + cm)
+  const gapStart = ch * 60 + cm
+  const gapEnd = nh * 60 + nm
+  const diff = gapEnd - gapStart
   if (diff <= 0) return null
-  const brk = breaks.find((b) => b.after_period === currentSlot.period_number)
+  // Find a named break that falls within this gap
+  const brk = breaks.find((b) => {
+    const [bsh, bsm] = b.start_time.split(":").map(Number)
+    const bs = bsh * 60 + bsm
+    return bs >= gapStart && bs < gapEnd
+  })
   return { minutes: diff, name: brk?.name || "" }
 }
 
@@ -122,33 +129,53 @@ function generatePreviewSlots(
   defaultBreak: number,
   breaks: BreakItem[],
 ): { period_number: number; start_time: string; end_time: string }[] {
-  const breaksMap = new Map<number, BreakItem>()
-  for (const b of breaks) breaksMap.set(b.after_period, b)
+  // Parse breaks into sorted list
+  const parsed = breaks
+    .map((b) => {
+      const [sh, sm] = b.start_time.split(":").map(Number)
+      const [eh, em] = b.end_time.split(":").map(Number)
+      return { start: sh * 60 + sm, end: eh * 60 + em, name: b.name }
+    })
+    .sort((a, b) => a.start - b.start)
 
   const [sh, sm] = dayStart.split(":").map(Number)
   const [eh, em] = dayEnd.split(":").map(Number)
   let cursor = sh * 60 + sm
   const endMin = eh * 60 + em
 
-  // Break before first lesson (after_period=0)
-  const pre = breaksMap.get(0)
-  if (pre) cursor += pre.duration
+  const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
 
   const result: { period_number: number; start_time: string; end_time: string }[] = []
   let period = 1
 
   while (cursor + lessonDur <= endMin) {
-    const start = cursor
-    const end = cursor + lessonDur
-    result.push({
-      period_number: period,
-      start_time: `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`,
-      end_time: `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`,
-    })
-    cursor = end
+    // Skip breaks at cursor
+    const activeBreak = parsed.find((b) => b.start <= cursor && cursor < b.end)
+    if (activeBreak) {
+      cursor = activeBreak.end
+      continue
+    }
+
+    let slotEnd = cursor + lessonDur
+
+    // Check overlap with break
+    let overlaps = false
+    for (const b of parsed) {
+      if (cursor < b.start && b.start < slotEnd) {
+        slotEnd = b.start
+        overlaps = true
+        break
+      }
+    }
+
+    if (slotEnd - cursor < 10) {
+      cursor = slotEnd
+      continue
+    }
+
+    result.push({ period_number: period, start_time: fmt(cursor), end_time: fmt(slotEnd) })
+    cursor = slotEnd + (overlaps ? 0 : defaultBreak)
     period++
-    const brk = breaksMap.get(period - 1)
-    cursor += brk ? brk.duration : defaultBreak
   }
 
   return result
@@ -252,17 +279,32 @@ function TimetablePage() {
             Haftalik dars jadvali — {currentYear?.name ?? "O'quv yili tanlanmagan"}
           </p>
         </div>
-        {isAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSettingsOpen((o) => !o)}
-          >
-            <Settings className="h-4 w-4 mr-1.5" />
-            Sozlamalar
-            <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sinf tanlang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha sinflar</SelectItem>
+              {grades.map((g) => (
+                <SelectItem key={g.id} value={g.id.toString()}>
+                  {g.display_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSettingsOpen((o) => !o)}
+            >
+              <Settings className="h-4 w-4 mr-1.5" />
+              Sozlamalar
+              <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ─── Settings Section ─── */}
@@ -273,28 +315,6 @@ function TimetablePage() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <Select value={gradeFilter} onValueChange={setGradeFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Sinf tanlang" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha sinflar</SelectItem>
-            {grades.map((g) => (
-              <SelectItem key={g.id} value={g.id.toString()}>
-                {g.display_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isAdmin && gradeFilter === "all" && sorted.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Dars qo'shish uchun sinf tanlang
-          </p>
-        )}
-      </div>
 
       {/* Timetable Grid */}
       {!academicYearId ? (
@@ -463,7 +483,7 @@ function SettingsSection({
   const [defaultBreak, setDefaultBreak] = useState(current.default_break_minutes)
   const [breaks, setBreaks] = useState<BreakItem[]>(current.breaks)
   const [workingDays, setWorkingDays] = useState(current.working_days)
-  const [newBreak, setNewBreak] = useState({ after: "", dur: "", name: "" })
+  const [newBreak, setNewBreak] = useState({ start: "", end: "", name: "" })
 
   // Sync state when settings load/change
   const [lastSettingsId, setLastSettingsId] = useState(current.id)
@@ -518,23 +538,22 @@ function SettingsSection({
   }
 
   const addBreak = () => {
-    if (!newBreak.after || !newBreak.dur) return
-    const afterPeriod = Number(newBreak.after)
-    // Don't add duplicate
-    if (breaks.some((b) => b.after_period === afterPeriod)) {
-      toast.error("Bu darsdan keyingi tanaffus allaqachon mavjud")
+    if (!newBreak.start || !newBreak.end) return
+    // Don't add duplicate start_time
+    if (breaks.some((b) => b.start_time === newBreak.start)) {
+      toast.error("Bu vaqtda tanaffus allaqachon mavjud")
       return
     }
     setBreaks((prev) => [...prev, {
-      after_period: afterPeriod,
-      duration: Number(newBreak.dur),
+      start_time: newBreak.start,
+      end_time: newBreak.end,
       name: newBreak.name,
-    }].sort((a, b) => a.after_period - b.after_period))
-    setNewBreak({ after: "", dur: "", name: "" })
+    }].sort((a, b) => a.start_time.localeCompare(b.start_time)))
+    setNewBreak({ start: "", end: "", name: "" })
   }
 
-  const removeBreak = (afterPeriod: number) => {
-    setBreaks((prev) => prev.filter((b) => b.after_period !== afterPeriod))
+  const removeBreak = (startTime: string) => {
+    setBreaks((prev) => prev.filter((b) => b.start_time !== startTime))
   }
 
   const toggleDay = (day: number) => {
@@ -607,21 +626,17 @@ function SettingsSection({
           <div className="space-y-2">
             <Label className="text-sm font-semibold">Maxsus tanaffuslar</Label>
             <p className="text-[10px] text-muted-foreground">
-              Oddiy tanaffusdan farq qiladigan tanaffuslar (Nonushta, Tushlik, Tolma choy)
+              Tushlik, Dam olish kabi vaqtga asoslangan tanaffuslar
             </p>
             {breaks.length > 0 && (
               <div className="space-y-1.5">
                 {breaks.map((b) => (
                   <div
-                    key={b.after_period}
+                    key={b.start_time}
                     className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm"
                   >
                     <span>
-                      <span className="text-muted-foreground">
-                        {b.after_period === 0 ? "Darsdan oldin" : `${b.after_period}-soatdan keyin`}
-                      </span>
-                      <span className="mx-1.5">·</span>
-                      <span className="font-medium">{b.duration} min</span>
+                      <span className="font-medium">{b.start_time} – {b.end_time}</span>
                       {b.name && (
                         <>
                           <span className="mx-1.5">·</span>
@@ -631,7 +646,7 @@ function SettingsSection({
                     </span>
                     <button
                       type="button"
-                      onClick={() => removeBreak(b.after_period)}
+                      onClick={() => removeBreak(b.start_time)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -643,33 +658,35 @@ function SettingsSection({
             {/* Add new break */}
             <div className="flex items-end gap-2">
               <div className="w-20">
-                <Label className="text-[10px] text-muted-foreground">Soatdan keyin</Label>
+                <Label className="text-[10px] text-muted-foreground">Boshlanishi</Label>
                 <Input
-                  type="number"
-                  min={0}
-                  max={12}
-                  placeholder="0"
-                  value={newBreak.after}
-                  onChange={(e) => setNewBreak((p) => ({ ...p, after: e.target.value }))}
+                  placeholder="12:30"
+                  value={newBreak.start}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9:]/g, "")
+                    if (v.length <= 5) setNewBreak((p) => ({ ...p, start: v }))
+                  }}
+                  maxLength={5}
                   className="h-8 text-sm"
                 />
               </div>
-              <div className="w-16">
-                <Label className="text-[10px] text-muted-foreground">Min</Label>
+              <div className="w-20">
+                <Label className="text-[10px] text-muted-foreground">Tugashi</Label>
                 <Input
-                  type="number"
-                  min={1}
-                  max={120}
-                  placeholder="30"
-                  value={newBreak.dur}
-                  onChange={(e) => setNewBreak((p) => ({ ...p, dur: e.target.value }))}
+                  placeholder="13:00"
+                  value={newBreak.end}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9:]/g, "")
+                    if (v.length <= 5) setNewBreak((p) => ({ ...p, end: v }))
+                  }}
+                  maxLength={5}
                   className="h-8 text-sm"
                 />
               </div>
               <div className="flex-1">
                 <Label className="text-[10px] text-muted-foreground">Nomi (ixtiyoriy)</Label>
                 <Input
-                  placeholder="Nonushta"
+                  placeholder="Tushlik"
                   value={newBreak.name}
                   onChange={(e) => setNewBreak((p) => ({ ...p, name: e.target.value }))}
                   className="h-8 text-sm"
@@ -746,14 +763,6 @@ function SettingsSection({
                   </div>
                 )
               })}
-              {(() => {
-                const preBreak = breaks.find((b) => b.after_period === 0)
-                return preBreak ? (
-                  <p className="text-[10px] text-[#6720FF] font-medium">
-                    * {preBreak.name || "Darsdan oldingi tanaffus"} {preBreak.duration} min ({dayStart} dan)
-                  </p>
-                ) : null
-              })()}
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Vaqt oralig'i yetarli emas</p>

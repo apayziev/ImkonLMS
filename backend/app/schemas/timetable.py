@@ -7,8 +7,8 @@ from .base import TimestampSchema
 
 
 class BreakItem(BaseModel):
-    after_period: int = Field(ge=0, le=12)
-    duration: int = Field(ge=1, le=120)
+    start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
+    end_time: str = Field(pattern=r"^\d{2}:\d{2}$")
     name: str = ""
 
 

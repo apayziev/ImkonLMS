@@ -271,8 +271,8 @@ export const academicYearsApi = {
 // --- School Settings Types & API ---
 
 export interface BreakItem {
-  after_period: number
-  duration: number
+  start_time: string
+  end_time: string
   name: string
 }
 
