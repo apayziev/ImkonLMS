@@ -1,4 +1,4 @@
-import { academicYearsApi, gradesApi, studentsApi, subjectsApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -8,7 +8,11 @@ export const queryKeys = {
   grades: ["grades"] as const,
   subjects: ["subjects"] as const,
   students: ["students"] as const,
+  teachers: ["teachers"] as const,
   currentAcademicYear: ["academic-years", "current"] as const,
+  schoolSettings: ["school-settings"] as const,
+  timeSlots: ["time-slots"] as const,
+  schedule: ["schedule"] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -26,6 +30,16 @@ export function getSubjectsQueryOptions() {
     queryKey: queryKeys.subjects,
     queryFn: async () => {
       const { data } = await subjectsApi.list(0, MAX_SUBJECTS)
+      return data
+    },
+  }
+}
+
+export function getTeachersQueryOptions(params?: { search?: string }) {
+  return {
+    queryKey: [...queryKeys.teachers, params ?? {}] as const,
+    queryFn: async () => {
+      const { data } = await teachersApi.list({ limit: 200, ...params })
       return data
     },
   }
@@ -50,5 +64,42 @@ export function getCurrentAcademicYearQueryOptions() {
     },
     staleTime: 5 * 60 * 1000, // 5 min — changes very rarely
     retry: false,
+  }
+}
+
+export function getSchoolSettingsQueryOptions() {
+  return {
+    queryKey: queryKeys.schoolSettings,
+    queryFn: async () => {
+      const { data } = await timetableApi.getSettings()
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  }
+}
+
+export function getTimeSlotsQueryOptions(academicYearId: number) {
+  return {
+    queryKey: [...queryKeys.timeSlots, academicYearId] as const,
+    queryFn: async () => {
+      const { data } = await timetableApi.listTimeSlots(academicYearId)
+      return data
+    },
+    enabled: academicYearId > 0,
+  }
+}
+
+export function getScheduleQueryOptions(params: {
+  academic_year_id: number
+  grade_id?: number
+  teacher_id?: number
+}) {
+  return {
+    queryKey: [...queryKeys.schedule, params] as const,
+    queryFn: async () => {
+      const { data } = await timetableApi.listSchedule(params)
+      return data
+    },
+    enabled: params.academic_year_id > 0,
   }
 }
