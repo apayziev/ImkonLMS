@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
 
+from .academic_years import router as academic_years_router
 from .grades import router as grades_router
 from .health import router as health_router
 from .login import router as login_router
@@ -23,6 +24,7 @@ router.include_router(login_router)
 # Protected routes
 router.include_router(logout_router, dependencies=[Depends(get_current_user)])
 router.include_router(users_router, dependencies=[Depends(get_current_user)])
+router.include_router(academic_years_router, dependencies=[Depends(get_current_user)])
 router.include_router(grades_router, dependencies=[Depends(get_current_user)])
 router.include_router(subjects_router, dependencies=[Depends(get_current_user)])
 router.include_router(students_router, dependencies=[Depends(get_current_user)])

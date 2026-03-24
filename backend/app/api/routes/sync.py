@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import SessionDep, SuperUser
 from app.core.config import settings
 from app.core.security import get_password_hash
+from app.models.academic_year import AcademicYear
 from app.models.grade import Grade
 from app.models.subject import Subject
 from app.models.sync_log import SyncLog
@@ -73,6 +74,57 @@ async def _fetch_payment_data(updated_after: datetime | None = None) -> dict:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Payment tizimiga ulanib bo'lmadi",
         ) from e
+
+
+async def _sync_academic_years(db: SessionDep, payment_years: list[dict]) -> tuple[int, int, int]:
+    """Upsert academic years by name. Returns (created, updated, deactivated)."""
+    existing = (await db.execute(select(AcademicYear))).scalars().all()
+    year_map: dict[str, AcademicYear] = {a.name: a for a in existing}
+    pms_names: set[str] = set()
+
+    created = updated = deactivated = 0
+
+    for pa in payment_years:
+        name = pa.get("name")
+        if not name:
+            continue
+        pms_names.add(name)
+
+        if name in year_map:
+            ay = year_map[name]
+            changed = False
+            for field in ("start_year", "end_year", "start_month", "end_month", "is_current"):
+                if pa.get(field) is not None and getattr(ay, field) != pa[field]:
+                    setattr(ay, field, pa[field])
+                    changed = True
+            # Restore if previously soft-deleted
+            if ay.is_deleted and not pa.get("is_deleted", False):
+                ay.is_deleted = False
+                changed = True
+            if changed:
+                updated += 1
+        else:
+            new_ay = AcademicYear(
+                name=name,
+                start_year=pa["start_year"],
+                end_year=pa["end_year"],
+                start_month=pa.get("start_month", 9),
+                end_month=pa.get("end_month", 6),
+                is_current=pa.get("is_current", False),
+                is_deleted=pa.get("is_deleted", False),
+            )
+            db.add(new_ay)
+            year_map[name] = new_ay
+            created += 1
+
+    # Soft-delete LMS years no longer present in PMS
+    for name, ay in year_map.items():
+        if name not in pms_names and not ay.is_deleted:
+            ay.is_deleted = True
+            deactivated += 1
+
+    await db.flush()
+    return created, updated, deactivated
 
 
 async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int, int, dict[int, int]]:
@@ -320,6 +372,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     last_sync = await _get_last_successful_sync(db)
     data = await _fetch_payment_data(updated_after=last_sync)
 
+    academic_years_created, academic_years_updated, academic_years_deactivated = await _sync_academic_years(db, data.get("academic_years", []))
     grades_created, grades_deactivated, grade_map = await _sync_grades(db, data.get("grades", []))
     subjects_created, subjects_updated = await _sync_subjects(db, data.get("subjects", []))
     students_created, students_updated, students_deactivated = await _sync_students(
@@ -337,6 +390,9 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "message": "Sinxronizatsiya muvaffaqiyatli yakunlandi",
         "incremental": last_sync is not None,
         "updated_after": last_sync.isoformat() if last_sync else None,
+        "academic_years_created": academic_years_created,
+        "academic_years_updated": academic_years_updated,
+        "academic_years_deactivated": academic_years_deactivated,
         "grades_created": grades_created,
         "grades_deactivated": grades_deactivated,
         "subjects_created": subjects_created,
@@ -354,10 +410,11 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     await _save_sync_log(db, status="success", stats=result, triggered_by=triggered_by)
 
     logger.info(
-        "Sync completed (%s, %s): grades=%d/%d, subjects=%d/%d, "
+        "Sync completed (%s, %s): academic_years=%d/%d/%d, grades=%d/%d, subjects=%d/%d, "
         "students=%d/%d/%d, teachers=%d/%d/%d",
         triggered_by,
         "incremental" if last_sync else "full",
+        academic_years_created, academic_years_updated, academic_years_deactivated,
         grades_created, grades_deactivated, subjects_created, subjects_updated,
         students_created, students_updated, students_deactivated,
         teachers_created, teachers_updated, teachers_deactivated,
