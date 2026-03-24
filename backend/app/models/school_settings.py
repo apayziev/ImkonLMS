@@ -11,14 +11,14 @@ class SchoolSettings(BaseModel):
     __tablename__ = "school_settings"
 
     key: Mapped[str] = mapped_column(String(50), unique=True, index=True, kw_only=True)
+    day_start_time: Mapped[str] = mapped_column(String(5), default="08:00", kw_only=True)
+    day_end_time: Mapped[str] = mapped_column(String(5), default="16:00", kw_only=True)
     lesson_duration_minutes: Mapped[int] = mapped_column(SmallInteger, default=45, kw_only=True)
-    short_break_minutes: Mapped[int] = mapped_column(SmallInteger, default=10, kw_only=True)
-    long_break_minutes: Mapped[int] = mapped_column(SmallInteger, default=25, kw_only=True)
-    long_break_after_period: Mapped[int] = mapped_column(SmallInteger, default=3, kw_only=True)
+    default_break_minutes: Mapped[int] = mapped_column(SmallInteger, default=5, kw_only=True)
     periods_per_day: Mapped[int] = mapped_column(SmallInteger, default=6, kw_only=True)
     working_days: Mapped[list[int]] = mapped_column(
         ARRAY(SmallInteger), default_factory=lambda: [1, 2, 3, 4, 5, 6], kw_only=True
     )
-    break_names: Mapped[dict] = mapped_column(
-        JSON, default_factory=dict, kw_only=True
+    breaks: Mapped[list] = mapped_column(
+        JSON, default_factory=list, kw_only=True
     )

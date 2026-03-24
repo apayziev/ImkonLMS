@@ -270,27 +270,33 @@ export const academicYearsApi = {
 
 // --- School Settings Types & API ---
 
+export interface BreakItem {
+  after_period: number
+  duration: number
+  name: string
+}
+
 export interface SchoolSettingsRead {
   id: number
+  day_start_time: string
+  day_end_time: string
   lesson_duration_minutes: number
-  short_break_minutes: number
-  long_break_minutes: number
-  long_break_after_period: number
+  default_break_minutes: number
   periods_per_day: number
   working_days: number[]
-  break_names: Record<string, string>
+  breaks: BreakItem[]
   created_at: string
   updated_at: string | null
 }
 
 export interface SchoolSettingsUpdate {
+  day_start_time?: string
+  day_end_time?: string
   lesson_duration_minutes?: number
-  short_break_minutes?: number
-  long_break_minutes?: number
-  long_break_after_period?: number
+  default_break_minutes?: number
   periods_per_day?: number
   working_days?: number[]
-  break_names?: Record<string, string>
+  breaks?: BreakItem[]
 }
 
 // --- TimeSlot Types & API ---
@@ -353,6 +359,8 @@ export const timetableApi = {
     api.post<TimeSlotRead>("/api/v1/timetable/time-slots", data),
   deleteTimeSlot: (id: number) =>
     api.delete(`/api/v1/timetable/time-slots/${id}`),
+  generateTimeSlots: (academicYearId: number) =>
+    api.post<TimeSlotList>(`/api/v1/timetable/time-slots/generate?academic_year_id=${academicYearId}`),
 
   // Schedule
   listSchedule: (params: { academic_year_id: number; grade_id?: number; teacher_id?: number }) =>

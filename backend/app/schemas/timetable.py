@@ -6,29 +6,35 @@ from .base import TimestampSchema
 # --- SchoolSettings ---
 
 
+class BreakItem(BaseModel):
+    after_period: int = Field(ge=0, le=12)
+    duration: int = Field(ge=1, le=120)
+    name: str = ""
+
+
 class SchoolSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    day_start_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    day_end_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     lesson_duration_minutes: int | None = Field(default=None, ge=15, le=120)
-    short_break_minutes: int | None = Field(default=None, ge=5, le=30)
-    long_break_minutes: int | None = Field(default=None, ge=10, le=60)
-    long_break_after_period: int | None = Field(default=None, ge=1, le=10)
+    default_break_minutes: int | None = Field(default=None, ge=1, le=30)
     periods_per_day: int | None = Field(default=None, ge=1, le=12)
     working_days: list[int] | None = Field(default=None, min_length=1, max_length=7)
-    break_names: dict[str, str] | None = None
+    breaks: list[BreakItem] | None = None
 
 
 class SchoolSettingsRead(TimestampSchema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    day_start_time: str
+    day_end_time: str
     lesson_duration_minutes: int
-    short_break_minutes: int
-    long_break_minutes: int
-    long_break_after_period: int
+    default_break_minutes: int
     periods_per_day: int
     working_days: list[int]
-    break_names: dict[str, str]
+    breaks: list[BreakItem]
 
 
 # --- TimeSlot ---

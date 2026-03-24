@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { CalendarDays, Loader2, Pencil, Plus, Settings, Trash2, X } from "lucide-react"
+import { CalendarDays, Loader2, Plus, RefreshCw, Settings, Trash2 } from "lucide-react"
 import type React from "react"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import type {
+  BreakItem,
   GradeRead,
   ScheduleEntryRead,
   SchoolSettingsRead,
@@ -97,7 +98,6 @@ function buildGrid(
   entries: ScheduleEntryRead[],
   workingDays: number[],
 ) {
-  // Map: "day-slotId" → entry
   const cellMap = new Map<string, ScheduleEntryRead>()
   for (const entry of entries) {
     cellMap.set(`${entry.day_of_week}-${entry.time_slot_id}`, entry)
@@ -106,15 +106,58 @@ function buildGrid(
   return { sorted, cellMap, days: workingDays }
 }
 
-function getBreakMinutes(
-  currentSlot: TimeSlotRead,
-  nextSlot: TimeSlotRead | undefined,
-): number | null {
+function getBreakInfo(
+  currentSlot: Pick<TimeSlotRead, "period_number" | "end_time" | "start_time">,
+  nextSlot: Pick<TimeSlotRead, "start_time"> | undefined,
+  breaks: BreakItem[],
+): { minutes: number; name: string } | null {
   if (!nextSlot) return null
   const [ch, cm] = currentSlot.end_time.split(":").map(Number)
   const [nh, nm] = nextSlot.start_time.split(":").map(Number)
   const diff = (nh * 60 + nm) - (ch * 60 + cm)
-  return diff > 0 ? diff : null
+  if (diff <= 0) return null
+  const brk = breaks.find((b) => b.after_period === currentSlot.period_number)
+  return { minutes: diff, name: brk?.name || "" }
+}
+
+/** Generate preview slots from settings (pure function, same logic as backend). */
+function generatePreviewSlots(
+  dayStart: string,
+  dayEnd: string,
+  lessonDur: number,
+  defaultBreak: number,
+  breaks: BreakItem[],
+): { period_number: number; start_time: string; end_time: string }[] {
+  const breaksMap = new Map<number, BreakItem>()
+  for (const b of breaks) breaksMap.set(b.after_period, b)
+
+  const [sh, sm] = dayStart.split(":").map(Number)
+  const [eh, em] = dayEnd.split(":").map(Number)
+  let cursor = sh * 60 + sm
+  const endMin = eh * 60 + em
+
+  // Break before first lesson (after_period=0)
+  const pre = breaksMap.get(0)
+  if (pre) cursor += pre.duration
+
+  const result: { period_number: number; start_time: string; end_time: string }[] = []
+  let period = 1
+
+  while (cursor + lessonDur <= endMin) {
+    const start = cursor
+    const end = cursor + lessonDur
+    result.push({
+      period_number: period,
+      start_time: `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`,
+      end_time: `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`,
+    })
+    cursor = end
+    period++
+    const brk = breaksMap.get(period - 1)
+    cursor += brk ? brk.duration : defaultBreak
+  }
+
+  return result
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
@@ -128,9 +171,6 @@ function TimetablePage() {
   const [gradeFilter, setGradeFilter] = useState("all")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [entryDialog, setEntryDialog] = useState<EntryDialogState | null>(null)
-  const [newSlot, setNewSlot] = useState({ period: "", start: "", end: "" })
-  const [editingBreak, setEditingBreak] = useState<number | null>(null)
-  const [breakValue, setBreakValue] = useState("")
 
   // Data queries
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -156,6 +196,7 @@ function TimetablePage() {
   const timeSlots = timeSlotsData?.data ?? []
   const entries = scheduleData?.data ?? []
   const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
+  const settingsBreaks = settings?.breaks ?? []
 
   const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
 
@@ -192,56 +233,7 @@ function TimetablePage() {
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
-  const createSlotMutation = useMutation({
-    mutationFn: timetableApi.createTimeSlot,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
-      toast.success("Dars vaqti qo'shildi")
-      setNewSlot({ period: "", start: "", end: "" })
-    },
-    onError: () => toast.error("Bu dars raqami allaqachon mavjud"),
-  })
-
-  const deleteSlotMutation = useMutation({
-    mutationFn: timetableApi.deleteTimeSlot,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
-      toast.success("Dars vaqti o'chirildi")
-    },
-    onError: () => toast.error("Xatolik yuz berdi"),
-  })
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: (data: SchoolSettingsUpdate) => timetableApi.updateSettings(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schoolSettings })
-      setEditingBreak(null)
-    },
-    onError: () => toast.error("Xatolik yuz berdi"),
-  })
-
   // ─── Handlers ───────────────────────────────────────────────────────
-
-  const handleAddSlot = () => {
-    if (!newSlot.period || !newSlot.start || !newSlot.end || !academicYearId) return
-    createSlotMutation.mutate({
-      academic_year_id: academicYearId,
-      period_number: Number(newSlot.period),
-      start_time: newSlot.start,
-      end_time: newSlot.end,
-    })
-  }
-
-  const saveBreakName = (periodNumber: number) => {
-    const current = { ...(settings?.break_names ?? {}) }
-    if (breakValue.trim()) {
-      current[String(periodNumber)] = breakValue.trim()
-    } else {
-      delete current[String(periodNumber)]
-    }
-    updateSettingsMutation.mutate({ break_names: current })
-  }
 
   const handleCellClick = (day: number, slotId: number) => {
     if (!isAdmin || gradeFilter === "all") return
@@ -302,49 +294,21 @@ function TimetablePage() {
       ) : isLoading ? (
         <GridSkeleton days={days.length} rows={6} />
       ) : sorted.length === 0 ? (
-        <div className="space-y-3">
-          <EmptyState message="Dars vaqtlari hali kiritilmagan." />
-          {isAdmin && (
-            <div className="flex items-center justify-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                max={12}
-                placeholder="Dars №"
-                value={newSlot.period}
-                onChange={(e) => setNewSlot((p) => ({ ...p, period: e.target.value }))}
-                className="h-8 w-20 text-sm"
-              />
-              <Input
-                type="time"
-                value={newSlot.start}
-                onChange={(e) => setNewSlot((p) => ({ ...p, start: e.target.value }))}
-                className="h-8 w-32 text-sm"
-              />
-              <span className="text-sm text-muted-foreground">–</span>
-              <Input
-                type="time"
-                value={newSlot.end}
-                onChange={(e) => setNewSlot((p) => ({ ...p, end: e.target.value }))}
-                className="h-8 w-32 text-sm"
-              />
-              <Button
-                size="sm"
-                onClick={handleAddSlot}
-                disabled={createSlotMutation.isPending || !newSlot.period || !newSlot.start || !newSlot.end}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Qo'shish
-              </Button>
-            </div>
-          )}
-        </div>
+        <EmptyState
+          message="Dars vaqtlari hali kiritilmagan."
+          action={isAdmin ? (
+            <Button size="sm" className="mt-3" onClick={() => setSettingsOpen(true)}>
+              <Settings className="h-4 w-4 mr-1.5" />
+              Sozlamalar orqali generatsiya qilish
+            </Button>
+          ) : undefined}
+        />
       ) : (
         <div className="rounded-lg border overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b bg-muted/40">
-                <th className="h-12 px-3 text-left align-middle font-medium text-muted-foreground w-24">
+                <th className="h-12 px-3 text-left align-middle font-medium text-muted-foreground w-28">
                   Vaqt
                 </th>
                 {days.map((day) => (
@@ -360,61 +324,22 @@ function TimetablePage() {
             </thead>
             <tbody>
               {sorted.map((slot, idx) => {
-                const breakMin = getBreakMinutes(slot, sorted[idx + 1])
-                const breakName = settings?.break_names?.[String(slot.period_number)]
-                const hasCustomName = !!breakName
+                const brk = getBreakInfo(slot, sorted[idx + 1], settingsBreaks)
 
                 return (
-                  <tr key={slot.id} className="border-b last:border-0 group">
+                  <tr key={slot.id} className="border-b last:border-0">
                     {/* Period + Time */}
                     <td className="px-3 py-2 align-top">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs font-semibold text-primary">
-                          {slot.period_number}-dars
-                        </div>
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => deleteSlotMutation.mutate(slot.id)}
-                            disabled={deleteSlotMutation.isPending}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
+                      <div className="text-xs font-semibold text-primary">
+                        {slot.period_number}-dars
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         {slot.start_time} – {slot.end_time}
                       </div>
-                      {breakMin !== null && (
-                        editingBreak === slot.period_number ? (
-                          <div className="flex items-center gap-1 mt-1">
-                            <input
-                              value={breakValue}
-                              onChange={(e) => setBreakValue(e.target.value)}
-                              onBlur={() => saveBreakName(slot.period_number)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveBreakName(slot.period_number)
-                                if (e.key === "Escape") setEditingBreak(null)
-                              }}
-                              placeholder="Tanaffus"
-                              className="h-5 w-20 rounded border px-1 text-[10px] outline-none focus:border-primary"
-                              autoFocus
-                            />
-                            <span className="text-[10px] text-muted-foreground/60">{breakMin} min</span>
-                          </div>
-                        ) : (
-                          <div
-                            className={`text-[10px] mt-1 ${hasCustomName ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"} ${isAdmin ? "cursor-pointer hover:text-[#6720FF] group/break inline-flex items-center gap-0.5" : ""}`}
-                            onClick={isAdmin ? () => {
-                              setEditingBreak(slot.period_number)
-                              setBreakValue(breakName || "")
-                            } : undefined}
-                          >
-                            {breakName || "Tanaffus"} {breakMin} min
-                            {isAdmin && <Pencil className="h-2.5 w-2.5 opacity-0 group-hover/break:opacity-100 transition-opacity" />}
-                          </div>
-                        )
+                      {brk && (
+                        <div className={`text-[10px] mt-1 ${brk.name ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
+                          {brk.name || "Tanaffus"} {brk.minutes} min
+                        </div>
                       )}
                     </td>
 
@@ -453,45 +378,6 @@ function TimetablePage() {
                   </tr>
                 )
               })}
-              {isAdmin && (
-                <tr className="border-t">
-                  <td colSpan={days.length + 1} className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={12}
-                        placeholder="№"
-                        value={newSlot.period}
-                        onChange={(e) => setNewSlot((p) => ({ ...p, period: e.target.value }))}
-                        className="h-7 w-14 text-xs"
-                      />
-                      <Input
-                        type="time"
-                        value={newSlot.start}
-                        onChange={(e) => setNewSlot((p) => ({ ...p, start: e.target.value }))}
-                        className="h-7 w-28 text-xs"
-                      />
-                      <span className="text-xs text-muted-foreground">–</span>
-                      <Input
-                        type="time"
-                        value={newSlot.end}
-                        onChange={(e) => setNewSlot((p) => ({ ...p, end: e.target.value }))}
-                        className="h-7 w-28 text-xs"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 w-7 p-0"
-                        onClick={handleAddSlot}
-                        disabled={createSlotMutation.isPending || !newSlot.period || !newSlot.start || !newSlot.end}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -502,6 +388,7 @@ function TimetablePage() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
+        academicYearId={academicYearId}
       />
 
       {/* ─── Entry Dialog ─── */}
@@ -549,65 +436,240 @@ function SettingsSheet({
   open,
   onOpenChange,
   settings,
+  academicYearId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   settings: SchoolSettingsRead | undefined
+  academicYearId: number
 }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<SchoolSettingsUpdate>({})
 
-  const defaults = {
+  const defaults: SchoolSettingsRead = {
+    id: 0,
+    day_start_time: "08:00",
+    day_end_time: "16:00",
     lesson_duration_minutes: 45,
+    default_break_minutes: 5,
     periods_per_day: 6,
     working_days: [1, 2, 3, 4, 5, 6],
+    breaks: [],
+    created_at: "",
+    updated_at: null,
   }
   const current = settings ?? defaults
+
+  const [dayStart, setDayStart] = useState(current.day_start_time)
+  const [dayEnd, setDayEnd] = useState(current.day_end_time)
+  const [lessonDur, setLessonDur] = useState(current.lesson_duration_minutes)
+  const [defaultBreak, setDefaultBreak] = useState(current.default_break_minutes)
+  const [breaks, setBreaks] = useState<BreakItem[]>(current.breaks)
+  const [workingDays, setWorkingDays] = useState(current.working_days)
+  const [newBreak, setNewBreak] = useState({ after: "", dur: "", name: "" })
+
+  // Sync state when settings load/change
+  const [lastSettingsId, setLastSettingsId] = useState(current.id)
+  if (settings && settings.id !== lastSettingsId) {
+    setDayStart(settings.day_start_time)
+    setDayEnd(settings.day_end_time)
+    setLessonDur(settings.lesson_duration_minutes)
+    setDefaultBreak(settings.default_break_minutes)
+    setBreaks(settings.breaks)
+    setWorkingDays(settings.working_days)
+    setLastSettingsId(settings.id)
+  }
+
+  const preview = generatePreviewSlots(dayStart, dayEnd, lessonDur, defaultBreak, breaks)
 
   const updateMutation = useMutation({
     mutationFn: (data: SchoolSettingsUpdate) => timetableApi.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schoolSettings })
       toast.success("Sozlamalar saqlandi")
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
+
+  const generateMutation = useMutation({
+    mutationFn: () => timetableApi.generateTimeSlots(academicYearId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeSlots })
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
+      toast.success(`${preview.length} ta dars vaqti yaratildi`)
       onOpenChange(false)
     },
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
-  const handleSave = () => {
-    if (Object.keys(form).length === 0) {
-      onOpenChange(false)
+  const settingsPayload: SchoolSettingsUpdate = {
+    day_start_time: dayStart,
+    day_end_time: dayEnd,
+    lesson_duration_minutes: lessonDur,
+    default_break_minutes: defaultBreak,
+    breaks,
+    working_days: workingDays,
+  }
+
+  const handleSaveAndGenerate = () => {
+    if (!academicYearId) return
+    updateMutation.mutate(settingsPayload, { onSuccess: () => generateMutation.mutate() })
+  }
+
+  const handleSaveOnly = () => {
+    updateMutation.mutate(settingsPayload)
+  }
+
+  const addBreak = () => {
+    if (!newBreak.after || !newBreak.dur) return
+    const afterPeriod = Number(newBreak.after)
+    // Don't add duplicate
+    if (breaks.some((b) => b.after_period === afterPeriod)) {
+      toast.error("Bu darsdan keyingi tanaffus allaqachon mavjud")
       return
     }
-    updateMutation.mutate(form)
+    setBreaks((prev) => [...prev, {
+      after_period: afterPeriod,
+      duration: Number(newBreak.dur),
+      name: newBreak.name,
+    }].sort((a, b) => a.after_period - b.after_period))
+    setNewBreak({ after: "", dur: "", name: "" })
   }
 
-  const currentDays = form.working_days ?? current.working_days
-  const toggleDay = (day: number) => {
-    const newDays = currentDays.includes(day)
-      ? currentDays.filter((d) => d !== day)
-      : [...currentDays, day].sort()
-    if (newDays.length > 0) setForm((prev) => ({ ...prev, working_days: newDays }))
+  const removeBreak = (afterPeriod: number) => {
+    setBreaks((prev) => prev.filter((b) => b.after_period !== afterPeriod))
   }
+
+  const toggleDay = (day: number) => {
+    const newDays = workingDays.includes(day)
+      ? workingDays.filter((d) => d !== day)
+      : [...workingDays, day].sort()
+    if (newDays.length > 0) setWorkingDays(newDays)
+  }
+
+  const isPending = updateMutation.isPending || generateMutation.isPending
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setForm({}) }}>
-      <SheetContent>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Jadval sozlamalari</SheetTitle>
         </SheetHeader>
         <div className="space-y-5 mt-6">
-          <div className="space-y-1.5">
-            <Label>Dars davomiyligi (min)</Label>
-            <Input
-              type="number"
-              min={15}
-              max={120}
-              value={form.lesson_duration_minutes ?? current.lesson_duration_minutes}
-              onChange={(e) => setForm((p) => ({ ...p, lesson_duration_minutes: +e.target.value }))}
-            />
+          {/* Time range */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Kun boshlanishi</Label>
+              <Input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kun tugashi</Label>
+              <Input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} />
+            </div>
           </div>
 
+          {/* Lesson duration + default break */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Dars davomiyligi (min)</Label>
+              <Input
+                type="number"
+                min={15}
+                max={120}
+                value={lessonDur}
+                onChange={(e) => setLessonDur(+e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Oddiy tanaffus (min)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={30}
+                value={defaultBreak}
+                onChange={(e) => setDefaultBreak(+e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Special breaks */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Maxsus tanaffuslar</Label>
+            <p className="text-[10px] text-muted-foreground">
+              Oddiy tanaffusdan farq qiladigan tanaffuslar (Nonushta, Tushlik, Tolma choy)
+            </p>
+            {breaks.length > 0 && (
+              <div className="space-y-1.5">
+                {breaks.map((b) => (
+                  <div
+                    key={b.after_period}
+                    className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm"
+                  >
+                    <span>
+                      <span className="text-muted-foreground">
+                        {b.after_period === 0 ? "Darsdan oldin" : `${b.after_period}-darsdan keyin`}
+                      </span>
+                      <span className="mx-1.5">·</span>
+                      <span className="font-medium">{b.duration} min</span>
+                      {b.name && (
+                        <>
+                          <span className="mx-1.5">·</span>
+                          <span className="text-[#6720FF] font-medium">{b.name}</span>
+                        </>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeBreak(b.after_period)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Add new break */}
+            <div className="flex items-end gap-2">
+              <div className="w-20">
+                <Label className="text-[10px] text-muted-foreground">Darsdan keyin</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={12}
+                  placeholder="0"
+                  value={newBreak.after}
+                  onChange={(e) => setNewBreak((p) => ({ ...p, after: e.target.value }))}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="w-16">
+                <Label className="text-[10px] text-muted-foreground">Min</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={120}
+                  placeholder="30"
+                  value={newBreak.dur}
+                  onChange={(e) => setNewBreak((p) => ({ ...p, dur: e.target.value }))}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <Label className="text-[10px] text-muted-foreground">Nomi (ixtiyoriy)</Label>
+                <Input
+                  placeholder="Nonushta"
+                  value={newBreak.name}
+                  onChange={(e) => setNewBreak((p) => ({ ...p, name: e.target.value }))}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <Button size="sm" variant="outline" className="h-8 px-2" onClick={addBreak}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Working days */}
           <div className="space-y-1.5">
             <Label>Ish kunlari</Label>
             <div className="flex flex-wrap gap-1.5 mt-1">
@@ -617,7 +679,7 @@ function SettingsSheet({
                   type="button"
                   onClick={() => toggleDay(day)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    currentDays.includes(day)
+                    workingDays.includes(day)
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
@@ -628,21 +690,63 @@ function SettingsSheet({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Kuniga darslar soni</Label>
-            <Input
-              type="number"
-              min={1}
-              max={12}
-              value={form.periods_per_day ?? current.periods_per_day}
-              onChange={(e) => setForm((p) => ({ ...p, periods_per_day: +e.target.value }))}
-            />
+          {/* Preview */}
+          <div className="border-t pt-4 space-y-2">
+            <Label className="text-sm font-semibold">
+              Ko'rinish ({preview.length} ta dars)
+            </Label>
+            {preview.length > 0 ? (
+              <div className="space-y-1">
+                {preview.map((slot, idx) => {
+                  const brk = getBreakInfo(slot, preview[idx + 1], breaks)
+                  return (
+                    <div key={slot.period_number}>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-primary font-medium w-14">
+                          {slot.period_number}-dars
+                        </span>
+                        <span className="text-muted-foreground">
+                          {slot.start_time} – {slot.end_time}
+                        </span>
+                      </div>
+                      {brk && (
+                        <div className={`text-[10px] ml-14 ${brk.name ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
+                          {brk.name || "Tanaffus"} {brk.minutes} min
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {(() => {
+                  const preBreak = breaks.find((b) => b.after_period === 0)
+                  return preBreak ? (
+                    <p className="text-[10px] text-[#6720FF] font-medium">
+                      * {preBreak.name || "Darsdan oldingi tanaffus"} {preBreak.duration} min ({dayStart} dan)
+                    </p>
+                  ) : null
+                })()}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Vaqt oralig'i yetarli emas</p>
+            )}
           </div>
 
-          <Button onClick={handleSave} disabled={updateMutation.isPending} className="w-full mt-4">
-            {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            Saqlash
-          </Button>
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={handleSaveOnly} disabled={isPending} className="flex-1">
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Saqlash
+            </Button>
+            <Button
+              onClick={handleSaveAndGenerate}
+              disabled={isPending || preview.length === 0 || !academicYearId}
+              className="flex-1"
+            >
+              {generateMutation.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              <RefreshCw className="h-4 w-4 mr-1.5" />
+              Generatsiya
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

@@ -152,6 +152,112 @@ async def delete_time_slot(slot_id: int, db: SessionDep, admin: SuperUser) -> No
         raise NotFoundException("Dars vaqti topilmadi")
 
 
+def _generate_slots(
+    day_start: str,
+    day_end: str,
+    lesson_dur: int,
+    default_break: int,
+    breaks: list[dict],
+) -> list[dict]:
+    """Calculate time slots from settings. Returns list of {period_number, start_time, end_time}."""
+    # Build breaks lookup: after_period -> {duration, name}
+    breaks_map: dict[int, dict] = {}
+    for b in breaks:
+        breaks_map[b["after_period"]] = {"duration": b["duration"], "name": b.get("name", "")}
+
+    start_h, start_m = map(int, day_start.split(":"))
+    end_h, end_m = map(int, day_end.split(":"))
+    cursor = start_h * 60 + start_m
+    day_end_min = end_h * 60 + end_m
+
+    result = []
+    period = 1
+
+    # Handle break before first lesson (after_period=0)
+    if 0 in breaks_map:
+        cursor += breaks_map[0]["duration"]
+
+    while cursor + lesson_dur <= day_end_min:
+        slot_start = cursor
+        slot_end = cursor + lesson_dur
+        result.append({
+            "period_number": period,
+            "start_time": f"{slot_start // 60:02d}:{slot_start % 60:02d}",
+            "end_time": f"{slot_end // 60:02d}:{slot_end % 60:02d}",
+        })
+
+        cursor = slot_end
+        period += 1
+
+        # Add break after this period
+        if period - 1 in breaks_map:
+            cursor += breaks_map[period - 1]["duration"]
+        else:
+            cursor += default_break
+
+    return result
+
+
+@router.post("/time-slots/generate", response_model=TimeSlotList)
+async def generate_time_slots(
+    db: SessionDep,
+    admin: SuperUser,
+    academic_year_id: int,
+) -> Any:
+    """Generate time slots from school settings. Replaces existing slots."""
+    settings = await _get_or_create_settings(db)
+
+    slots_data = _generate_slots(
+        day_start=settings.day_start_time,
+        day_end=settings.day_end_time,
+        lesson_dur=settings.lesson_duration_minutes,
+        default_break=settings.default_break_minutes,
+        breaks=settings.breaks or [],
+    )
+
+    if not slots_data:
+        return TimeSlotList(data=[], count=0)
+
+    # Soft-delete existing slots for this academic year
+    existing = await crud_time_slots.get_multi(
+        db, academic_year_id=academic_year_id, is_deleted=False, limit=50,
+    )
+    for slot in existing["data"]:
+        await crud_time_slots.delete(db, id=slot.id, is_deleted=False)
+
+    # Create new slots
+    created = []
+    for s in slots_data:
+        slot = TimeSlot(
+            academic_year_id=academic_year_id,
+            period_number=s["period_number"],
+            start_time=_parse_time(s["start_time"]),
+            end_time=_parse_time(s["end_time"]),
+        )
+        db.add(slot)
+        created.append(slot)
+
+    await db.commit()
+    for slot in created:
+        await db.refresh(slot)
+
+    return TimeSlotList(
+        data=[
+            TimeSlotRead(
+                id=s.id,
+                academic_year_id=s.academic_year_id,
+                period_number=s.period_number,
+                start_time=_format_time(s.start_time),
+                end_time=_format_time(s.end_time),
+                created_at=s.created_at,
+                updated_at=s.updated_at,
+            )
+            for s in created
+        ],
+        count=len(created),
+    )
+
+
 # ─── Schedule Entries ────────────────────────────────────────────────────────
 
 
