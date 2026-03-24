@@ -56,7 +56,9 @@ function StudentsPage() {
   const closeModal = useCallback(() => setActiveModal(null), [])
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
-  const grades: GradeRead[] = gradesData?.data ?? []
+  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
+    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
+  )
 
   const gradeId = gradeFilter !== "all" ? Number(gradeFilter) : undefined
   const status = statusFilter !== "all" ? statusFilter : undefined
