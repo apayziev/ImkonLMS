@@ -75,18 +75,23 @@ async def _fetch_payment_data(updated_after: datetime | None = None) -> dict:
         ) from e
 
 
-async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int, dict[int, int]]:
-    """Upsert grades and return (created_count, payment_id_to_lms_id_map)."""
+async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int, int, dict[int, int]]:
+    """Upsert grades and return (created_count, deactivated_count, payment_id_to_lms_id_map)."""
     existing = (await db.execute(select(Grade))).scalars().all()
     grade_map: dict[tuple[int, str], Grade] = {(g.level, g.section): g for g in existing}
 
     created = 0
     payment_to_lms: dict[int, int] = {}
+    pms_keys: set[tuple[int, str]] = set()
 
     for pg in payment_grades:
         key = (pg["level"], pg["section"])
+        pms_keys.add(key)
         if key in grade_map:
             lms_grade = grade_map[key]
+            # Restore if previously soft-deleted
+            if lms_grade.is_deleted:
+                lms_grade.is_deleted = False
         else:
             lms_grade = Grade(level=pg["level"], section=pg["section"])
             db.add(lms_grade)
@@ -95,7 +100,15 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
             created += 1
         payment_to_lms[pg["id"]] = lms_grade.id
 
-    return created, payment_to_lms
+    # Soft-delete LMS grades no longer present in PMS export
+    deactivated = 0
+    for key, lms_grade in grade_map.items():
+        if key not in pms_keys and not lms_grade.is_deleted:
+            lms_grade.is_deleted = True
+            deactivated += 1
+
+    await db.flush()
+    return created, deactivated, payment_to_lms
 
 
 async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[int, int]:
@@ -307,7 +320,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     last_sync = await _get_last_successful_sync(db)
     data = await _fetch_payment_data(updated_after=last_sync)
 
-    grades_created, grade_map = await _sync_grades(db, data.get("grades", []))
+    grades_created, grades_deactivated, grade_map = await _sync_grades(db, data.get("grades", []))
     subjects_created, subjects_updated = await _sync_subjects(db, data.get("subjects", []))
     students_created, students_updated, students_deactivated = await _sync_students(
         db, data.get("students", []), grade_map,
@@ -325,6 +338,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "incremental": last_sync is not None,
         "updated_after": last_sync.isoformat() if last_sync else None,
         "grades_created": grades_created,
+        "grades_deactivated": grades_deactivated,
         "subjects_created": subjects_created,
         "subjects_updated": subjects_updated,
         "students_created": students_created,
@@ -340,11 +354,11 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     await _save_sync_log(db, status="success", stats=result, triggered_by=triggered_by)
 
     logger.info(
-        "Sync completed (%s, %s): grades=%d, subjects=%d/%d, "
+        "Sync completed (%s, %s): grades=%d/%d, subjects=%d/%d, "
         "students=%d/%d/%d, teachers=%d/%d/%d",
         triggered_by,
         "incremental" if last_sync else "full",
-        grades_created, subjects_created, subjects_updated,
+        grades_created, grades_deactivated, subjects_created, subjects_updated,
         students_created, students_updated, students_deactivated,
         teachers_created, teachers_updated, teachers_deactivated,
     )
