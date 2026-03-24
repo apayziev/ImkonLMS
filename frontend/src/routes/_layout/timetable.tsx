@@ -222,7 +222,9 @@ function TimetablePage() {
     }),
   )
 
-  const grades: GradeRead[] = gradesData?.data ?? []
+  const grades: GradeRead[] = (gradesData?.data ?? []).toSorted((a, b) =>
+    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
+  )
   const subjects = subjectsData?.data ?? []
   const teachers = teachersData?.data ?? []
   const timeSlots = timeSlotsData?.data ?? []
@@ -845,6 +847,11 @@ function EntryDialog({
   const [teacherId, setTeacherId] = useState(state.entry?.teacher_id?.toString() ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  const selectedSubjectName = subjects.find((s) => s.id.toString() === subjectId)?.name
+  const filteredTeachers = selectedSubjectName
+    ? teachers.filter((t) => t.subjects?.includes(selectedSubjectName))
+    : teachers
+
   return (
     <Dialog open={state.open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -872,7 +879,7 @@ function EntryDialog({
           {/* Subject */}
           <div className="space-y-1.5">
             <Label>Fan</Label>
-            <Select value={subjectId} onValueChange={setSubjectId}>
+            <Select value={subjectId} onValueChange={(v) => { setSubjectId(v); setTeacherId("") }}>
               <SelectTrigger>
                 <SelectValue placeholder="Fan tanlang" />
               </SelectTrigger>
@@ -889,12 +896,12 @@ function EntryDialog({
           {/* Teacher */}
           <div className="space-y-1.5">
             <Label>O'qituvchi</Label>
-            <Select value={teacherId} onValueChange={setTeacherId}>
+            <Select value={teacherId} onValueChange={setTeacherId} disabled={!subjectId}>
               <SelectTrigger>
-                <SelectValue placeholder="O'qituvchi tanlang" />
+                <SelectValue placeholder={subjectId ? "O'qituvchi tanlang" : "Avval fan tanlang"} />
               </SelectTrigger>
               <SelectContent>
-                {teachers.map((t) => (
+                {filteredTeachers.map((t) => (
                   <SelectItem key={t.id} value={t.id.toString()}>
                     {t.full_name}
                   </SelectItem>
