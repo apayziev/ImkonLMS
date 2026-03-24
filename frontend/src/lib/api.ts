@@ -183,6 +183,7 @@ export interface TeacherRead {
   photo_url: string | null
   is_active: boolean
   subjects: string[] | null
+  teaching_grade_ids: number[] | null
   class_teacher_grade_id: number | null
 }
 

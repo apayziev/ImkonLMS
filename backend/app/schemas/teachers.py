@@ -20,6 +20,7 @@ class TeacherRead(BaseModel):
     photo_url: str | None = None
     is_active: bool
     subjects: list | None = None
+    teaching_grade_ids: list[int] | None = None
     class_teacher_grade_id: int | None = None
 
     @model_validator(mode="after")
