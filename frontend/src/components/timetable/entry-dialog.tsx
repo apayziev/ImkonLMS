@@ -48,12 +48,17 @@ export function EntryDialog({
   const [teacherId, setTeacherId] = useState(state.entry?.teacher_id?.toString() ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Filter teachers: must have this grade in teaching_grade_ids
+  const byGrade = teachers.filter(
+    (t) => !t.teaching_grade_ids || t.teaching_grade_ids.includes(gradeId),
+  )
+
   const selectedSubjectName = subjects.find((s) => s.id.toString() === subjectId)?.name
   const bySubject = selectedSubjectName
-    ? teachers.filter((t) => t.subjects?.includes(selectedSubjectName))
+    ? byGrade.filter((t) => t.subjects?.includes(selectedSubjectName))
     : []
-  // Fallback to all teachers if none match the selected subject
-  const filteredTeachers = subjectId ? (bySubject.length > 0 ? bySubject : teachers) : teachers
+  // Fallback to grade-filtered teachers if none match the selected subject
+  const filteredTeachers = subjectId ? (bySubject.length > 0 ? bySubject : byGrade) : byGrade
 
   return (
     <Dialog open={state.open} onOpenChange={onOpenChange}>

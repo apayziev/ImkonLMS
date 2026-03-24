@@ -40,7 +40,7 @@ function TimetablePage() {
   const isAdmin = user?.is_superuser ?? false
 
   // UI state
-  const [gradeFilter, setGradeFilter] = useState("all")
+  const [gradeFilter, setGradeFilter] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [entryDialog, setEntryDialog] = useState<EntryDialogState | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
@@ -56,7 +56,8 @@ function TimetablePage() {
 
   const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
 
-  const gradeId = gradeFilter !== "all" ? Number(gradeFilter) : undefined
+  const selectedGradeId = gradeFilter ?? grades[0]?.id?.toString() ?? null
+  const gradeId = selectedGradeId ? Number(selectedGradeId) : undefined
   const { data: scheduleData, isLoading } = useQuery(
     getScheduleQueryOptions({
       academic_year_id: academicYearId,
@@ -74,55 +75,32 @@ function TimetablePage() {
   const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
   const settingsBreaks = settings?.breaks ?? []
 
-  const { sorted, cellMap, cellMapMulti, days } = buildGrid(timeSlots, entries, workingDays)
+  const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
 
   // ─── Stats ────────────────────────────────────────────────────────
   const statsData = useMemo(() => {
     if (!entries.length) return null
 
-    if (gradeFilter !== "all") {
-      // Sinf tanlangan — fanlar kesimida haftalik dars soatlari
-      const subjectMap = new Map<string, { count: number; teacher: string }>()
-      for (const e of entries) {
-        const subj = e.subject_name ?? "Noma'lum"
-        const existing = subjectMap.get(subj)
-        if (existing) {
-          existing.count++
-        } else {
-          subjectMap.set(subj, { count: 1, teacher: e.teacher_name ?? "—" })
-        }
-      }
-      const selectedGrade = grades.find((g) => g.id.toString() === gradeFilter)
-      return {
-        mode: "grade" as const,
-        gradeName: selectedGrade?.display_name ?? "Sinf",
-        total: entries.length,
-        subjects: [...subjectMap.entries()]
-          .sort((a, b) => b[1].count - a[1].count)
-          .map(([name, { count, teacher }]) => ({ name, count, teacher })),
-      }
-    }
-
-    // Barchasi — umumiy statistika: sinflar kesimida
-    const gradeMap = new Map<string, number>()
-    const teacherSet = new Set<string>()
+    const subjectMap = new Map<string, { count: number; teacher: string }>()
     for (const e of entries) {
-      const grade = e.grade_display ?? "—"
-      gradeMap.set(grade, (gradeMap.get(grade) ?? 0) + 1)
-      if (e.teacher_name) teacherSet.add(e.teacher_name)
+      const subj = e.subject_name ?? "Noma'lum"
+      const existing = subjectMap.get(subj)
+      if (existing) {
+        existing.count++
+      } else {
+        subjectMap.set(subj, { count: 1, teacher: e.teacher_name ?? "—" })
+      }
     }
-    const gradeRows = [...gradeMap.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([name, count]) => ({ name, count }))
-
+    const selectedGrade = grades.find((g) => g.id.toString() === selectedGradeId)
     return {
-      mode: "all" as const,
+      mode: "grade" as const,
+      gradeName: selectedGrade?.display_name ?? "Sinf",
       total: entries.length,
-      teacherCount: teacherSet.size,
-      gradeCount: gradeMap.size,
-      gradeRows,
+      subjects: [...subjectMap.entries()]
+        .sort((a, b) => b[1].count - a[1].count)
+        .map(([name, { count, teacher }]) => ({ name, count, teacher })),
     }
-  }, [entries, gradeFilter, grades])
+  }, [entries, selectedGradeId, grades])
 
   // ─── Mutations ──────────────────────────────────────────────────────
 
@@ -171,7 +149,7 @@ function TimetablePage() {
   // ─── Handlers ───────────────────────────────────────────────────────
 
   const handleCellClick = (day: number, slotId: number) => {
-    if (!isAdmin || gradeFilter === "all") return
+    if (!isAdmin || !selectedGradeId) return
     const existing = cellMap.get(`${day}-${slotId}`)
     if (existing) {
       setEntryDialog({ open: true, mode: "edit", day, slotId, entry: existing })
@@ -249,24 +227,13 @@ function TimetablePage() {
       {/* ─── Class Chips ─── */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-muted-foreground font-medium">Sinf:</span>
-        <button
-          type="button"
-          onClick={() => setGradeFilter("all")}
-          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-            gradeFilter === "all"
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
-          }`}
-        >
-          Barchasi
-        </button>
         {grades.map((g) => (
           <button
             key={g.id}
             type="button"
             onClick={() => setGradeFilter(g.id.toString())}
             className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-              gradeFilter === g.id.toString()
+              selectedGradeId === g.id.toString()
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
             }`}
@@ -281,19 +248,14 @@ function TimetablePage() {
         <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
-              {statsData?.mode === "grade"
-                ? `${statsData.gradeName} — Haftalik jadval`
-                : "Umumiy statistika"}
+              {statsData ? `${statsData.gradeName} — Haftalik jadval` : "Statistika"}
             </SheetTitle>
             <SheetDescription>
-              {statsData?.mode === "all"
-                ? `${statsData.total} ta dars · ${statsData.teacherCount} o'qituvchi · ${statsData.gradeCount} sinf`
-                : `Jami ${statsData?.total ?? 0} ta dars`}
+              {`Jami ${statsData?.total ?? 0} ta dars`}
             </SheetDescription>
           </SheetHeader>
 
-          {statsData?.mode === "grade" ? (
-            /* ── Sinf tanlangan: fanlar jadvali ── */
+          {statsData ? (
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -313,30 +275,6 @@ function TimetablePage() {
                   ))}
                   <tr className="bg-muted/30 font-medium">
                     <td className="px-3 py-1.5" colSpan={2}>Jami</td>
-                    <td className="px-3 py-1.5 text-center">{statsData.total}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : statsData?.mode === "all" ? (
-            /* ── Barchasi: sinflar kesimida ── */
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/40 border-b">
-                    <th className="text-left px-3 py-2 font-medium">Sinf</th>
-                    <th className="text-center px-3 py-2 font-medium w-32">Haftalik dars soni</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statsData.gradeRows.map((r) => (
-                    <tr key={r.name} className="border-b last:border-0">
-                      <td className="px-3 py-1.5">{r.name}</td>
-                      <td className="px-3 py-1.5 text-center font-medium">{r.count}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-muted/30 font-medium">
-                    <td className="px-3 py-1.5">Jami</td>
                     <td className="px-3 py-1.5 text-center">{statsData.total}</td>
                   </tr>
                 </tbody>
@@ -373,11 +311,7 @@ function TimetablePage() {
         />
       ) : (
         <div className="space-y-3">
-          {gradeFilter === "all" && isAdmin && (
-            <div className="rounded-md bg-muted/50 border border-dashed px-4 py-2.5 text-sm text-muted-foreground">
-              Sinf tanlang, keyin katakka bosib <span className="font-medium text-foreground">fan va o'qituvchi</span> biriktiring
-            </div>
-          )}
+
           <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] table-fixed">
@@ -416,24 +350,7 @@ function TimetablePage() {
                       {/* Day cells */}
                       {days.map((day) => {
                         const key = `${day}-${slot.id}`
-                        const canClick = isAdmin && gradeFilter !== "all"
-
-                        if (gradeFilter === "all") {
-                          const multiEntries = cellMapMulti.get(key)
-                          return (
-                            <td key={day} className="px-1.5 py-1.5 align-top border-r last:border-r-0">
-                              {multiEntries?.length ? (
-                                <div className="flex flex-col gap-1">
-                                  {multiEntries.map((e) => (
-                                    <ScheduleCellMini key={e.id} entry={e} />
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="h-16" />
-                              )}
-                            </td>
-                          )
-                        }
+                        const canClick = isAdmin
 
                         const entry = cellMap.get(key)
                         return (
@@ -498,7 +415,7 @@ function TimetablePage() {
           state={entryDialog}
           onOpenChange={(open) => !open && setEntryDialog(null)}
           academicYearId={academicYearId}
-          gradeId={Number(gradeFilter)}
+          gradeId={Number(selectedGradeId)}
           subjects={subjects}
           teachers={teachers}
           timeSlots={sorted}
@@ -506,7 +423,7 @@ function TimetablePage() {
             if (entryDialog.mode === "create") {
               createEntryMutation.mutate({
                 academic_year_id: academicYearId,
-                grade_id: Number(gradeFilter),
+                grade_id: Number(selectedGradeId),
                 subject_id: subjectId,
                 teacher_id: teacherId,
                 time_slot_id: entryDialog.slotId,
@@ -557,21 +474,6 @@ function ScheduleCell({
       </div>
       <div className="text-xs text-muted-foreground truncate mt-0.5">
         {subtitle ?? "—"}
-      </div>
-    </div>
-  )
-}
-
-/** Compact cell for "Barchasi" mode — shows grade, subject, teacher in one mini card */
-function ScheduleCellMini({ entry }: { entry: ScheduleEntryRead }) {
-  return (
-    <div className="rounded-md relative overflow-hidden pl-2.5 pr-1.5 py-1 bg-primary/5 border border-primary/15">
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
-      <div className="text-xs font-semibold truncate">
-        {entry.grade_display ?? "—"} · {entry.subject_name ?? "—"}
-      </div>
-      <div className="text-[11px] text-muted-foreground truncate">
-        {entry.teacher_name ?? "—"}
       </div>
     </div>
   )

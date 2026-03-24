@@ -65,16 +65,12 @@ export function buildGrid(
   workingDays: number[],
 ) {
   const cellMap = new Map<string, ScheduleEntryRead>()
-  const cellMapMulti = new Map<string, ScheduleEntryRead[]>()
   for (const entry of entries) {
     const key = `${entry.day_of_week}-${entry.time_slot_id}`
     cellMap.set(key, entry)
-    const arr = cellMapMulti.get(key)
-    if (arr) arr.push(entry)
-    else cellMapMulti.set(key, [entry])
   }
   const sorted = [...timeSlots].sort((a, b) => a.period_number - b.period_number)
-  return { sorted, cellMap, cellMapMulti, days: workingDays }
+  return { sorted, cellMap, days: workingDays }
 }
 
 export function getBreakInfo(
