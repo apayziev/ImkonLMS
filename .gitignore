@@ -31,3 +31,4 @@ node_modules/
 # Docker
 backups/*.sql
 backups/*.sql.gz
+jadval.html

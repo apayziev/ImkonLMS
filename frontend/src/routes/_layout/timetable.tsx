@@ -75,6 +75,23 @@ const DAY_SHORT: Record<number, string> = {
   7: "Yak",
 }
 
+// ─── Subject Color Palette (deterministic by subject id) ────────────────────
+
+const SUBJECT_COLORS = [
+  { bg: "#EFF6FF", border: "#BFDBFE", accent: "#2563EB", text: "#1D4ED8" }, // blue
+  { bg: "#F0FDF4", border: "#BBF7D0", accent: "#16A34A", text: "#15803D" }, // green
+  { bg: "#FFFBEB", border: "#FDE68A", accent: "#D97706", text: "#B45309" }, // amber
+  { bg: "#F5F3FF", border: "#DDD6FE", accent: "#7C3AED", text: "#6D28D9" }, // purple
+  { bg: "#ECFEFF", border: "#A5F3FC", accent: "#0891B2", text: "#0E7490" }, // cyan
+  { bg: "#FEF2F2", border: "#FECACA", accent: "#DC2626", text: "#B91C1C" }, // red
+  { bg: "#FFF7ED", border: "#FED7AA", accent: "#EA580C", text: "#C2410C" }, // orange
+  { bg: "#F0F9FF", border: "#BAE6FD", accent: "#0284C7", text: "#0369A1" }, // sky
+] as const
+
+function getSubjectColor(subjectId: number) {
+  return SUBJECT_COLORS[subjectId % SUBJECT_COLORS.length]
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface EntryDialogState {
@@ -304,19 +321,6 @@ function TimetablePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sinf tanlang" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha sinflar</SelectItem>
-              {grades.map((g) => (
-                <SelectItem key={g.id} value={g.id.toString()}>
-                  {g.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {isAdmin && (
             <Button
               variant="outline"
@@ -359,6 +363,36 @@ function TimetablePage() {
         </div>
       </div>
 
+      {/* ─── Class Chips ─── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground font-medium">Sinf:</span>
+        <button
+          type="button"
+          onClick={() => setGradeFilter("all")}
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            gradeFilter === "all"
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+          }`}
+        >
+          Barchasi
+        </button>
+        {grades.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => setGradeFilter(g.id.toString())}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              gradeFilter === g.id.toString()
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+            }`}
+          >
+            {g.display_name}
+          </button>
+        ))}
+      </div>
+
       {/* ─── Settings Section ─── */}
       {isAdmin && settingsOpen && (
         <SettingsSection
@@ -391,20 +425,20 @@ function TimetablePage() {
               Sinf tanlang, keyin katakka bosib <span className="font-medium text-foreground">fan va o'qituvchi</span> biriktiring
             </div>
           )}
-          <div className="rounded-lg border overflow-x-auto">
+          <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="h-12 px-3 text-left align-middle font-medium text-muted-foreground w-28">
+              <tr className="bg-muted/50 border-b">
+                <th className="h-11 px-3 text-center align-middle text-[11px] font-semibold text-muted-foreground uppercase tracking-wider w-[130px]">
                   Vaqt
                 </th>
                 {days.map((day) => (
                   <th
                     key={day}
-                    className="h-12 px-3 text-center align-middle font-medium text-muted-foreground"
+                    className="h-11 px-3 text-center align-middle text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
                   >
-                    <span className="hidden sm:inline">{DAY_NAMES[day]}</span>
-                    <span className="sm:hidden">{DAY_SHORT[day]}</span>
+                    {DAY_NAMES[day]}
                   </th>
                 ))}
               </tr>
@@ -414,59 +448,72 @@ function TimetablePage() {
                 const brk = getBreakInfo(slot, sorted[idx + 1], settingsBreaks)
 
                 return (
-                  <tr key={slot.id} className="border-b last:border-0">
-                    {/* Period + Time */}
-                    <td className="px-3 py-2 align-top">
-                      <div className="text-xs font-semibold text-primary">
-                        {slot.period_number}-soat
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {slot.start_time} – {slot.end_time}
-                      </div>
-                      {brk && (
-                        <div className={`text-[10px] mt-1 ${brk.name ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
-                          {brk.name || "Tanaffus"} {brk.minutes} min
+                  <>
+                    <tr key={slot.id} className="border-b last:border-0">
+                      {/* Period + Time */}
+                      <td className="px-3 py-2 align-middle border-r bg-muted/30" style={{ minHeight: 76 }}>
+                        <div className="text-[11px] font-semibold text-primary font-mono">
+                          {slot.period_number}-soat
                         </div>
-                      )}
-                    </td>
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          {slot.start_time} – {slot.end_time}
+                        </div>
+                      </td>
 
-                    {/* Day cells */}
-                    {days.map((day) => {
-                      const entry = cellMap.get(`${day}-${slot.id}`)
-                      const canClick = isAdmin && gradeFilter !== "all"
-                      return (
-                        <td key={day} className="px-1.5 py-1.5 align-top">
-                          {entry ? (
-                            <ScheduleCell
-                              entry={entry}
-                              onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className={`h-14 w-full rounded-md border border-dashed border-border/50 flex items-center justify-center transition-colors ${
-                                canClick
-                                  ? "hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
-                                  : "cursor-default"
-                              }`}
-                              onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
-                              disabled={!canClick}
-                            >
-                              {canClick ? (
-                                <Plus className="h-4 w-4 text-muted-foreground/40" />
-                              ) : (
-                                <span className="text-xs text-muted-foreground/40">—</span>
-                              )}
-                            </button>
-                          )}
+                      {/* Day cells */}
+                      {days.map((day) => {
+                        const entry = cellMap.get(`${day}-${slot.id}`)
+                        const canClick = isAdmin && gradeFilter !== "all"
+                        return (
+                          <td key={day} className="px-1.5 py-1.5 align-top border-r last:border-r-0">
+                            {entry ? (
+                              <ScheduleCell
+                                entry={entry}
+                                onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                className={`h-16 w-full rounded-lg flex items-center justify-center transition-colors ${
+                                  canClick
+                                    ? "hover:bg-[#FFF0EE] cursor-pointer group"
+                                    : "cursor-default"
+                                }`}
+                                onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
+                                disabled={!canClick}
+                              >
+                                {canClick && (
+                                  <span className="text-xl text-muted-foreground/30 group-hover:text-primary transition-colors">+</span>
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+
+                    {/* Break row */}
+                    {brk && (
+                      <tr key={`brk-${slot.id}`} className="border-b" style={{ background: "#FDF8F0" }}>
+                        <td className="px-3 py-1.5 text-center border-r" style={{ background: "#FDF8F0" }}>
+                          <div className="text-[11px] font-medium" style={{ color: "#D97706" }}>
+                            {brk.name || "Tanaffus"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-mono">
+                            {brk.minutes} min
+                          </div>
                         </td>
-                      )
-                    })}
-                  </tr>
+                        {days.map((day) => (
+                          <td key={day} className="border-r last:border-r-0" style={{ background: "#FDF8F0" }} />
+                        ))}
+                      </tr>
+                    )}
+                  </>
                 )
               })}
             </tbody>
           </table>
+          </div>
         </div>
         </div>
       )}
@@ -623,9 +670,7 @@ function SettingsSection({
 
   return (
     <div className="rounded-lg border bg-card p-5">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
-        {/* Left: settings form */}
-        <div className="space-y-5">
+      <div className="space-y-5">
           {/* Vaqt oralig'i */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -779,39 +824,6 @@ function SettingsSection({
             </Button>
           </div>
         </div>
-
-        {/* Right: preview */}
-        <div className="lg:w-56 lg:border-l lg:pl-6 space-y-2">
-          <Label className="text-sm font-semibold">
-            Ko'rinish ({preview.length} ta soat)
-          </Label>
-          {preview.length > 0 ? (
-            <div className="space-y-1">
-              {preview.map((slot, idx) => {
-                const brk = getBreakInfo(slot, preview[idx + 1], breaks)
-                return (
-                  <div key={slot.period_number}>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-primary font-medium w-14">
-                        {slot.period_number}-soat
-                      </span>
-                      <span className="text-muted-foreground">
-                        {slot.start_time} – {slot.end_time}
-                      </span>
-                    </div>
-                    {brk && (
-                      <div className={`text-[10px] ml-14 ${brk.name ? "text-[#6720FF] font-medium" : "text-muted-foreground/60"}`}>
-                        {brk.name || "Tanaffus"} {brk.minutes} min
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">Vaqt oralig'i yetarli emas</p>
-          )}
-        </div>
       </div>
     </div>
   )
@@ -961,18 +973,29 @@ function ScheduleCell({
   entry: ScheduleEntryRead
   onClick?: () => void
 }) {
+  const color = getSubjectColor(entry.subject_id ?? 0)
   return (
     <div
-      className={`h-14 rounded-md bg-primary/5 border border-primary/10 px-2 py-1.5 flex flex-col justify-center transition-colors ${
-        onClick ? "hover:bg-primary/10 cursor-pointer" : ""
+      className={`h-16 rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all ${
+        onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer" : ""
       }`}
+      style={{
+        background: color.bg,
+        border: `1px solid ${color.border}`,
+      }}
       onClick={onClick}
       onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="text-xs font-medium truncate">{entry.subject_name ?? "—"}</div>
-      <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg"
+        style={{ background: color.accent }}
+      />
+      <div className="text-[13px] font-semibold truncate" style={{ color: color.text }}>
+        {entry.subject_name ?? "—"}
+      </div>
+      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
         {entry.teacher_name ?? "—"}
       </div>
     </div>
