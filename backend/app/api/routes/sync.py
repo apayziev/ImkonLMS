@@ -131,7 +131,7 @@ async def _sync_students(
 
     sync_fields = [
         "first_name", "last_name", "middle_name", "birth_date", "gender",
-        "phone_number", "student_id",
+        "phone_number", "student_id", "photo_url",
         "father_first_name", "father_last_name", "father_phone",
         "mother_first_name", "mother_last_name", "mother_phone",
         "address", "enrollment_date", "withdrawal_date",
@@ -139,9 +139,15 @@ async def _sync_students(
         "departure_date", "return_date", "is_deleted", "deleted_at",
     ]
 
+    pms_base = settings.PAYMENT_API_URL.rstrip("/")
+
     created = updated = 0
 
     for ps in payment_students:
+        # Make relative photo_url absolute so LMS frontend can load from PMS
+        if ps.get("photo_url") and not ps["photo_url"].startswith("http"):
+            ps["photo_url"] = f"{pms_base}{ps['photo_url']}"
+
         doc_id = ps.get("document_id")
         if not doc_id:
             continue
@@ -195,9 +201,15 @@ async def _sync_teachers(
         "phone_number", "photo_url", "is_active", "is_deleted", "subjects",
     ]
 
+    pms_base = settings.PAYMENT_API_URL.rstrip("/")
+
     created = updated = 0
 
     for pt in payment_teachers:
+        # Make relative photo_url absolute so LMS frontend can load from PMS
+        if pt.get("photo_url") and not pt["photo_url"].startswith("http"):
+            pt["photo_url"] = f"{pms_base}{pt['photo_url']}"
+
         doc_id = pt.get("document_id")
         if not doc_id:
             continue
