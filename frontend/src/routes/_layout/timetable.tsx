@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { CalendarDays, ChevronDown, Loader2, Settings, Trash2 } from "lucide-react"
+import { CalendarDays, ChevronDown, Info, Loader2, Settings, Trash2 } from "lucide-react"
 import type React from "react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -43,6 +43,7 @@ function TimetablePage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [entryDialog, setEntryDialog] = useState<EntryDialogState | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
 
   // Data queries
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -75,35 +76,57 @@ function TimetablePage() {
   const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
 
   // ─── Stats ────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
+  const statsData = useMemo(() => {
     if (!entries.length) return null
+
     if (gradeFilter !== "all") {
-      // Sinf tanlangan: haftalik dars soatlari
+      // Sinf tanlangan — fanlar kesimida haftalik dars soatlari
+      const subjectMap = new Map<string, { count: number; teacher: string }>()
+      for (const e of entries) {
+        const subj = e.subject_name ?? "Noma'lum"
+        const existing = subjectMap.get(subj)
+        if (existing) {
+          existing.count++
+        } else {
+          subjectMap.set(subj, { count: 1, teacher: e.teacher_name ?? "—" })
+        }
+      }
       const selectedGrade = grades.find((g) => g.id.toString() === gradeFilter)
       return {
-        label: `${selectedGrade?.display_name ?? "Sinf"}`,
-        value: `Haftalik ${entries.length} ta dars`,
+        mode: "grade" as const,
+        gradeName: selectedGrade?.display_name ?? "Sinf",
+        total: entries.length,
+        subjects: [...subjectMap.entries()]
+          .sort((a, b) => b[1].count - a[1].count)
+          .map(([name, { count, teacher }]) => ({ name, count, teacher })),
       }
     }
-    // Barchasi: har bir o'qituvchining umumiy soatlari
-    const teacherMap = new Map<string, { count: number; grades: Set<string> }>()
+
+    // Barchasi — o'qituvchilar kesimida, sinflarga ajratilgan
+    const teacherMap = new Map<string, Map<string, number>>()
+    const gradeSet = new Set<string>()
     for (const e of entries) {
-      const name = e.teacher_name ?? "Noma'lum"
-      const existing = teacherMap.get(name)
-      if (existing) {
-        existing.count++
-        if (e.grade_display) existing.grades.add(e.grade_display)
-      } else {
-        teacherMap.set(name, { count: 1, grades: new Set(e.grade_display ? [e.grade_display] : []) })
-      }
+      const teacher = e.teacher_name ?? "Noma'lum"
+      const grade = e.grade_display ?? "—"
+      gradeSet.add(grade)
+      if (!teacherMap.has(teacher)) teacherMap.set(teacher, new Map())
+      const gMap = teacherMap.get(teacher)!
+      gMap.set(grade, (gMap.get(grade) ?? 0) + 1)
     }
-    const teacherStats = [...teacherMap.entries()]
-      .sort((a, b) => b[1].count - a[1].count)
-      .map(([name, { count, grades: g }]) => `${name}: ${count} dars (${g.size} sinf)`)
+    const gradeColumns = [...gradeSet].sort()
+    const rows = [...teacherMap.entries()]
+      .map(([name, gMap]) => {
+        const byGrade = gradeColumns.map((g) => gMap.get(g) ?? 0)
+        const total = byGrade.reduce((s, v) => s + v, 0)
+        return { name, byGrade, total }
+      })
+      .sort((a, b) => b.total - a.total)
+
     return {
-      label: "Barcha o'qituvchilar",
-      value: `Jami ${entries.length} ta dars`,
-      details: teacherStats,
+      mode: "all" as const,
+      total: entries.length,
+      gradeColumns,
+      rows,
     }
   }, [entries, gradeFilter, grades])
 
@@ -116,7 +139,7 @@ function TimetablePage() {
       toast.success("Dars qo'shildi")
       setEntryDialog(null)
     },
-    onError: () => toast.error("Bu vaqtda sinf yoki o'qituvchi band"),
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
   })
 
   const updateEntryMutation = useMutation({
@@ -127,7 +150,7 @@ function TimetablePage() {
       toast.success("Dars yangilandi")
       setEntryDialog(null)
     },
-    onError: () => toast.error("Bu vaqtda sinf yoki o'qituvchi band"),
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
   })
 
   const deleteEntryMutation = useMutation({
@@ -249,18 +272,77 @@ function TimetablePage() {
         ))}
       </div>
 
-      {/* ─── Stats ─── */}
-      {stats && (
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-medium">{stats.label}:</span>
-            <span className="text-muted-foreground">{stats.value}</span>
-          </div>
-          {"details" in stats && stats.details && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              {stats.details.map((d) => (
-                <span key={d}>{d}</span>
-              ))}
+      {/* ─── Batafsil ma'lumot ─── */}
+      {statsData && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setStatsOpen((o) => !o)}
+            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Info className="h-4 w-4" />
+            Batafsil ma'lumot
+            <ChevronDown className={`h-4 w-4 transition-transform ${statsOpen ? "rotate-180" : ""}`} />
+            <span className="text-xs font-normal ml-1">
+              (Jami {statsData.total} ta dars)
+            </span>
+          </button>
+
+          {statsOpen && (
+            <div className="mt-3 rounded-lg border overflow-hidden">
+              {statsData.mode === "grade" ? (
+                /* ── Sinf tanlangan: fanlar jadvali ── */
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/40 border-b">
+                      <th className="text-left px-3 py-2 font-medium">Fan</th>
+                      <th className="text-left px-3 py-2 font-medium">O'qituvchi</th>
+                      <th className="text-center px-3 py-2 font-medium w-24">Haftalik soat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statsData.subjects.map((s) => (
+                      <tr key={s.name} className="border-b last:border-0">
+                        <td className="px-3 py-1.5">{s.name}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{s.teacher}</td>
+                        <td className="px-3 py-1.5 text-center font-medium">{s.count}</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-muted/30 font-medium">
+                      <td className="px-3 py-1.5" colSpan={2}>Jami</td>
+                      <td className="px-3 py-1.5 text-center">{statsData.total}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                /* ── Barchasi: o'qituvchilar × sinflar jadvali ── */
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/40 border-b">
+                        <th className="text-left px-3 py-2 font-medium sticky left-0 bg-muted/40">O'qituvchi</th>
+                        {statsData.gradeColumns.map((g) => (
+                          <th key={g} className="text-center px-2 py-2 font-medium whitespace-nowrap">{g}</th>
+                        ))}
+                        <th className="text-center px-3 py-2 font-medium">Jami</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statsData.rows.map((r) => (
+                        <tr key={r.name} className="border-b last:border-0">
+                          <td className="px-3 py-1.5 whitespace-nowrap sticky left-0 bg-background">{r.name}</td>
+                          {r.byGrade.map((v, i) => (
+                            <td key={statsData.gradeColumns[i]} className="text-center px-2 py-1.5 text-muted-foreground">
+                              {v || "—"}
+                            </td>
+                          ))}
+                          <td className="text-center px-3 py-1.5 font-medium">{r.total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
