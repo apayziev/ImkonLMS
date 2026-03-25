@@ -239,8 +239,8 @@ function LessonCard({
     <Card
       className={cn(
         "rounded-xl border-2 p-5 transition-colors",
-        isInProgress && "border-blue-400 bg-blue-50/50",
-        isCompleted && "border-green-200 bg-green-50/30",
+        isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
+        isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
         !isInProgress && !isCompleted && "border-border",
       )}
     >
@@ -269,7 +269,7 @@ function LessonCard({
           variant="outline"
           onClick={onContinue}
         >
-          <CheckCircle2 className="mr-2 h-5 w-5 text-green-600" />
+          <CheckCircle2 className="mr-2 h-5 w-5 text-[var(--imkon-teal)]" />
           Tugallangan — Ko'rish
         </Button>
       ) : isInProgress ? (
@@ -412,7 +412,7 @@ function SessionView({
       </div>
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 text-[var(--imkon-teal)] bg-[var(--imkon-teal)]/10 rounded-lg px-4 py-3">
           <CheckCircle2 className="h-5 w-5" />
           <span className="text-lg font-medium">
             Dars tugatilgan · {session.ended_at ? new Date(session.ended_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }) : ""}
@@ -428,8 +428,7 @@ function SessionView({
           <span>O'quvchi</span>
           <div className="flex gap-1.5 w-56 justify-center">
             <span className="flex items-center gap-1 px-3 py-1.5">
-              {!isCompleted && (
-                <button
+              <button
                   type="button"
                   title={unmarkedCount > 0 ? "Hammasini keldi" : "Hammasini bekor qilish"}
                   onClick={() => markAllMutation.mutate(unmarkedCount > 0 ? "mark" : "unmark")}
@@ -437,7 +436,7 @@ function SessionView({
                   className={cn(
                     "inline-flex items-center justify-center h-5 w-5 rounded-full transition-colors disabled:opacity-50",
                     unmarkedCount > 0
-                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      ? "bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white"
                       : "bg-muted-foreground/20 hover:bg-muted-foreground/30 text-muted-foreground",
                   )}
                 >
@@ -446,8 +445,7 @@ function SessionView({
                   ) : (
                     <UserCheck className="h-3 w-3" />
                   )}
-                </button>
-              )}
+              </button>
               Keldi
             </span>
             <span className="px-3 py-1.5">Sababli</span>
@@ -462,7 +460,7 @@ function SessionView({
             student={student}
             index={index + 1}
             sessionId={sessionId}
-            disabled={isCompleted}
+            disabled={false}
           />
         ))}
       </div>
@@ -480,9 +478,9 @@ function SessionView({
 // ─── Student Row ────────────────────────────────────────────────────────────
 
 const ATTENDANCE_OPTIONS = [
-  { value: "present", label: "Keldi", color: "bg-green-100 text-green-800 border-green-300" },
-  { value: "excused", label: "Sababli", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
-  { value: "unexcused", label: "Sababsiz", color: "bg-red-100 text-red-800 border-red-300" },
+  { value: "present", label: "Keldi", color: "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)] border-[var(--imkon-teal)]/40" },
+  { value: "excused", label: "Sababli", color: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple-dark)] border-[var(--imkon-purple)]/30" },
+  { value: "unexcused", label: "Sababsiz", color: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)] border-[var(--imkon-red)]/30" },
 ] as const
 
 const GRADES = [5, 4, 3, 2, 1] as const
@@ -577,7 +575,7 @@ function StudentRow({
           <Loader2 className="absolute -right-3 -top-1 h-3 w-3 animate-spin text-muted-foreground" />
         )}
         {saveStatus === "saved" && (
-          <Check className="absolute -right-3 -top-1 h-3 w-3 text-green-600" />
+          <Check className="absolute -right-3 -top-1 h-3 w-3 text-[var(--imkon-teal)]" />
         )}
         {saveStatus === "error" && (
           <TriangleAlert className="absolute -right-3 -top-1 h-3 w-3 text-red-500" />

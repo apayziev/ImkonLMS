@@ -245,8 +245,6 @@ async def update_attendance(
     session = (await db.execute(session_query)).scalar_one_or_none()
     if not session:
         raise NotFoundException("Sessiya topilmadi")
-    if session.status != "in_progress":
-        raise BadRequestException("Sessiya allaqachon tugatilgan")
 
     # Query 2: attendance + student in one JOIN
     att_query = (
@@ -309,8 +307,6 @@ async def mark_all_present(
     session = (await db.execute(session_query)).scalar_one_or_none()
     if not session:
         raise NotFoundException("Sessiya topilmadi")
-    if session.status != "in_progress":
-        raise BadRequestException("Sessiya allaqachon tugatilgan")
 
     now = datetime.now(UTC)
     stmt = (
@@ -350,8 +346,6 @@ async def unmark_all(
     session = (await db.execute(session_query)).scalar_one_or_none()
     if not session:
         raise NotFoundException("Sessiya topilmadi")
-    if session.status != "in_progress":
-        raise BadRequestException("Sessiya allaqachon tugatilgan")
 
     stmt = (
         update(SessionAttendance)
