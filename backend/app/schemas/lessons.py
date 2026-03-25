@@ -74,5 +74,5 @@ class SessionDetailRead(BaseModel):
 
 class AttendanceUpdateRequest(BaseModel):
     student_id: int
-    status: str = Field(pattern=r"^(present|excused|unexcused)$")
+    status: str = Field(pattern=r"^(unmarked|present|excused|unexcused)$")
     grade: int | None = Field(default=None, ge=1, le=5)

@@ -436,24 +436,28 @@ function SessionView({
         <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
           <span>#</span>
           <span>O'quvchi</span>
-          <span className="w-56 text-center flex items-center justify-center gap-2">
-            Davomat
-            {!isCompleted && unmarkedCount > 0 && (
-              <button
-                type="button"
-                title="Hammasini keldi"
-                onClick={() => markAllMutation.mutate()}
-                disabled={markAllMutation.isPending}
-                className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
-              >
-                {markAllMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <UserCheck className="h-4 w-4" />
-                )}
-              </button>
-            )}
-          </span>
+          <div className="flex gap-1.5 w-56 justify-center">
+            <span className="flex items-center justify-center px-3 py-1.5 relative">
+              Keldi
+              {!isCompleted && unmarkedCount > 0 && (
+                <button
+                  type="button"
+                  title="Hammasini keldi"
+                  onClick={() => markAllMutation.mutate()}
+                  disabled={markAllMutation.isPending}
+                  className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
+                >
+                  {markAllMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <UserCheck className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+            </span>
+            <span className="px-3 py-1.5">Sababli</span>
+            <span className="px-3 py-1.5">Sababsiz</span>
+          </div>
           <span className="w-28 text-center">Baho</span>
         </div>
 
@@ -547,8 +551,10 @@ function StudentRow({
 
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
-    const grade = newStatus === "present" ? student.grade : null
-    mutation.mutate({ status: newStatus, grade })
+    // Toggle: clicking same status resets to unmarked
+    const resolved = newStatus === student.status ? "unmarked" : newStatus
+    const grade = resolved === "present" ? student.grade : null
+    mutation.mutate({ status: resolved, grade })
   }
 
   const handleGradeChange = (newGrade: number) => {
