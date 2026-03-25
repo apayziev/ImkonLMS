@@ -505,6 +505,7 @@ async def get_attendance(
                 full_name=att.student.full_name if att.student else "",
                 photo_url=att.student.photo_url if att.student else None,
                 status=att.status,
+                marked_at=att.marked_at.isoformat() if att.marked_at else None,
                 grade=att.grade,
             ))
 
@@ -514,6 +515,8 @@ async def get_attendance(
             period_number=entry.time_slot.period_number if entry.time_slot else 0,
             start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
             end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+            started_at=session.started_at.isoformat(),
+            ended_at=session.ended_at.isoformat() if session.ended_at else None,
             teacher_name=entry.teacher.full_name if entry.teacher else "",
             status=session.status,
             students=students,

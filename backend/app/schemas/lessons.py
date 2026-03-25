@@ -86,6 +86,7 @@ class AttendanceStudentRead(BaseModel):
     full_name: str
     photo_url: str | None = None
     status: str  # unmarked | present | excused | unexcused
+    marked_at: str | None = None
     grade: int | None = None
 
 
@@ -95,6 +96,8 @@ class AttendanceSessionRead(BaseModel):
     period_number: int
     start_time: str
     end_time: str
+    started_at: str
+    ended_at: str | None = None
     teacher_name: str
     status: str  # in_progress | completed
     students: list[AttendanceStudentRead]

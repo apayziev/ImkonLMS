@@ -435,6 +435,7 @@ export interface AttendanceStudentRead {
   full_name: string
   photo_url: string | null
   status: string // unmarked | present | excused | unexcused
+  marked_at: string | null
   grade: number | null
 }
 
@@ -444,6 +445,8 @@ export interface AttendanceSessionRead {
   period_number: number
   start_time: string
   end_time: string
+  started_at: string
+  ended_at: string | null
   teacher_name: string
   status: string // in_progress | completed
   students: AttendanceStudentRead[]

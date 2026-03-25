@@ -64,6 +64,10 @@ const STATUS_CONFIG = {
   unmarked: { label: "Belgilanmagan", className: "bg-muted text-muted-foreground" },
 } as const
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 function AttendancePage() {
@@ -264,7 +268,7 @@ function SessionCard({ session }: { session: AttendanceSessionRead }) {
 
       {/* Status bar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isCompleted ? (
             <span className="flex items-center gap-1.5 text-sm text-[var(--imkon-teal)]">
               <Check className="h-4 w-4" />
@@ -276,6 +280,10 @@ function SessionCard({ session }: { session: AttendanceSessionRead }) {
               Davom etmoqda
             </span>
           )}
+          <span className="text-xs text-muted-foreground">
+            Boshlangan: {formatTime(session.started_at)}
+            {session.ended_at && ` · Tugatilgan: ${formatTime(session.ended_at)}`}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <UserCheck className="h-4 w-4" />
@@ -286,10 +294,11 @@ function SessionCard({ session }: { session: AttendanceSessionRead }) {
       {/* Student list */}
       {session.students.length > 0 ? (
         <div className="space-y-1.5">
-          <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-x-4 px-3 py-1.5 text-xs font-medium text-muted-foreground">
             <span>#</span>
             <span>O'quvchi</span>
             <span className="w-28 text-center">Davomat</span>
+            <span className="w-16 text-center">Vaqti</span>
             <span className="w-12 text-center">Baho</span>
           </div>
           {session.students.map((student, idx) => {
@@ -297,7 +306,7 @@ function SessionCard({ session }: { session: AttendanceSessionRead }) {
             return (
               <div
                 key={student.student_id}
-                className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 rounded-lg border px-3 py-2 bg-card"
+                className="grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-x-4 rounded-lg border px-3 py-2 bg-card"
               >
                 <span className="text-sm text-muted-foreground">{idx + 1}</span>
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -311,6 +320,9 @@ function SessionCard({ session }: { session: AttendanceSessionRead }) {
                 </div>
                 <span className={cn("w-28 text-center text-xs font-medium rounded-md px-2 py-1", config.className)}>
                   {config.label}
+                </span>
+                <span className="w-16 text-center text-xs text-muted-foreground">
+                  {student.marked_at ? formatTime(student.marked_at) : "—"}
                 </span>
                 <span className="w-12 text-center text-sm font-bold">
                   {student.grade ?? "—"}
