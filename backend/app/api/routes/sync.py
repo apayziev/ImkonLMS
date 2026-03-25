@@ -300,6 +300,7 @@ async def _sync_teachers(
     sync_fields = [
         "first_name", "last_name", "middle_name", "birth_date", "gender",
         "phone_number", "photo_url", "is_active", "is_deleted", "subjects",
+        "hashed_password",
     ]
 
     pms_base = settings.PAYMENT_API_URL.rstrip("/")
@@ -353,8 +354,9 @@ async def _sync_teachers(
             teacher_data["class_teacher_grade_id"] = lms_ct_grade_id
             teacher_data["teaching_grade_ids"] = lms_teaching_ids
             teacher_data["role"] = UserRole.TEACHER.value
-            loop = asyncio.get_running_loop()
-            teacher_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)
+            if not teacher_data.get("hashed_password"):
+                loop = asyncio.get_running_loop()
+                teacher_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)
             new_teacher = User(**teacher_data)
             db.add(new_teacher)
             teacher_map[doc_id] = new_teacher
