@@ -46,8 +46,8 @@ class SessionStudentRead(BaseModel):
     last_name: str
     full_name: str
     photo_url: str | None = None
-    status: str  # present | excused | unexcused
-    marked_at: str
+    status: str  # unmarked | present | excused | unexcused
+    marked_at: str | None = None
     grade: int | None = None
 
 

@@ -3,8 +3,8 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
-from fastapi import APIRouter
-from sqlalchemy import select
+from fastapi import APIRouter, Query
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
@@ -48,11 +48,15 @@ def _require_teacher(user: User) -> None:
 
 
 @router.get("/today", response_model=TodayLessonsResponse)
-async def get_today_lessons(db: SessionDep, current_user: CurrentUser) -> Any:
-    """Get current teacher's lessons for today with session status."""
+async def get_today_lessons(
+    db: SessionDep,
+    current_user: CurrentUser,
+    target_date: date | None = Query(None, alias="date"),
+) -> Any:
+    """Get current teacher's lessons for a given date (defaults to today)."""
     _require_teacher(current_user)
 
-    today = date.today()
+    today = target_date or date.today()
     # Python: Monday=0 … Sunday=6. DB: Monday=1 … Sunday=7
     day_of_week = today.weekday() + 1
 
@@ -165,14 +169,14 @@ async def start_session(
     students_result = await db.execute(students_query)
     students = students_result.scalars().all()
 
-    # Create attendance records (default: present)
+    # Create attendance records (default: unmarked)
     attendances = []
     for student in students:
         att = SessionAttendance(
             lesson_session_id=session.id,
             student_id=student.id,
-            status="present",
-            marked_at=now,
+            status="unmarked",
+            marked_at=None,
         )
         db.add(att)
         attendances.append((att, student))
@@ -283,6 +287,47 @@ async def update_attendance(
     )
 
 
+# ─── Mark All Present ────────────────────────────────────────────────────────
+
+
+@router.post("/sessions/{session_id}/attendance/mark-all-present")
+async def mark_all_present(
+    session_id: int, db: SessionDep, current_user: CurrentUser,
+) -> Any:
+    """Mark all unmarked students as present in one batch."""
+    _require_teacher(current_user)
+
+    session_query = (
+        select(LessonSession)
+        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+        .where(
+            LessonSession.id == session_id,
+            LessonSession.is_deleted == False,  # noqa: E712
+            ScheduleEntry.teacher_id == current_user.id,
+        )
+    )
+    session = (await db.execute(session_query)).scalar_one_or_none()
+    if not session:
+        raise NotFoundException("Sessiya topilmadi")
+    if session.status != "in_progress":
+        raise BadRequestException("Sessiya allaqachon tugatilgan")
+
+    now = datetime.now(UTC)
+    stmt = (
+        update(SessionAttendance)
+        .where(
+            SessionAttendance.lesson_session_id == session_id,
+            SessionAttendance.status == "unmarked",
+            SessionAttendance.is_deleted == False,  # noqa: E712
+        )
+        .values(status="present", marked_at=now)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+
+    return {"updated": result.rowcount}
+
+
 # ─── End Session ────────────────────────────────────────────────────────────
 
 
@@ -349,7 +394,7 @@ def _build_session_detail(
                 full_name=student.full_name if student else "",
                 photo_url=student.photo_url if student else None,
                 status=att.status,
-                marked_at=att.marked_at.isoformat() if att.marked_at else "",
+                marked_at=att.marked_at.isoformat() if att.marked_at else None,
                 grade=att.grade,
             )
         )

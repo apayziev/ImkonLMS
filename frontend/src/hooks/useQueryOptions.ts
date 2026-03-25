@@ -14,6 +14,7 @@ export const queryKeys = {
   timeSlots: ["time-slots"] as const,
   schedule: ["schedule"] as const,
   todayLessons: ["today-lessons"] as const,
+  lessonsForDate: (date: string) => ["lessons-for-date", date] as const,
   lessonSession: ["lesson-session"] as const,
 } as const
 
@@ -106,11 +107,11 @@ export function getScheduleQueryOptions(params: {
   }
 }
 
-export function getTodayLessonsQueryOptions() {
+export function getTodayLessonsQueryOptions(date?: string) {
   return {
-    queryKey: queryKeys.todayLessons,
+    queryKey: date ? queryKeys.lessonsForDate(date) : queryKeys.todayLessons,
     queryFn: async () => {
-      const { data } = await lessonsApi.today()
+      const { data } = await lessonsApi.today(date)
       return data
     },
   }

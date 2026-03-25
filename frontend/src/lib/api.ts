@@ -402,8 +402,8 @@ export interface SessionStudentRead {
   last_name: string
   full_name: string
   photo_url: string | null
-  status: string // present | excused | unexcused
-  marked_at: string
+  status: string // unmarked | present | excused | unexcused
+  marked_at: string | null
   grade: number | null
 }
 
@@ -430,14 +430,16 @@ export interface AttendanceUpdateRequest {
 }
 
 export const lessonsApi = {
-  today: () =>
-    api.get<TodayLessonsResponse>("/api/v1/lessons/today"),
+  today: (date?: string) =>
+    api.get<TodayLessonsResponse>("/api/v1/lessons/today", { params: date ? { date } : undefined }),
   startSession: (schedule_entry_id: number) =>
     api.post<SessionDetailRead>("/api/v1/lessons/sessions", { schedule_entry_id }),
   getSession: (sessionId: number) =>
     api.get<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`),
   updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
     api.patch<SessionStudentRead>(`/api/v1/lessons/sessions/${sessionId}/attendance`, data),
+  markAllPresent: (sessionId: number) =>
+    api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/mark-all-present`),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
 }

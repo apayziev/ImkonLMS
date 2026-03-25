@@ -5,14 +5,17 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Loader2,
   Play,
   Square,
   TriangleAlert,
+  UserCheck,
   UserX,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -33,7 +36,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getTodayLessonsQueryOptions,
@@ -48,10 +53,36 @@ export const Route = createFileRoute("/_layout/lessons")({
   }),
 })
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"]
+const UZ_WEEKDAYS_SHORT = ["Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha"]
+const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
+
+function formatDate(d: Date) {
+  return d.toISOString().split("T")[0]
+}
+
+function formatLabel(d: Date) {
+  return `${UZ_WEEKDAYS[d.getDay()]}, ${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`
+}
+
+function getWeekDays(baseDate: Date): Date[] {
+  const day = baseDate.getDay() // 0=Sun
+  const monday = new Date(baseDate)
+  monday.setDate(baseDate.getDate() - ((day + 6) % 7))
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 function LessonsPage() {
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
   if (activeSessionId) {
     return (
@@ -62,18 +93,33 @@ function LessonsPage() {
     )
   }
 
-  return <TodayLessonsList onSessionOpen={setActiveSessionId} />
+  return (
+    <LessonsList
+      selectedDate={selectedDate}
+      onDateChange={setSelectedDate}
+      onSessionOpen={setActiveSessionId}
+    />
+  )
 }
 
-// ─── Today's Lessons ────────────────────────────────────────────────────────
+// ─── Week Selector + Lessons ────────────────────────────────────────────────
 
-function TodayLessonsList({
+function LessonsList({
+  selectedDate,
+  onDateChange,
   onSessionOpen,
 }: {
+  selectedDate: Date
+  onDateChange: (d: Date) => void
   onSessionOpen: (sessionId: number) => void
 }) {
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery(getTodayLessonsQueryOptions())
+  const dateStr = formatDate(selectedDate)
+  const todayStr = formatDate(new Date())
+  const isToday = dateStr === todayStr
+  const weekDays = getWeekDays(selectedDate)
+
+  const { data, isLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
   const startMutation = useMutation({
     mutationFn: (scheduleEntryId: number) =>
@@ -81,6 +127,7 @@ function TodayLessonsList({
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
       onSessionOpen(response.data.id)
     },
     onError: () => toast.error("Darsni boshlashda xatolik"),
@@ -88,18 +135,59 @@ function TodayLessonsList({
 
   const lessons = data?.data ?? []
 
-  const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"]
-  const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
-  const now = new Date()
-  const todayLabel = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS[now.getMonth()]}`
+  const prevWeek = () => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() - 7)
+    onDateChange(d)
+  }
+  const nextWeek = () => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + 7)
+    onDateChange(d)
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Darslarim</h1>
-        <p className="text-muted-foreground mt-1 text-lg capitalize">
-          {todayLabel}
+        <p className="text-muted-foreground mt-1 text-lg">
+          {formatLabel(selectedDate)}
         </p>
+      </div>
+
+      {/* Week day selector */}
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex gap-1.5 flex-1 justify-center">
+          {weekDays.map((d) => {
+            const ds = formatDate(d)
+            const isSelected = ds === dateStr
+            const isDayToday = ds === todayStr
+            return (
+              <button
+                key={ds}
+                type="button"
+                onClick={() => onDateChange(d)}
+                className={cn(
+                  "flex flex-col items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors min-w-[52px]",
+                  isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : isDayToday
+                      ? "bg-accent text-accent-foreground"
+                      : "hover:bg-accent text-muted-foreground",
+                )}
+              >
+                <span className="text-xs">{UZ_WEEKDAYS_SHORT[d.getDay()]}</span>
+                <span className="text-lg font-bold">{d.getDate()}</span>
+              </button>
+            )
+          })}
+        </div>
+        <Button variant="ghost" size="icon" onClick={nextWeek} className="shrink-0">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {isLoading ? (
@@ -111,7 +199,9 @@ function TodayLessonsList({
       ) : lessons.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <BookOpen className="h-16 w-16 mb-4 opacity-40" />
-          <p className="text-xl">Bugun dars yo'q</p>
+          <p className="text-xl">
+            {isToday ? "Bugun dars yo'q" : "Bu kunda dars yo'q"}
+          </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -125,6 +215,7 @@ function TodayLessonsList({
                 startMutation.isPending &&
                 startMutation.variables === lesson.schedule_entry_id
               }
+              canStart={isToday}
             />
           ))}
         </div>
@@ -140,22 +231,24 @@ function LessonCard({
   onStart,
   onContinue,
   isStarting,
+  canStart,
 }: {
   lesson: TodayLessonRead
   onStart: () => void
   onContinue: () => void
   isStarting: boolean
+  canStart: boolean
 }) {
   const isInProgress = lesson.session_status === "in_progress"
   const isCompleted = lesson.session_status === "completed"
 
   return (
-    <div
+    <Card
       className={cn(
         "rounded-xl border-2 p-5 transition-colors",
         isInProgress && "border-blue-400 bg-blue-50/50",
         isCompleted && "border-green-200 bg-green-50/30",
-        !isInProgress && !isCompleted && "border-border bg-card",
+        !isInProgress && !isCompleted && "border-border",
       )}
     >
       <div className="flex items-start justify-between mb-4">
@@ -177,10 +270,15 @@ function LessonCard({
       </div>
 
       {isCompleted ? (
-        <div className="flex items-center gap-2 text-green-600">
-          <CheckCircle2 className="h-5 w-5" />
-          <span className="text-lg font-medium">Tugallangan</span>
-        </div>
+        <Button
+          size="lg"
+          className="w-full text-lg h-12"
+          variant="outline"
+          onClick={onContinue}
+        >
+          <CheckCircle2 className="mr-2 h-5 w-5 text-green-600" />
+          Tugallangan — Ko'rish
+        </Button>
       ) : isInProgress ? (
         <Button
           size="lg"
@@ -189,9 +287,9 @@ function LessonCard({
           onClick={onContinue}
         >
           <Play className="mr-2 h-5 w-5" />
-          Davom etish
+          Darsni boshlash
         </Button>
-      ) : (
+      ) : canStart ? (
         <Button
           size="lg"
           className="w-full text-lg h-12"
@@ -205,8 +303,12 @@ function LessonCard({
           )}
           Darsni boshlash
         </Button>
+      ) : (
+        <div className="flex items-center gap-2 text-muted-foreground justify-center py-2">
+          <span className="text-sm">Boshlanmagan</span>
+        </div>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -247,6 +349,17 @@ function SessionView({
   }
 
   const isCompleted = session.status === "completed"
+  const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
+  const markedCount = session.students.length - unmarkedCount
+
+  const markAllMutation = useMutation({
+    mutationFn: () => lessonsApi.markAllPresent(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
+      toast.success("Barcha o'quvchilar belgilandi")
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
 
   return (
     <div className="space-y-6">
@@ -265,7 +378,11 @@ function SessionView({
             </p>
           </div>
         </div>
-        {!isCompleted && (
+        <div className="flex items-center gap-4">
+          {!isCompleted && (
+            <SessionTimer startedAt={session.started_at} />
+          )}
+          {!isCompleted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -301,6 +418,7 @@ function SessionView({
             </AlertDialogContent>
           </AlertDialog>
         )}
+        </div>
       </div>
 
       {isCompleted && (
@@ -309,6 +427,30 @@ function SessionView({
           <span className="text-lg font-medium">
             Dars tugatilgan · {session.ended_at ? new Date(session.ended_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }) : ""}
           </span>
+        </div>
+      )}
+
+      {/* Bulk Actions + Counter */}
+      {!isCompleted && session.students.length > 0 && (
+        <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
+          <span className="text-sm text-muted-foreground">
+            Belgilangan: <span className="font-semibold text-foreground">{markedCount}</span> / {session.students.length}
+          </span>
+          {unmarkedCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllMutation.mutate()}
+              disabled={markAllMutation.isPending}
+            >
+              {markAllMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserCheck className="mr-2 h-4 w-4" />
+              )}
+              Hammasini keldi ({unmarkedCount})
+            </Button>
+          )}
         </div>
       )}
 
@@ -338,6 +480,34 @@ function SessionView({
           <p className="text-lg">Bu sinfda o'quvchilar topilmadi</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Session Timer ──────────────────────────────────────────────────────────
+
+function SessionTimer({ startedAt }: { startedAt: string }) {
+  const getElapsed = useCallback(() => {
+    const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
+    return Math.max(0, diff)
+  }, [startedAt])
+
+  const [elapsed, setElapsed] = useState(getElapsed)
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(getElapsed()), 1000)
+    return () => clearInterval(id)
+  }, [getElapsed])
+
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-2">
+      <Clock className="h-4 w-4 text-blue-600" />
+      <span className="text-lg font-mono font-bold text-blue-700">
+        {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+      </span>
     </div>
   )
 }
@@ -407,6 +577,7 @@ function StudentRow({
   })
 
   const isAbsent = student.status !== "present"
+  const isUnmarked = student.status === "unmarked"
 
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
@@ -424,7 +595,11 @@ function StudentRow({
     <div
       className={cn(
         "grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
-        isAbsent ? "bg-muted/50" : "bg-card",
+        isUnmarked
+          ? "border-dashed border-muted-foreground/30 bg-muted/30"
+          : isAbsent
+            ? "bg-muted/50"
+            : "bg-card",
         mutation.isPending && "opacity-70",
       )}
     >
@@ -442,10 +617,18 @@ function StudentRow({
         )}
       </span>
 
-      {/* Student Name */}
-      <span className="text-lg font-medium truncate">
-        {student.last_name} {student.first_name}
-      </span>
+      {/* Student Name + Photo */}
+      <div className="flex items-center gap-3 min-w-0">
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+          <AvatarFallback className="text-xs">
+            {student.first_name[0]}{student.last_name[0]}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-lg font-medium truncate">
+          {student.last_name} {student.first_name}
+        </span>
+      </div>
 
       {/* Attendance Buttons */}
       <div className="flex gap-1.5 w-56 justify-center">

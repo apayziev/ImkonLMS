@@ -29,9 +29,11 @@ class SessionAttendance(BaseModel):
         ForeignKey("user.id"), index=True, kw_only=True,
     )
     status: Mapped[str] = mapped_column(
-        String(20), default="present", kw_only=True,
-    )  # present | excused | unexcused
-    marked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), kw_only=True)
+        String(20), default="unmarked", kw_only=True,
+    )  # unmarked | present | excused | unexcused
+    marked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None, kw_only=True,
+    )
     grade: Mapped[int | None] = mapped_column(
         SmallInteger, nullable=True, default=None, kw_only=True,
     )
