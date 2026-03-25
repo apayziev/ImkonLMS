@@ -328,6 +328,46 @@ async def mark_all_present(
     return {"updated": result.rowcount}
 
 
+# ─── Unmark All ──────────────────────────────────────────────────────────────
+
+
+@router.post("/sessions/{session_id}/attendance/unmark-all")
+async def unmark_all(
+    session_id: int, db: SessionDep, current_user: CurrentUser,
+) -> Any:
+    """Reset all students back to unmarked in one batch."""
+    _require_teacher(current_user)
+
+    session_query = (
+        select(LessonSession)
+        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+        .where(
+            LessonSession.id == session_id,
+            LessonSession.is_deleted == False,  # noqa: E712
+            ScheduleEntry.teacher_id == current_user.id,
+        )
+    )
+    session = (await db.execute(session_query)).scalar_one_or_none()
+    if not session:
+        raise NotFoundException("Sessiya topilmadi")
+    if session.status != "in_progress":
+        raise BadRequestException("Sessiya allaqachon tugatilgan")
+
+    stmt = (
+        update(SessionAttendance)
+        .where(
+            SessionAttendance.lesson_session_id == session_id,
+            SessionAttendance.status != "unmarked",
+            SessionAttendance.is_deleted == False,  # noqa: E712
+        )
+        .values(status="unmarked", marked_at=None, grade=None)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+
+    return {"updated": result.rowcount}
+
+
 # ─── End Session ────────────────────────────────────────────────────────────
 
 

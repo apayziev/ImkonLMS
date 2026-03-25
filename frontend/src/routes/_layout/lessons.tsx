@@ -56,16 +56,10 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"]
 const UZ_WEEKDAYS_SHORT = ["Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha"]
-const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
 
 function formatDate(d: Date) {
   return d.toISOString().split("T")[0]
-}
-
-function formatLabel(d: Date) {
-  return `${UZ_WEEKDAYS[d.getDay()]}, ${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`
 }
 
 function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
@@ -152,12 +146,7 @@ function LessonsList({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Darslarim</h1>
-        <p className="text-muted-foreground mt-1 text-lg">
-          {formatLabel(selectedDate)}
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold tracking-tight">Darslarim</h1>
 
       {/* Week day selector */}
       <div className="flex items-center gap-2">
@@ -341,10 +330,11 @@ function SessionView({
   })
 
   const markAllMutation = useMutation({
-    mutationFn: () => lessonsApi.markAllPresent(sessionId),
-    onSuccess: () => {
+    mutationFn: (action: "mark" | "unmark") =>
+      action === "mark" ? lessonsApi.markAllPresent(sessionId) : lessonsApi.unmarkAll(sessionId),
+    onSuccess: (_, action) => {
       queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
-      toast.success("Barcha o'quvchilar belgilandi")
+      toast.success(action === "mark" ? "Barcha o'quvchilar belgilandi" : "Barcha belgilar olib tashlandi")
     },
     onError: () => toast.error("Xatolik yuz berdi"),
   })
@@ -437,15 +427,19 @@ function SessionView({
           <span>#</span>
           <span>O'quvchi</span>
           <div className="flex gap-1.5 w-56 justify-center">
-            <span className="flex items-center justify-center px-3 py-1.5 relative">
-              Keldi
-              {!isCompleted && unmarkedCount > 0 && (
+            <span className="flex items-center gap-1 px-3 py-1.5">
+              {!isCompleted && (
                 <button
                   type="button"
-                  title="Hammasini keldi"
-                  onClick={() => markAllMutation.mutate()}
+                  title={unmarkedCount > 0 ? "Hammasini keldi" : "Hammasini bekor qilish"}
+                  onClick={() => markAllMutation.mutate(unmarkedCount > 0 ? "mark" : "unmark")}
                   disabled={markAllMutation.isPending}
-                  className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
+                  className={cn(
+                    "inline-flex items-center justify-center h-5 w-5 rounded-full transition-colors disabled:opacity-50",
+                    unmarkedCount > 0
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-muted-foreground/20 hover:bg-muted-foreground/30 text-muted-foreground",
+                  )}
                 >
                   {markAllMutation.isPending ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -454,6 +448,7 @@ function SessionView({
                   )}
                 </button>
               )}
+              Keldi
             </span>
             <span className="px-3 py-1.5">Sababli</span>
             <span className="px-3 py-1.5">Sababsiz</span>

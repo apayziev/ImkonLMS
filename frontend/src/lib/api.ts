@@ -440,6 +440,8 @@ export const lessonsApi = {
     api.patch<SessionStudentRead>(`/api/v1/lessons/sessions/${sessionId}/attendance`, data),
   markAllPresent: (sessionId: number) =>
     api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/mark-all-present`),
+  unmarkAll: (sessionId: number) =>
+    api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/unmark-all`),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
 }
