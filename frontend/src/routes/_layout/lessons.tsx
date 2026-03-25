@@ -433,23 +433,23 @@ function SessionView({
 
       {/* Bulk Actions + Counter */}
       {!isCompleted && session.students.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
-          <span className="text-sm text-muted-foreground">
-            Belgilangan: <span className="font-semibold text-foreground">{markedCount}</span> / {session.students.length}
+        <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-5 py-4">
+          <span className="text-base text-muted-foreground">
+            Belgilangan: <span className="font-bold text-foreground text-lg">{markedCount}</span> / {session.students.length}
           </span>
           {unmarkedCount > 0 && (
             <Button
-              variant="outline"
-              size="sm"
+              size="lg"
               onClick={() => markAllMutation.mutate()}
               disabled={markAllMutation.isPending}
+              className="bg-green-600 hover:bg-green-700 text-white text-base h-11 px-6 rounded-lg"
             >
               {markAllMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
-                <UserCheck className="mr-2 h-4 w-4" />
+                <UserCheck className="mr-2 h-5 w-5" />
               )}
-              Hammasini keldi ({unmarkedCount})
+              Hammasini keldi
             </Button>
           )}
         </div>
