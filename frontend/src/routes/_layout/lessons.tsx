@@ -367,7 +367,7 @@ function StudentRow({
   const queryClient = useQueryClient()
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Auto-clear "saved" status after 2s
   useEffect(() => {
