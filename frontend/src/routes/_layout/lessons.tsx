@@ -88,11 +88,10 @@ function TodayLessonsList({
 
   const lessons = data?.data ?? []
 
-  const todayLabel = new Intl.DateTimeFormat("uz-UZ", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date())
+  const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"]
+  const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
+  const now = new Date()
+  const todayLabel = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS[now.getMonth()]}`
 
   return (
     <div className="space-y-6">
