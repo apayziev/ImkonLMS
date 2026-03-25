@@ -111,10 +111,10 @@ function AttendancePage() {
         </p>
       </div>
 
-      {/* Filters: Grade selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      {/* Filters: Grade selector + Week day selector */}
+      <div className="flex items-center gap-4">
         <Select value={gradeId} onValueChange={setGradeId}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger className="w-[200px] shrink-0">
             <SelectValue placeholder="Sinf tanlang" />
           </SelectTrigger>
           <SelectContent>
@@ -125,41 +125,40 @@ function AttendancePage() {
             ))}
           </SelectContent>
         </Select>
-      </div>
 
-      {/* Week day selector */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex gap-1.5 flex-1 justify-center">
-          {weekDays.map((d) => {
-            const ds = formatDate(d)
-            const isSelected = ds === dateStr
-            const isDayToday = ds === todayStr
-            return (
-              <button
-                key={ds}
-                type="button"
-                onClick={() => setSelectedDate(d)}
-                className={cn(
-                  "flex flex-col items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors min-w-[52px]",
-                  isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : isDayToday
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-accent text-muted-foreground",
-                )}
-              >
-                <span className="text-xs">{UZ_WEEKDAYS_SHORT[d.getDay()]}</span>
-                <span className="text-lg font-bold">{d.getDate()}</span>
-              </button>
-            )
-          })}
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex gap-1.5">
+            {weekDays.map((d) => {
+              const ds = formatDate(d)
+              const isSelected = ds === dateStr
+              const isDayToday = ds === todayStr
+              return (
+                <button
+                  key={ds}
+                  type="button"
+                  onClick={() => setSelectedDate(d)}
+                  className={cn(
+                    "flex flex-col items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors min-w-[52px]",
+                    isSelected
+                      ? "bg-primary text-primary-foreground"
+                      : isDayToday
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-accent text-muted-foreground",
+                  )}
+                >
+                  <span className="text-xs">{UZ_WEEKDAYS_SHORT[d.getDay()]}</span>
+                  <span className="text-lg font-bold">{d.getDate()}</span>
+                </button>
+              )
+            })}
+          </div>
+          <Button variant="ghost" size="icon" onClick={nextWeek} className="shrink-0">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={nextWeek} className="shrink-0">
-          <ChevronRight className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Content */}
