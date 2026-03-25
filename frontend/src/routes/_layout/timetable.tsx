@@ -76,29 +76,52 @@ function TimetablePage() {
 
   const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
 
-  // ─── Stats ────────────────────────────────────────────────────────
-  const statsData = useMemo(() => {
-    if (!entries.length) return null
+  // ─── Stats (all grades) ───────────────────────────────────────────
+  const { data: allScheduleData } = useQuery({
+    ...getScheduleQueryOptions({ academic_year_id: academicYearId }),
+    enabled: academicYearId > 0 && statsOpen,
+  })
+  const allEntries = allScheduleData?.data ?? []
 
-    const subjectMap = new Map<string, { count: number; teacher: string }>()
-    for (const e of entries) {
-      const subj = e.subject_name ?? "Noma'lum"
-      const existing = subjectMap.get(subj)
-      if (existing) {
-        existing.count++
-      } else {
-        subjectMap.set(subj, { count: 1, teacher: e.teacher_name ?? "—" })
+  const statsData = useMemo(() => {
+    if (!allEntries.length) return null
+
+    const gradeMap = new Map<string, { total: number; subjects: Map<string, { count: number; teacher: string }> }>()
+    const teacherSet = new Set<string>()
+
+    for (const e of allEntries) {
+      const grade = e.grade_display ?? "—"
+      if (!gradeMap.has(grade)) {
+        gradeMap.set(grade, { total: 0, subjects: new Map() })
       }
+      const g = gradeMap.get(grade)!
+      g.total++
+
+      const subj = e.subject_name ?? "Noma'lum"
+      const existing = g.subjects.get(subj)
+      if (existing) existing.count++
+      else g.subjects.set(subj, { count: 1, teacher: e.teacher_name ?? "—" })
+
+      if (e.teacher_name) teacherSet.add(e.teacher_name)
     }
-    const selectedGrade = grades.find((g) => g.id.toString() === selectedGradeId)
+
+    const gradeRows = [...gradeMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, { total, subjects }]) => ({
+        name,
+        total,
+        subjects: [...subjects.entries()]
+          .sort((a, b) => b[1].count - a[1].count)
+          .map(([sName, { count, teacher }]) => ({ name: sName, count, teacher })),
+      }))
+
     return {
-      gradeName: selectedGrade?.display_name ?? "Sinf",
-      total: entries.length,
-      subjects: [...subjectMap.entries()]
-        .sort((a, b) => b[1].count - a[1].count)
-        .map(([name, { count, teacher }]) => ({ name, count, teacher })),
+      total: allEntries.length,
+      teacherCount: teacherSet.size,
+      gradeCount: gradeMap.size,
+      gradeRows,
     }
-  }, [entries, selectedGradeId, grades])
+  }, [allEntries])
 
   // ─── Mutations ──────────────────────────────────────────────────────
 
@@ -170,16 +193,14 @@ function TimetablePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {statsData && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setStatsOpen(true)}
-            >
-              <Info className="h-4 w-4 mr-1.5" />
-              Batafsil
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStatsOpen(true)}
+          >
+            <Info className="h-4 w-4 mr-1.5" />
+            Batafsil
+          </Button>
           {isAdmin && (
             <Button
               variant="outline"
@@ -245,38 +266,35 @@ function TimetablePage() {
       <Sheet open={statsOpen} onOpenChange={setStatsOpen}>
         <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>
-              {statsData ? `${statsData.gradeName} — Haftalik jadval` : "Statistika"}
-            </SheetTitle>
+            <SheetTitle>Haftalik dars jadvali</SheetTitle>
             <SheetDescription>
-              {`Jami ${statsData?.total ?? 0} ta dars`}
+              {statsData
+                ? `${statsData.total} ta dars · ${statsData.teacherCount} o'qituvchi · ${statsData.gradeCount} sinf`
+                : "Ma'lumot yuklanmoqda..."}
             </SheetDescription>
           </SheetHeader>
 
           {statsData ? (
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/40 border-b">
-                    <th className="text-left px-3 py-2 font-medium">Fan</th>
-                    <th className="text-left px-3 py-2 font-medium">O'qituvchi</th>
-                    <th className="text-center px-3 py-2 font-medium w-20">Soat</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statsData.subjects.map((s) => (
-                    <tr key={s.name} className="border-b last:border-0">
-                      <td className="px-3 py-1.5">{s.name}</td>
-                      <td className="px-3 py-1.5 text-muted-foreground">{s.teacher}</td>
-                      <td className="px-3 py-1.5 text-center font-medium">{s.count}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-muted/30 font-medium">
-                    <td className="px-3 py-1.5" colSpan={2}>Jami</td>
-                    <td className="px-3 py-1.5 text-center">{statsData.total}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="space-y-4">
+              {statsData.gradeRows.map((grade) => (
+                <div key={grade.name} className="rounded-lg border overflow-hidden">
+                  <div className="bg-muted/40 px-3 py-2 flex items-center justify-between border-b">
+                    <span className="text-sm font-semibold">{grade.name}</span>
+                    <span className="text-xs text-muted-foreground">{grade.total} ta dars</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {grade.subjects.map((s) => (
+                        <tr key={s.name} className="border-b last:border-0">
+                          <td className="px-3 py-1.5">{s.name}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground text-right">{s.teacher}</td>
+                          <td className="px-3 py-1.5 text-center font-medium w-14">{s.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
             </div>
           ) : null}
         </SheetContent>
