@@ -2,8 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CalendarDays, ChevronDown, Info, Loader2, Settings, Trash2 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
-import type React from "react"
-import { useMemo, useState } from "react"
+import { Fragment, type ReactNode, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
@@ -93,7 +92,6 @@ function TimetablePage() {
     }
     const selectedGrade = grades.find((g) => g.id.toString() === selectedGradeId)
     return {
-      mode: "grade" as const,
       gradeName: selectedGrade?.display_name ?? "Sinf",
       total: entries.length,
       subjects: [...subjectMap.entries()]
@@ -335,8 +333,8 @@ function TimetablePage() {
                 const brk = getBreakInfo(slot, sorted[idx + 1], settingsBreaks)
 
                 return (
-                  <>
-                    <tr key={slot.id} className="border-b last:border-0">
+                  <Fragment key={slot.id}>
+                    <tr className="border-b last:border-0">
                       {/* Period + Time */}
                       <td className="px-3 py-2 align-middle border-r bg-muted/30" style={{ minHeight: 76 }}>
                         <div className="text-sm font-semibold text-primary">
@@ -398,7 +396,7 @@ function TimetablePage() {
                         ))}
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -414,7 +412,6 @@ function TimetablePage() {
           key={`${entryDialog.day}-${entryDialog.slotId}`}
           state={entryDialog}
           onOpenChange={(open) => !open && setEntryDialog(null)}
-          academicYearId={academicYearId}
           gradeId={Number(selectedGradeId)}
           subjects={subjects}
           teachers={teachers}
@@ -479,7 +476,7 @@ function ScheduleCell({
   )
 }
 
-function EmptyState({ message, action }: { message: string; action?: React.ReactNode }) {
+function EmptyState({ message, action }: { message: string; action?: ReactNode }) {
   return (
     <div className="rounded-lg border border-dashed p-12 text-center">
       <CalendarDays className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />

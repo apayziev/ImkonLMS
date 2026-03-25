@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -338,7 +339,7 @@ async def create_schedule_entry(
     db.add(entry)
     try:
         await db.flush()
-    except Exception as exc:
+    except IntegrityError as exc:
         await db.rollback()
         raise DuplicateValueException("Bu vaqtda sinf yoki o'qituvchi band") from exc
 
@@ -377,7 +378,7 @@ async def update_schedule_entry(
 
     try:
         await db.flush()
-    except Exception as exc:
+    except IntegrityError as exc:
         await db.rollback()
         raise DuplicateValueException("Bu vaqtda sinf yoki o'qituvchi band") from exc
 

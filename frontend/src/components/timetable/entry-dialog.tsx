@@ -34,7 +34,6 @@ export function EntryDialog({
 }: {
   state: EntryDialogState
   onOpenChange: (open: boolean) => void
-  academicYearId: number
   gradeId: number
   subjects: SubjectRead[]
   teachers: TeacherRead[]
