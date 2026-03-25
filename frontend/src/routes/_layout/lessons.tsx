@@ -336,6 +336,15 @@ function SessionView({
     onError: () => toast.error("Darsni tugatishda xatolik"),
   })
 
+  const markAllMutation = useMutation({
+    mutationFn: () => lessonsApi.markAllPresent(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
+      toast.success("Barcha o'quvchilar belgilandi")
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
+
   if (isLoading || !session) {
     return (
       <div className="space-y-6">
@@ -351,15 +360,6 @@ function SessionView({
   const isCompleted = session.status === "completed"
   const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
   const markedCount = session.students.length - unmarkedCount
-
-  const markAllMutation = useMutation({
-    mutationFn: () => lessonsApi.markAllPresent(sessionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
-      toast.success("Barcha o'quvchilar belgilandi")
-    },
-    onError: () => toast.error("Xatolik yuz berdi"),
-  })
 
   return (
     <div className="space-y-6">
