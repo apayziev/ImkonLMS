@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutLessonsRouteImport } from './routes/_layout/lessons'
 import { Route as LayoutStudentsRouteImport } from './routes/_layout/students'
 import { Route as LayoutTeachersRouteImport } from './routes/_layout/teachers'
 import { Route as LayoutTimetableRouteImport } from './routes/_layout/timetable'
@@ -28,6 +29,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutLessonsRoute = LayoutLessonsRouteImport.update({
+  id: '/lessons',
+  path: '/lessons',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutStudentsRoute = LayoutStudentsRouteImport.update({
@@ -49,12 +55,14 @@ const LayoutTimetableRoute = LayoutTimetableRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
+  '/lessons': typeof LayoutLessonsRoute
   '/students': typeof LayoutStudentsRoute
   '/teachers': typeof LayoutTeachersRoute
   '/timetable': typeof LayoutTimetableRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/lessons': typeof LayoutLessonsRoute
   '/students': typeof LayoutStudentsRoute
   '/teachers': typeof LayoutTeachersRoute
   '/timetable': typeof LayoutTimetableRoute
@@ -64,6 +72,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/_layout/lessons': typeof LayoutLessonsRoute
   '/_layout/students': typeof LayoutStudentsRoute
   '/_layout/teachers': typeof LayoutTeachersRoute
   '/_layout/timetable': typeof LayoutTimetableRoute
@@ -71,13 +80,14 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/students' | '/teachers' | '/timetable'
+  fullPaths: '/' | '/login' | '/lessons' | '/students' | '/teachers' | '/timetable'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/students' | '/teachers' | '/timetable' | '/'
+  to: '/login' | '/lessons' | '/students' | '/teachers' | '/timetable' | '/'
   id:
     | '__root__'
     | '/_layout'
     | '/login'
+    | '/_layout/lessons'
     | '/_layout/students'
     | '/_layout/teachers'
     | '/_layout/timetable'
@@ -112,6 +122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/lessons': {
+      id: '/_layout/lessons'
+      path: '/lessons'
+      fullPath: '/lessons'
+      preLoaderRoute: typeof LayoutLessonsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/students': {
       id: '/_layout/students'
       path: '/students'
@@ -137,6 +154,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface LayoutRouteChildren {
+  LayoutLessonsRoute: typeof LayoutLessonsRoute
   LayoutStudentsRoute: typeof LayoutStudentsRoute
   LayoutTeachersRoute: typeof LayoutTeachersRoute
   LayoutTimetableRoute: typeof LayoutTimetableRoute
@@ -144,6 +162,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutLessonsRoute: LayoutLessonsRoute,
   LayoutStudentsRoute: LayoutStudentsRoute,
   LayoutTeachersRoute: LayoutTeachersRoute,
   LayoutTimetableRoute: LayoutTimetableRoute,

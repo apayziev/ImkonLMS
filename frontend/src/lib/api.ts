@@ -374,3 +374,70 @@ export const timetableApi = {
   deleteEntry: (id: number) =>
     api.delete(`/api/v1/timetable/schedule/${id}`),
 }
+
+// --- Lesson Session Types & API ---
+
+export interface TodayLessonRead {
+  schedule_entry_id: number
+  grade_id: number
+  grade_display: string
+  subject_id: number
+  subject_name: string
+  period_number: number
+  start_time: string
+  end_time: string
+  session_id: number | null
+  session_status: string | null // in_progress | completed
+}
+
+export interface TodayLessonsResponse {
+  data: TodayLessonRead[]
+  date: string
+}
+
+export interface SessionStudentRead {
+  attendance_id: number
+  student_id: number
+  first_name: string
+  last_name: string
+  full_name: string
+  photo_url: string | null
+  status: string // present | excused | unexcused
+  marked_at: string
+  grade: number | null
+}
+
+export interface SessionDetailRead {
+  id: number
+  schedule_entry_id: number
+  session_date: string
+  started_at: string
+  ended_at: string | null
+  status: string
+  grade_display: string
+  subject_name: string
+  period_number: number
+  start_time: string
+  end_time: string
+  teacher_name: string
+  students: SessionStudentRead[]
+}
+
+export interface AttendanceUpdateRequest {
+  student_id: number
+  status: string
+  grade: number | null
+}
+
+export const lessonsApi = {
+  today: () =>
+    api.get<TodayLessonsResponse>("/api/v1/lessons/today"),
+  startSession: (schedule_entry_id: number) =>
+    api.post<SessionDetailRead>("/api/v1/lessons/sessions", { schedule_entry_id }),
+  getSession: (sessionId: number) =>
+    api.get<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`),
+  updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
+    api.patch<SessionStudentRead>(`/api/v1/lessons/sessions/${sessionId}/attendance`, data),
+  endSession: (sessionId: number) =>
+    api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
+}

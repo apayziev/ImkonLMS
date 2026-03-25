@@ -1,0 +1,371 @@
+"""Lesson session routes — teacher starts/ends lessons, marks attendance & grades."""
+
+from datetime import UTC, date, datetime
+from typing import Any
+
+from fastapi import APIRouter
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
+from app.api.deps import CurrentUser, SessionDep
+from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
+from app.crud.lessons import crud_lesson_sessions
+from app.models.lesson_session import LessonSession
+from app.models.schedule_entry import ScheduleEntry
+from app.models.session_attendance import SessionAttendance
+from app.models.user import User, UserRole
+from app.schemas.lessons import (
+    AttendanceUpdateRequest,
+    SessionDetailRead,
+    SessionStartRequest,
+    SessionStudentRead,
+    TodayLessonRead,
+    TodayLessonsResponse,
+)
+
+router = APIRouter(prefix="/lessons", tags=["lessons"])
+
+ENTRY_LOAD = [
+    selectinload(ScheduleEntry.subject),
+    selectinload(ScheduleEntry.teacher),
+    selectinload(ScheduleEntry.grade),
+    selectinload(ScheduleEntry.time_slot),
+]
+
+
+def _format_time(t: Any) -> str:
+    if hasattr(t, "strftime"):
+        return t.strftime("%H:%M")
+    return str(t)
+
+
+def _require_teacher(user: User) -> None:
+    if user.role != UserRole.TEACHER.value:
+        raise ForbiddenException("Faqat o'qituvchilar uchun")
+
+
+# ─── Today's Lessons ────────────────────────────────────────────────────────
+
+
+@router.get("/today", response_model=TodayLessonsResponse)
+async def get_today_lessons(db: SessionDep, current_user: CurrentUser) -> Any:
+    """Get current teacher's lessons for today with session status."""
+    _require_teacher(current_user)
+
+    today = date.today()
+    # Python: Monday=0 … Sunday=6. DB: Monday=1 … Sunday=7
+    day_of_week = today.weekday() + 1
+
+    # Fetch today's schedule entries for this teacher
+    query = (
+        select(ScheduleEntry)
+        .options(*ENTRY_LOAD)
+        .where(
+            ScheduleEntry.teacher_id == current_user.id,
+            ScheduleEntry.day_of_week == day_of_week,
+            ScheduleEntry.is_deleted == False,  # noqa: E712
+        )
+    )
+    result = await db.execute(query)
+    entries = result.scalars().all()
+
+    # Fetch today's sessions for this teacher's entries
+    entry_ids = [e.id for e in entries]
+    sessions_map: dict[int, LessonSession] = {}
+    if entry_ids:
+        sess_query = select(LessonSession).where(
+            LessonSession.schedule_entry_id.in_(entry_ids),
+            LessonSession.session_date == today,
+            LessonSession.is_deleted == False,  # noqa: E712
+        )
+        sess_result = await db.execute(sess_query)
+        for s in sess_result.scalars().all():
+            sessions_map[s.schedule_entry_id] = s
+
+    # Build response sorted by period_number
+    lessons = []
+    for entry in sorted(entries, key=lambda e: e.time_slot.period_number if e.time_slot else 0):
+        session = sessions_map.get(entry.id)
+        lessons.append(
+            TodayLessonRead(
+                schedule_entry_id=entry.id,
+                grade_id=entry.grade_id,
+                grade_display=entry.grade.display_name if entry.grade else "",
+                subject_id=entry.subject_id,
+                subject_name=entry.subject.name if entry.subject else "",
+                period_number=entry.time_slot.period_number if entry.time_slot else 0,
+                start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
+                end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+                session_id=session.id if session else None,
+                session_status=session.status if session else None,
+            )
+        )
+
+    return TodayLessonsResponse(data=lessons, date=today.isoformat())
+
+
+# ─── Start Session ──────────────────────────────────────────────────────────
+
+
+@router.post("/sessions", response_model=SessionDetailRead, status_code=201)
+async def start_session(
+    body: SessionStartRequest, db: SessionDep, current_user: CurrentUser,
+) -> Any:
+    """Start a lesson session. Creates attendance records for all students in the grade."""
+    _require_teacher(current_user)
+
+    # Validate schedule entry belongs to this teacher
+    entry_query = (
+        select(ScheduleEntry)
+        .options(*ENTRY_LOAD)
+        .where(
+            ScheduleEntry.id == body.schedule_entry_id,
+            ScheduleEntry.is_deleted == False,  # noqa: E712
+        )
+    )
+    entry_result = await db.execute(entry_query)
+    entry = entry_result.scalar_one_or_none()
+    if not entry:
+        raise NotFoundException("Dars jadvali topilmadi")
+    if entry.teacher_id != current_user.id:
+        raise ForbiddenException("Bu dars sizga tegishli emas")
+
+    today = date.today()
+
+    # Check if session already exists for today
+    existing = await crud_lesson_sessions.get(
+        db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,
+    )
+    if existing:
+        raise BadRequestException("Bu dars uchun bugun sessiya allaqachon mavjud")
+
+    now = datetime.now(UTC)
+
+    # Create session
+    session = LessonSession(
+        schedule_entry_id=entry.id,
+        session_date=today,
+        started_at=now,
+        status="in_progress",
+    )
+    db.add(session)
+    await db.flush()
+
+    # Get all active students in this grade
+    students_query = (
+        select(User)
+        .where(
+            User.grade_id == entry.grade_id,
+            User.role == UserRole.STUDENT.value,
+            User.is_active == True,  # noqa: E712
+            User.is_deleted == False,  # noqa: E712
+        )
+        .order_by(User.last_name, User.first_name)
+    )
+    students_result = await db.execute(students_query)
+    students = students_result.scalars().all()
+
+    # Create attendance records (default: present)
+    attendances = []
+    for student in students:
+        att = SessionAttendance(
+            lesson_session_id=session.id,
+            student_id=student.id,
+            status="present",
+            marked_at=now,
+        )
+        db.add(att)
+        attendances.append((att, student))
+
+    await db.commit()
+    await db.refresh(session)
+
+    return _build_session_detail(session, entry, attendances)
+
+
+# ─── Get Session Detail ─────────────────────────────────────────────────────
+
+
+@router.get("/sessions/{session_id}", response_model=SessionDetailRead)
+async def get_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> Any:
+    """Get session details with all student attendance/grades."""
+    _require_teacher(current_user)
+
+    session = await _load_session_with_relations(db, session_id)
+    if not session:
+        raise NotFoundException("Sessiya topilmadi")
+
+    entry = session.schedule_entry
+    if entry.teacher_id != current_user.id:
+        raise ForbiddenException("Bu sessiya sizga tegishli emas")
+
+    # Load students for each attendance
+    student_ids = [a.student_id for a in session.attendances]
+    students_map: dict[int, User] = {}
+    if student_ids:
+        students_query = select(User).where(User.id.in_(student_ids))
+        students_result = await db.execute(students_query)
+        students_map = {s.id: s for s in students_result.scalars().all()}
+
+    attendances = [
+        (att, students_map.get(att.student_id))
+        for att in sorted(session.attendances, key=lambda a: a.student_id)
+    ]
+
+    return _build_session_detail(session, entry, attendances)
+
+
+# ─── Update Attendance ──────────────────────────────────────────────────────
+
+
+@router.patch("/sessions/{session_id}/attendance", response_model=SessionStudentRead)
+async def update_attendance(
+    session_id: int,
+    body: AttendanceUpdateRequest,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """Update a single student's attendance status and/or grade. Real-time save."""
+    _require_teacher(current_user)
+
+    # Query 1: session + ownership check in one JOIN
+    session_query = (
+        select(LessonSession)
+        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+        .where(
+            LessonSession.id == session_id,
+            LessonSession.is_deleted == False,  # noqa: E712
+            ScheduleEntry.teacher_id == current_user.id,
+        )
+    )
+    session = (await db.execute(session_query)).scalar_one_or_none()
+    if not session:
+        raise NotFoundException("Sessiya topilmadi")
+    if session.status != "in_progress":
+        raise BadRequestException("Sessiya allaqachon tugatilgan")
+
+    # Query 2: attendance + student in one JOIN
+    att_query = (
+        select(SessionAttendance, User)
+        .join(User, SessionAttendance.student_id == User.id)
+        .where(
+            SessionAttendance.lesson_session_id == session_id,
+            SessionAttendance.student_id == body.student_id,
+            SessionAttendance.is_deleted == False,  # noqa: E712
+        )
+    )
+    row = (await db.execute(att_query)).one_or_none()
+    if not row:
+        raise NotFoundException("O'quvchi davomat yozuvi topilmadi")
+
+    attendance, student = row
+
+    # If absent, clear grade
+    grade = body.grade if body.status == "present" else None
+
+    attendance.status = body.status
+    attendance.grade = grade
+    attendance.marked_at = datetime.now(UTC)
+
+    await db.commit()
+    await db.refresh(attendance)
+
+    return SessionStudentRead(
+        attendance_id=attendance.id,
+        student_id=attendance.student_id,
+        first_name=student.first_name,
+        last_name=student.last_name,
+        full_name=student.full_name,
+        photo_url=student.photo_url,
+        status=attendance.status,
+        marked_at=attendance.marked_at.isoformat(),
+        grade=attendance.grade,
+    )
+
+
+# ─── End Session ────────────────────────────────────────────────────────────
+
+
+@router.post("/sessions/{session_id}/end", status_code=200)
+async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> Any:
+    """End a lesson session."""
+    _require_teacher(current_user)
+
+    # Session + ownership check in one JOIN
+    query = (
+        select(LessonSession)
+        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+        .where(
+            LessonSession.id == session_id,
+            LessonSession.is_deleted == False,  # noqa: E712
+            ScheduleEntry.teacher_id == current_user.id,
+        )
+    )
+    session = (await db.execute(query)).scalar_one_or_none()
+    if not session:
+        raise NotFoundException("Sessiya topilmadi")
+    if session.status != "in_progress":
+        raise BadRequestException("Sessiya allaqachon tugatilgan")
+
+    session.status = "completed"
+    session.ended_at = datetime.now(UTC)
+    await db.commit()
+
+    return {"message": "Dars tugatildi", "session_id": session_id}
+
+
+# ─── Helpers ────────────────────────────────────────────────────────────────
+
+
+async def _load_session_with_relations(db: SessionDep, session_id: int) -> LessonSession | None:
+    query = (
+        select(LessonSession)
+        .options(
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.subject),
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.teacher),
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.grade),
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
+            selectinload(LessonSession.attendances),
+        )
+        .where(LessonSession.id == session_id, LessonSession.is_deleted == False)  # noqa: E712
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+def _build_session_detail(
+    session: LessonSession,
+    entry: ScheduleEntry,
+    attendances: list[tuple[SessionAttendance, User | None]],
+) -> SessionDetailRead:
+    students = []
+    for att, student in sorted(attendances, key=lambda x: (x[1].last_name if x[1] else "", x[1].first_name if x[1] else "")):
+        students.append(
+            SessionStudentRead(
+                attendance_id=att.id,
+                student_id=att.student_id,
+                first_name=student.first_name if student else "",
+                last_name=student.last_name if student else "",
+                full_name=student.full_name if student else "",
+                photo_url=student.photo_url if student else None,
+                status=att.status,
+                marked_at=att.marked_at.isoformat() if att.marked_at else "",
+                grade=att.grade,
+            )
+        )
+
+    return SessionDetailRead(
+        id=session.id,
+        schedule_entry_id=session.schedule_entry_id,
+        session_date=session.session_date.isoformat(),
+        started_at=session.started_at.isoformat(),
+        ended_at=session.ended_at.isoformat() if session.ended_at else None,
+        status=session.status,
+        grade_display=entry.grade.display_name if entry.grade else "",
+        subject_name=entry.subject.name if entry.subject else "",
+        period_number=entry.time_slot.period_number if entry.time_slot else 0,
+        start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
+        end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+        teacher_name=entry.teacher.full_name if entry.teacher else "",
+        students=students,
+    )

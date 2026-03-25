@@ -1,4 +1,4 @@
-import { academicYearsApi, gradesApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, lessonsApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -13,6 +13,8 @@ export const queryKeys = {
   schoolSettings: ["school-settings"] as const,
   timeSlots: ["time-slots"] as const,
   schedule: ["schedule"] as const,
+  todayLessons: ["today-lessons"] as const,
+  lessonSession: ["lesson-session"] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -101,5 +103,26 @@ export function getScheduleQueryOptions(params: {
       return data
     },
     enabled: params.academic_year_id > 0,
+  }
+}
+
+export function getTodayLessonsQueryOptions() {
+  return {
+    queryKey: queryKeys.todayLessons,
+    queryFn: async () => {
+      const { data } = await lessonsApi.today()
+      return data
+    },
+  }
+}
+
+export function getLessonSessionQueryOptions(sessionId: number) {
+  return {
+    queryKey: [...queryKeys.lessonSession, sessionId] as const,
+    queryFn: async () => {
+      const { data } = await lessonsApi.getSession(sessionId)
+      return data
+    },
+    enabled: sessionId > 0,
   }
 }
