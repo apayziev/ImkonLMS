@@ -268,7 +268,7 @@ function LessonCard({
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {lesson.period_number}-dars
+            {lesson.period_number}-soat
           </p>
         </div>
       </div>
@@ -363,7 +363,6 @@ function SessionView({
 
   const isCompleted = session.status === "completed"
   const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
-  const markedCount = session.students.length - unmarkedCount
 
   return (
     <div className="space-y-6">
@@ -378,7 +377,7 @@ function SessionView({
               {session.grade_display} — {session.subject_name}
             </h1>
             <p className="text-muted-foreground text-lg">
-              {session.period_number}-dars · {session.start_time} – {session.end_time}
+              {session.period_number}-soat · {session.start_time} – {session.end_time}
             </p>
           </div>
         </div>
@@ -432,35 +431,29 @@ function SessionView({
       )}
 
       {/* Bulk Actions + Counter */}
-      {!isCompleted && session.students.length > 0 && (
-        <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-5 py-4">
-          <span className="text-base text-muted-foreground">
-            Belgilangan: <span className="font-bold text-foreground text-lg">{markedCount}</span> / {session.students.length}
-          </span>
-          {unmarkedCount > 0 && (
-            <Button
-              size="lg"
-              onClick={() => markAllMutation.mutate()}
-              disabled={markAllMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white text-base h-11 px-6 rounded-lg"
-            >
-              {markAllMutation.isPending ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <UserCheck className="mr-2 h-5 w-5" />
-              )}
-              Hammasini keldi
-            </Button>
-          )}
-        </div>
-      )}
-
       {/* Student List */}
       <div className="space-y-2">
         <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
           <span>#</span>
           <span>O'quvchi</span>
-          <span className="w-56 text-center">Davomat</span>
+          <span className="w-56 text-center flex items-center justify-center gap-2">
+            Davomat
+            {!isCompleted && unmarkedCount > 0 && (
+              <button
+                type="button"
+                title="Hammasini keldi"
+                onClick={() => markAllMutation.mutate()}
+                disabled={markAllMutation.isPending}
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
+              >
+                {markAllMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserCheck className="h-4 w-4" />
+                )}
+              </button>
+            )}
+          </span>
           <span className="w-28 text-center">Baho</span>
         </div>
 
