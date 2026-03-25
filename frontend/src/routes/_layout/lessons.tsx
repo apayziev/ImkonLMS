@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Loader2,
   Play,
   Square,
@@ -15,7 +14,7 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -41,6 +40,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  getSchoolSettingsQueryOptions,
   getTodayLessonsQueryOptions,
   getLessonSessionQueryOptions,
   queryKeys,
@@ -67,13 +67,14 @@ function formatLabel(d: Date) {
   return `${UZ_WEEKDAYS[d.getDay()]}, ${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`
 }
 
-function getWeekDays(baseDate: Date): Date[] {
+function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
   const day = baseDate.getDay() // 0=Sun
   const monday = new Date(baseDate)
   monday.setDate(baseDate.getDate() - ((day + 6) % 7))
-  return Array.from({ length: 6 }, (_, i) => {
+  // workingDays: 1=Mon..7=Sun → offset from monday: Mon=0, Tue=1, ..., Sun=6
+  return workingDays.map((wd) => {
     const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
+    d.setDate(monday.getDate() + (wd === 7 ? 6 : wd - 1))
     return d
   })
 }
@@ -114,10 +115,12 @@ function LessonsList({
   onSessionOpen: (sessionId: number) => void
 }) {
   const queryClient = useQueryClient()
+  const { data: settings } = useQuery(getSchoolSettingsQueryOptions())
+  const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
   const dateStr = formatDate(selectedDate)
   const todayStr = formatDate(new Date())
   const isToday = dateStr === todayStr
-  const weekDays = getWeekDays(selectedDate)
+  const weekDays = getWeekDays(selectedDate, workingDays)
 
   const { data, isLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
@@ -380,9 +383,6 @@ function SessionView({
         </div>
         <div className="flex items-center gap-4">
           {!isCompleted && (
-            <SessionTimer startedAt={session.started_at} />
-          )}
-          {!isCompleted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -480,34 +480,6 @@ function SessionView({
           <p className="text-lg">Bu sinfda o'quvchilar topilmadi</p>
         </div>
       )}
-    </div>
-  )
-}
-
-// ─── Session Timer ──────────────────────────────────────────────────────────
-
-function SessionTimer({ startedAt }: { startedAt: string }) {
-  const getElapsed = useCallback(() => {
-    const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-    return Math.max(0, diff)
-  }, [startedAt])
-
-  const [elapsed, setElapsed] = useState(getElapsed)
-
-  useEffect(() => {
-    const id = setInterval(() => setElapsed(getElapsed()), 1000)
-    return () => clearInterval(id)
-  }, [getElapsed])
-
-  const mins = Math.floor(elapsed / 60)
-  const secs = elapsed % 60
-
-  return (
-    <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-2">
-      <Clock className="h-4 w-4 text-blue-600" />
-      <span className="text-lg font-mono font-bold text-blue-700">
-        {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
-      </span>
     </div>
   )
 }
