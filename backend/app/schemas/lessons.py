@@ -76,3 +76,31 @@ class AttendanceUpdateRequest(BaseModel):
     student_id: int
     status: str = Field(pattern=r"^(unmarked|present|excused|unexcused)$")
     grade: int | None = Field(default=None, ge=1, le=5)
+
+
+# --- Admin Attendance View ---
+
+
+class AttendanceStudentRead(BaseModel):
+    student_id: int
+    full_name: str
+    photo_url: str | None = None
+    status: str  # unmarked | present | excused | unexcused
+    grade: int | None = None
+
+
+class AttendanceSessionRead(BaseModel):
+    session_id: int
+    subject_name: str
+    period_number: int
+    start_time: str
+    end_time: str
+    teacher_name: str
+    status: str  # in_progress | completed
+    students: list[AttendanceStudentRead]
+
+
+class AttendanceDayResponse(BaseModel):
+    date: str
+    grade_display: str
+    sessions: list[AttendanceSessionRead]

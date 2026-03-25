@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, GraduationCap, Home, Users } from "lucide-react"
+import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Home, Users } from "lucide-react"
 import { useMemo } from "react"
 
 import { Logo } from "@/components/Common/Logo"
@@ -16,6 +16,7 @@ const adminMenuItems: Item[] = [
   { icon: Home, title: "Bosh sahifa", path: "/" },
   { icon: GraduationCap, title: "O'quvchilar", path: "/students" },
   { icon: Users, title: "O'qituvchilar", path: "/teachers" },
+  { icon: ClipboardList, title: "Davomat", path: "/attendance" },
   { icon: CalendarDays, title: "Dars jadvali", path: "/timetable" },
 ]
 

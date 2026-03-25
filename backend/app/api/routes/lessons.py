@@ -7,14 +7,18 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, SuperUser
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.crud.lessons import crud_lesson_sessions
+from app.models.grade import Grade
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.models.session_attendance import SessionAttendance
 from app.models.user import User, UserRole
 from app.schemas.lessons import (
+    AttendanceDayResponse,
+    AttendanceSessionRead,
+    AttendanceStudentRead,
     AttendanceUpdateRequest,
     SessionDetailRead,
     SessionStartRequest,
@@ -447,4 +451,76 @@ def _build_session_detail(
         end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
         teacher_name=entry.teacher.full_name if entry.teacher else "",
         students=students,
+    )
+
+
+# ─── Admin: Attendance View ─────────────────────────────────────────────────
+
+
+@router.get("/attendance", response_model=AttendanceDayResponse)
+async def get_attendance(
+    db: SessionDep,
+    current_user: SuperUser,
+    grade_id: int = Query(...),
+    target_date: date | None = Query(None, alias="date"),
+) -> Any:
+    """Admin: view all sessions and attendance for a grade on a date."""
+    day = target_date or date.today()
+
+    # Get grade display name
+    grade = (await db.execute(
+        select(Grade).where(Grade.id == grade_id, Grade.is_deleted == False)  # noqa: E712
+    )).scalar_one_or_none()
+    if not grade:
+        raise NotFoundException("Sinf topilmadi")
+
+    # Find all sessions for this grade on this date
+    query = (
+        select(LessonSession)
+        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+        .options(
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.subject),
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.teacher),
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
+            selectinload(LessonSession.attendances).selectinload(SessionAttendance.student),
+        )
+        .where(
+            ScheduleEntry.grade_id == grade_id,
+            LessonSession.session_date == day,
+            LessonSession.is_deleted == False,  # noqa: E712
+            ScheduleEntry.is_deleted == False,  # noqa: E712
+        )
+    )
+    sessions = (await db.execute(query)).scalars().all()
+
+    result_sessions = []
+    for session in sorted(sessions, key=lambda s: s.schedule_entry.time_slot.period_number if s.schedule_entry and s.schedule_entry.time_slot else 0):
+        entry = session.schedule_entry
+        students = []
+        for att in sorted(session.attendances, key=lambda a: (a.student.last_name if a.student else "", a.student.first_name if a.student else "")):
+            if att.is_deleted:
+                continue
+            students.append(AttendanceStudentRead(
+                student_id=att.student_id,
+                full_name=att.student.full_name if att.student else "",
+                photo_url=att.student.photo_url if att.student else None,
+                status=att.status,
+                grade=att.grade,
+            ))
+
+        result_sessions.append(AttendanceSessionRead(
+            session_id=session.id,
+            subject_name=entry.subject.name if entry.subject else "",
+            period_number=entry.time_slot.period_number if entry.time_slot else 0,
+            start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
+            end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+            teacher_name=entry.teacher.full_name if entry.teacher else "",
+            status=session.status,
+            students=students,
+        ))
+
+    return AttendanceDayResponse(
+        date=day.isoformat(),
+        grade_display=grade.display_name,
+        sessions=result_sessions,
     )

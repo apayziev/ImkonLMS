@@ -16,6 +16,7 @@ export const queryKeys = {
   todayLessons: ["today-lessons"] as const,
   lessonsForDate: (date: string) => ["lessons-for-date", date] as const,
   lessonSession: ["lesson-session"] as const,
+  attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -125,5 +126,16 @@ export function getLessonSessionQueryOptions(sessionId: number) {
       return data
     },
     enabled: sessionId > 0,
+  }
+}
+
+export function getAttendanceQueryOptions(gradeId: number, date: string) {
+  return {
+    queryKey: queryKeys.attendance(gradeId, date),
+    queryFn: async () => {
+      const { data } = await lessonsApi.getAttendance(gradeId, date)
+      return data
+    },
+    enabled: gradeId > 0,
   }
 }

@@ -429,6 +429,32 @@ export interface AttendanceUpdateRequest {
   grade: number | null
 }
 
+// Admin attendance view
+export interface AttendanceStudentRead {
+  student_id: number
+  full_name: string
+  photo_url: string | null
+  status: string // unmarked | present | excused | unexcused
+  grade: number | null
+}
+
+export interface AttendanceSessionRead {
+  session_id: number
+  subject_name: string
+  period_number: number
+  start_time: string
+  end_time: string
+  teacher_name: string
+  status: string // in_progress | completed
+  students: AttendanceStudentRead[]
+}
+
+export interface AttendanceDayResponse {
+  date: string
+  grade_display: string
+  sessions: AttendanceSessionRead[]
+}
+
 export const lessonsApi = {
   today: (date?: string) =>
     api.get<TodayLessonsResponse>("/api/v1/lessons/today", { params: date ? { date } : undefined }),
@@ -444,4 +470,8 @@ export const lessonsApi = {
     api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/unmark-all`),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
+  getAttendance: (gradeId: number, date?: string) =>
+    api.get<AttendanceDayResponse>("/api/v1/lessons/attendance", {
+      params: { grade_id: gradeId, ...(date ? { date } : {}) },
+    }),
 }
