@@ -20,7 +20,6 @@ const adminMenuItems: Item[] = [
 ]
 
 const teacherMenuItems: Item[] = [
-  { icon: Home, title: "Bosh sahifa", path: "/" },
   { icon: BookOpen, title: "Darslarim", path: "/lessons" },
   { icon: CalendarDays, title: "Dars jadvali", path: "/timetable" },
 ]

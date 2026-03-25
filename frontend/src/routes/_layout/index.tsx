@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { BookOpen, CalendarDays, GraduationCap, Users, Users2 } from "lucide-react"
+import { Navigate, createFileRoute } from "@tanstack/react-router"
+import { BookOpen, GraduationCap, Users, Users2 } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/Common/AnimatedNumber"
 import {
@@ -11,9 +11,7 @@ import {
 } from "@/components/Common/PatternCard"
 import useAuth from "@/hooks/useAuth"
 import {
-  getCurrentAcademicYearQueryOptions,
   getGradesQueryOptions,
-  getScheduleQueryOptions,
   getSubjectsQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { studentsApi, teachersApi } from "@/lib/api"
@@ -26,6 +24,10 @@ function Dashboard() {
   const { user } = useAuth()
   const isTeacher = user?.role === "teacher"
 
+  if (isTeacher) {
+    return <Navigate to="/lessons" />
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -37,7 +39,7 @@ function Dashboard() {
         </p>
       </div>
 
-      {isTeacher ? <TeacherCards /> : <AdminCards />}
+      <AdminCards />
     </div>
   )
 }
@@ -94,58 +96,6 @@ function AdminCards() {
       icon: Users,
       color: "text-[#321A94]",
       isLoading: loadingGrades,
-    },
-  ]
-
-  return <StatsGrid cards={cards} />
-}
-
-function TeacherCards() {
-  const { user } = useAuth()
-  const teachingGradeIds = user?.teaching_grade_ids ?? []
-
-  const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
-  const academicYearId = currentYear?.id ?? 0
-
-  const { data: scheduleData, isLoading: loadingSchedule } = useQuery({
-    ...getScheduleQueryOptions({
-      academic_year_id: academicYearId,
-      teacher_id: user?.id,
-    }),
-    enabled: academicYearId > 0 && !!user?.id,
-  })
-
-  const weeklyLessons = scheduleData?.count ?? 0
-  const gradeCount = teachingGradeIds.length
-
-  const uniqueSubjects = new Set(
-    (scheduleData?.data ?? []).map((e) => e.subject_id),
-  )
-
-  const cards = [
-    {
-      title: "Haftalik darslar",
-      value: weeklyLessons,
-      description: "Jami dars soatlari",
-      icon: CalendarDays,
-      color: "text-[#6720FF]",
-      isLoading: loadingSchedule,
-    },
-    {
-      title: "Sinflar",
-      value: gradeCount,
-      description: "Dars beradigan sinflar",
-      icon: GraduationCap,
-      color: "text-[#00A27D]",
-      isLoading: false,
-    },
-    {
-      title: "Fanlar",
-      value: uniqueSubjects.size || 0,
-      description: "Dars beradigan fanlar",
-      icon: BookOpen,
-      color: "text-[#FF3B47]",
-      isLoading: loadingSchedule,
     },
   ]
 
