@@ -84,6 +84,7 @@ class UserRead(BaseModel):
     is_active: bool
     is_superuser: bool
     role: str
+    teaching_grade_ids: list[int] | None = None
     age: int | None = None
 
     @model_validator(mode="after")

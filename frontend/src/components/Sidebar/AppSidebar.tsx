@@ -1,4 +1,5 @@
 import { CalendarDays, GraduationCap, Home, Users } from "lucide-react"
+import { useMemo } from "react"
 
 import { Logo } from "@/components/Common/Logo"
 import {
@@ -11,15 +12,24 @@ import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
-const menuItems: Item[] = [
+const adminMenuItems: Item[] = [
   { icon: Home, title: "Bosh sahifa", path: "/" },
   { icon: GraduationCap, title: "O'quvchilar", path: "/students" },
   { icon: Users, title: "O'qituvchilar", path: "/teachers" },
   { icon: CalendarDays, title: "Dars jadvali", path: "/timetable" },
 ]
 
+const teacherMenuItems: Item[] = [
+  { icon: Home, title: "Bosh sahifa", path: "/" },
+  { icon: CalendarDays, title: "Dars jadvali", path: "/timetable" },
+]
+
 export function AppSidebar() {
   const { user } = useAuth()
+  const menuItems = useMemo(
+    () => (user?.role === "teacher" ? teacherMenuItems : adminMenuItems),
+    [user?.role],
+  )
 
   return (
     <Sidebar collapsible="icon">

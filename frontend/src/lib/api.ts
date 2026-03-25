@@ -91,6 +91,7 @@ export interface UserRead {
   is_active: boolean
   is_superuser: boolean
   role: string
+  teaching_grade_ids: number[] | null
   age: number | null
 }
 

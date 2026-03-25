@@ -37,6 +37,8 @@ function TimetablePage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
+  const isTeacher = user?.role === "teacher"
+  const teacherGradeIds = user?.teaching_grade_ids ?? []
 
   // UI state
   const [gradeFilter, setGradeFilter] = useState<string | null>(null)
@@ -58,7 +60,13 @@ function TimetablePage() {
   const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
     a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
   )
-  const selectedGradeId = gradeFilter ?? grades[0]?.id?.toString() ?? null
+  const allowedGradeIds = isTeacher && teacherGradeIds.length > 0
+    ? new Set(teacherGradeIds)
+    : null
+  const defaultGrade = allowedGradeIds
+    ? grades.find((g) => allowedGradeIds.has(g.id))
+    : grades[0]
+  const selectedGradeId = gradeFilter ?? defaultGrade?.id?.toString() ?? null
   const gradeId = selectedGradeId ? Number(selectedGradeId) : undefined
   const { data: scheduleData, isLoading } = useQuery(
     getScheduleQueryOptions({
@@ -246,20 +254,26 @@ function TimetablePage() {
       {/* ─── Class Chips ─── */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-muted-foreground font-medium">Sinf:</span>
-        {grades.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            onClick={() => setGradeFilter(g.id.toString())}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-              selectedGradeId === g.id.toString()
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
-            }`}
-          >
-            {g.display_name}
-          </button>
-        ))}
+        {grades.map((g) => {
+          const isAllowed = !allowedGradeIds || allowedGradeIds.has(g.id)
+          return (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => isAllowed && setGradeFilter(g.id.toString())}
+              disabled={!isAllowed}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                !isAllowed
+                  ? "bg-muted text-muted-foreground/40 border-border cursor-not-allowed"
+                  : selectedGradeId === g.id.toString()
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+              }`}
+            >
+              {g.display_name}
+            </button>
+          )
+        })}
       </div>
 
       {/* ─── Batafsil Sheet ─── */}

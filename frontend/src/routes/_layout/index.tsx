@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { BookOpen, GraduationCap, Users, Users2 } from "lucide-react"
+import { BookOpen, CalendarDays, GraduationCap, Users, Users2 } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/Common/AnimatedNumber"
 import {
@@ -10,7 +10,12 @@ import {
   PatternCardTitle,
 } from "@/components/Common/PatternCard"
 import useAuth from "@/hooks/useAuth"
-import { getGradesQueryOptions, getSubjectsQueryOptions } from "@/hooks/useQueryOptions"
+import {
+  getCurrentAcademicYearQueryOptions,
+  getGradesQueryOptions,
+  getScheduleQueryOptions,
+  getSubjectsQueryOptions,
+} from "@/hooks/useQueryOptions"
 import { studentsApi, teachersApi } from "@/lib/api"
 
 export const Route = createFileRoute("/_layout/")({
@@ -19,7 +24,25 @@ export const Route = createFileRoute("/_layout/")({
 
 function Dashboard() {
   const { user } = useAuth()
+  const isTeacher = user?.role === "teacher"
 
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Salom, {user?.full_name || user?.first_name || "Foydalanuvchi"} 👋
+        </h1>
+        <p className="text-muted-foreground">
+          IMKON LMS — O'quv boshqaruv tizimi
+        </p>
+      </div>
+
+      {isTeacher ? <TeacherCards /> : <AdminCards />}
+    </div>
+  )
+}
+
+function AdminCards() {
   const { data: studentsData, isLoading: loadingStudents } = useQuery({
     queryKey: ["dashboard-students"],
     queryFn: async () => {
@@ -74,40 +97,94 @@ function Dashboard() {
     },
   ]
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Salom, {user?.full_name || user?.first_name || "Foydalanuvchi"} 👋
-        </h1>
-        <p className="text-muted-foreground">
-          IMKON LMS — O'quv boshqaruv tizimi
-        </p>
-      </div>
+  return <StatsGrid cards={cards} />
+}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <PatternCard key={card.title}>
-            <PatternCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <PatternCardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </PatternCardTitle>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
-            </PatternCardHeader>
-            <PatternCardContent>
-              {card.isLoading ? (
-                <div className="h-8 w-20 bg-muted animate-pulse rounded" />
-              ) : (
-                <AnimatedNumber
-                  value={card.value}
-                  className={`text-2xl font-bold ${card.color}`}
-                />
-              )}
-              <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
-            </PatternCardContent>
-          </PatternCard>
-        ))}
-      </div>
+function TeacherCards() {
+  const { user } = useAuth()
+  const teachingGradeIds = user?.teaching_grade_ids ?? []
+
+  const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
+  const academicYearId = currentYear?.id ?? 0
+
+  const { data: scheduleData, isLoading: loadingSchedule } = useQuery({
+    ...getScheduleQueryOptions({
+      academic_year_id: academicYearId,
+      teacher_id: user?.id,
+    }),
+    enabled: academicYearId > 0 && !!user?.id,
+  })
+
+  const weeklyLessons = scheduleData?.count ?? 0
+  const gradeCount = teachingGradeIds.length
+
+  const uniqueSubjects = new Set(
+    (scheduleData?.data ?? []).map((e) => e.subject_id),
+  )
+
+  const cards = [
+    {
+      title: "Haftalik darslar",
+      value: weeklyLessons,
+      description: "Jami dars soatlari",
+      icon: CalendarDays,
+      color: "text-[#6720FF]",
+      isLoading: loadingSchedule,
+    },
+    {
+      title: "Sinflar",
+      value: gradeCount,
+      description: "Dars beradigan sinflar",
+      icon: GraduationCap,
+      color: "text-[#00A27D]",
+      isLoading: false,
+    },
+    {
+      title: "Fanlar",
+      value: uniqueSubjects.size || 0,
+      description: "Dars beradigan fanlar",
+      icon: BookOpen,
+      color: "text-[#FF3B47]",
+      isLoading: loadingSchedule,
+    },
+  ]
+
+  return <StatsGrid cards={cards} />
+}
+
+interface StatCard {
+  title: string
+  value: number
+  description: string
+  icon: React.ElementType
+  color: string
+  isLoading: boolean
+}
+
+function StatsGrid({ cards }: { cards: StatCard[] }) {
+  return (
+    <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-${cards.length}`}>
+      {cards.map((card) => (
+        <PatternCard key={card.title}>
+          <PatternCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <PatternCardTitle className="text-sm font-medium text-muted-foreground">
+              {card.title}
+            </PatternCardTitle>
+            <card.icon className={`h-5 w-5 ${card.color}`} />
+          </PatternCardHeader>
+          <PatternCardContent>
+            {card.isLoading ? (
+              <div className="h-8 w-20 bg-muted animate-pulse rounded" />
+            ) : (
+              <AnimatedNumber
+                value={card.value}
+                className={`text-2xl font-bold ${card.color}`}
+              />
+            )}
+            <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+          </PatternCardContent>
+        </PatternCard>
+      ))}
     </div>
   )
 }
