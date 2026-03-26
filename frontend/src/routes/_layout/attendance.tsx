@@ -2,17 +2,14 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import {
   CalendarDays,
-  Check,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
-  Clock,
-  UserCheck,
   UserX,
 } from "lucide-react"
 import { useState } from "react"
 
-import type { AttendanceSessionRead, GradeRead } from "@/lib/api"
+import type { AttendanceSessionRead, AttendanceStudentRead, GradeRead } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
@@ -183,160 +180,176 @@ function AttendancePage() {
           <p className="text-xl">Bu kunda dars o'tkazilmagan</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Summary */}
-          <AttendanceSummary sessions={attendance.sessions} />
-
-          {/* Sessions */}
-          {attendance.sessions.map((session) => (
-            <SessionCard key={session.session_id} session={session} />
-          ))}
-        </div>
+        <UnifiedAttendanceTable
+          sessions={attendance.sessions}
+          gradeDisplay={attendance.grade_display}
+          date={dateStr}
+        />
       )}
     </div>
   )
 }
 
-// ─── Summary ────────────────────────────────────────────────────────────────
+// ─── Unified Attendance Table ───────────────────────────────────────────────
 
-function AttendanceSummary({ sessions }: { sessions: AttendanceSessionRead[] }) {
-  const allStudentStatuses = sessions.flatMap((s) => s.students.map((st) => st.status))
-  const total = allStudentStatuses.length
-  const present = allStudentStatuses.filter((s) => s === "present").length
-  const excused = allStudentStatuses.filter((s) => s === "excused").length
-  const unexcused = allStudentStatuses.filter((s) => s === "unexcused").length
-  const unmarked = allStudentStatuses.filter((s) => s === "unmarked").length
+function UnifiedAttendanceTable({
+  sessions,
+  gradeDisplay,
+  date,
+}: {
+  sessions: AttendanceSessionRead[]
+  gradeDisplay: string
+  date: string
+}) {
+  // Filter started sessions (have students)
+  const startedSessions = sessions.filter((s) => s.status !== "not_started")
 
-  if (total === 0) return null
+  // Collect unique students across all sessions
+  const studentMap = new Map<number, { student_id: number; full_name: string; photo_url: string | null }>()
+  for (const session of sessions) {
+    for (const student of session.students) {
+      if (!studentMap.has(student.student_id)) {
+        studentMap.set(student.student_id, student)
+      }
+    }
+  }
+  const students = [...studentMap.values()].sort((a, b) => a.full_name.localeCompare(b.full_name))
+
+  // Build matrix: student_id → session_index → attendance
+  const matrix = new Map<number, Map<number, AttendanceStudentRead>>()
+  startedSessions.forEach((session, idx) => {
+    for (const student of session.students) {
+      if (!matrix.has(student.student_id)) matrix.set(student.student_id, new Map())
+      matrix.get(student.student_id)!.set(idx, student)
+    }
+  })
+
+  // Summary stats
+  const allStatuses = startedSessions.flatMap((s) => s.students.map((st) => st.status))
+  const present = allStatuses.filter((s) => s === "present").length
+  const excused = allStatuses.filter((s) => s === "excused").length
+  const unexcused = allStatuses.filter((s) => s === "unexcused").length
+
+  // Title: if all sessions are same subject, show subject name
+  const subjects = [...new Set(startedSessions.map((s) => s.subject_name))]
+  const teachers = [...new Set(startedSessions.map((s) => s.teacher_name))]
+  const titleSubject = subjects.length === 1 ? subjects[0] : "Darslar"
+  const titleTeacher = teachers.length === 1 ? teachers[0] : ""
+
+  const formattedDate = new Date(date).toLocaleDateString("uz-UZ", {
+    day: "numeric",
+    month: "long",
+  })
+
+  if (students.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-10 text-muted-foreground">
+        <UserX className="h-10 w-10 mb-3 opacity-40" />
+        <p>Darslar boshlanmagan</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <Card className="p-4 text-center">
-        <p className="text-2xl font-bold text-[var(--imkon-teal)]">{present}</p>
-        <p className="text-sm text-muted-foreground">Keldi</p>
-      </Card>
-      <Card className="p-4 text-center">
-        <p className="text-2xl font-bold text-[var(--imkon-purple)]">{excused}</p>
-        <p className="text-sm text-muted-foreground">Sababli</p>
-      </Card>
-      <Card className="p-4 text-center">
-        <p className="text-2xl font-bold text-[var(--imkon-red)]">{unexcused}</p>
-        <p className="text-sm text-muted-foreground">Sababsiz</p>
-      </Card>
-      <Card className="p-4 text-center">
-        <p className="text-2xl font-bold text-muted-foreground">{unmarked}</p>
-        <p className="text-sm text-muted-foreground">Belgilanmagan</p>
-      </Card>
-    </div>
-  )
-}
-
-// ─── Session Card ───────────────────────────────────────────────────────────
-
-function SessionCard({ session }: { session: AttendanceSessionRead }) {
-  const isCompleted = session.status === "completed"
-  const presentCount = session.students.filter((s) => s.status === "present").length
-  const totalCount = session.students.length
-
-  return (
-    <Card
-      className={cn(
-        "rounded-xl border-2 p-5 space-y-4",
-        isCompleted
-          ? "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5"
-          : "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
-      )}
-    >
-      {/* Session Header */}
-      <div className="flex items-start justify-between">
+    <Card className="rounded-xl overflow-hidden">
+      {/* Card header */}
+      <div className="flex items-start justify-between p-5 pb-3 border-b">
         <div>
-          <p className="text-xl font-bold">{session.subject_name}</p>
-          <p className="text-sm text-muted-foreground">{session.teacher_name}</p>
-        </div>
-        <div className="text-right">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span className="font-medium">
-              {session.start_time} – {session.end_time}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {session.period_number}-soat
+          <h2 className="text-xl font-bold">
+            {titleSubject} — {gradeDisplay} sinf davomat
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {titleTeacher && `${titleTeacher} · `}
+            {formattedDate} · {startedSessions.length} soat birlashtirilgan
           </p>
         </div>
       </div>
 
-      {/* Status bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {isCompleted ? (
-            <span className="flex items-center gap-1.5 text-sm text-[var(--imkon-teal)]">
-              <Check className="h-4 w-4" />
-              Tugallangan
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-sm text-[var(--imkon-purple)]">
-              <Clock className="h-4 w-4" />
-              Davom etmoqda
-            </span>
-          )}
-          <span className="text-xs text-muted-foreground">
-            Boshlangan: {formatTime(session.started_at)}
-            {session.ended_at && ` · Tugatilgan: ${formatTime(session.ended_at)}`}
-          </span>
+      {/* Summary inline */}
+      <div className="flex items-center gap-6 px-5 py-3 border-b bg-muted/20">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xl font-bold text-[var(--imkon-teal)]">{present}</span>
+          <span className="text-sm text-muted-foreground">Keldi</span>
         </div>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <UserCheck className="h-4 w-4" />
-          {presentCount}/{totalCount} keldi
+        <div className="flex items-center gap-1.5">
+          <span className="text-xl font-bold text-[var(--imkon-purple)]">{excused}</span>
+          <span className="text-sm text-muted-foreground">Sababli</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xl font-bold text-[var(--imkon-red)]">{unexcused}</span>
+          <span className="text-sm text-muted-foreground">Sababsiz</span>
         </div>
       </div>
 
-      {/* Student list */}
-      {session.students.length > 0 ? (
-        <div className="space-y-1.5">
-          <div className="grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-x-4 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            <span>#</span>
-            <span>O'quvchi</span>
-            <span className="w-28 text-center">Davomat</span>
-            <span className="w-16 text-center">Vaqti</span>
-            <span className="w-12 text-center">Baho</span>
-          </div>
-          {session.students.map((student, idx) => {
-            const config = STATUS_CONFIG[student.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.unmarked
-            return (
-              <div
-                key={student.student_id}
-                className="grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-x-4 rounded-lg border px-3 py-2 bg-card"
-              >
-                <span className="text-sm text-muted-foreground">{idx + 1}</span>
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Avatar className="h-7 w-7 shrink-0">
-                    <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
-                    <AvatarFallback className="text-xs">
-                      {student.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium truncate">{student.full_name}</span>
-                </div>
-                <span className={cn("w-28 text-center text-xs font-medium rounded-md px-2 py-1", config.className)}>
-                  {config.label}
-                </span>
-                <span className="w-16 text-center text-xs text-muted-foreground">
-                  {student.marked_at ? formatTime(student.marked_at) : "—"}
-                </span>
-                <span className="w-12 text-center text-sm font-bold">
-                  {student.grade ?? "—"}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center py-6 text-muted-foreground">
-          <UserX className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-sm">O'quvchilar topilmadi</p>
-        </div>
-      )}
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b bg-muted/30">
+              <th className="sticky left-0 z-20 w-10 py-2.5 px-3 text-left text-xs font-medium text-muted-foreground border-r bg-muted/30">#</th>
+              <th className="sticky left-10 z-20 py-2.5 px-3 text-left text-xs font-medium text-muted-foreground min-w-[180px] border-r bg-muted/30">O'quvchi</th>
+              {startedSessions.map((session, idx) => (
+                <th
+                  key={idx}
+                  className={cn(
+                    "py-2.5 px-2 text-center min-w-[100px]",
+                    idx < startedSessions.length - 1 && "border-r-2",
+                  )}
+                >
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-sm">{session.period_number}-soat</p>
+                    <p className="text-xs font-medium">{session.subject_name}</p>
+                    <p className="text-xs text-muted-foreground">{session.start_time}–{session.end_time}</p>
+                    {session.started_at && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {formatTime(session.started_at)}
+                        {session.ended_at ? ` — ${formatTime(session.ended_at)}` : " · davom etmoqda"}
+                      </p>
+                    )}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((student, idx) => (
+              <tr key={student.student_id} className="border-b last:border-b-0 hover:bg-muted/10">
+                <td className="sticky left-0 z-10 py-2.5 px-3 text-muted-foreground border-r bg-card">{idx + 1}</td>
+                <td className="sticky left-10 z-10 py-2.5 px-3 border-r bg-card">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar className="h-7 w-7 shrink-0">
+                      <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+                      <AvatarFallback className="text-xs">
+                        {student.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium truncate">{student.full_name}</span>
+                  </div>
+                </td>
+                {startedSessions.map((_, sIdx) => {
+                  const att = matrix.get(student.student_id)?.get(sIdx)
+                  const config = att
+                    ? (STATUS_CONFIG[att.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.unmarked)
+                    : STATUS_CONFIG.unmarked
+                  return (
+                    <td
+                      key={sIdx}
+                      className={cn(
+                        "py-2.5 px-2 text-center",
+                        sIdx < startedSessions.length - 1 && "border-r-2",
+                      )}
+                    >
+                      <span className={cn("text-xs font-medium rounded-md px-2 py-1 inline-block", config.className)}>
+                        {config.label}
+                      </span>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   )
 }
