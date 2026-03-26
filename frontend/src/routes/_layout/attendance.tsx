@@ -258,24 +258,6 @@ function UnifiedAttendanceTable({
         </div>
       </div>
 
-      {/* Summary per session */}
-      <div className="flex items-center gap-4 px-5 py-3 border-b bg-muted/20 overflow-x-auto">
-        {startedSessions.map((session, idx) => {
-          const p = session.students.filter((s) => s.status === "present").length
-          const e = session.students.filter((s) => s.status === "excused").length
-          const u = session.students.filter((s) => s.status === "unexcused").length
-          return (
-            <div key={idx} className="flex items-center gap-3 shrink-0">
-              <span className="text-xs font-bold text-muted-foreground">{session.period_number}-soat:</span>
-              <span className="text-sm font-bold text-[var(--imkon-teal)]">{p}</span>
-              <span className="text-sm font-bold text-[var(--imkon-purple)]">{e}</span>
-              <span className="text-sm font-bold text-[var(--imkon-red)]">{u}</span>
-              {idx < startedSessions.length - 1 && <span className="text-border">|</span>}
-            </div>
-          )
-        })}
-      </div>
-
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
@@ -283,7 +265,11 @@ function UnifiedAttendanceTable({
             <tr className="border-b bg-muted/30">
               <th className="sticky left-0 z-20 w-10 py-2.5 px-3 text-left text-xs font-medium text-muted-foreground border-r bg-muted/30">#</th>
               <th className="sticky left-10 z-20 py-2.5 px-3 text-left text-xs font-medium text-muted-foreground min-w-[180px] border-r bg-muted/30">O'quvchi</th>
-              {startedSessions.map((session, idx) => (
+              {startedSessions.map((session, idx) => {
+                const p = session.students.filter((s) => s.status === "present").length
+                const e = session.students.filter((s) => s.status === "excused").length
+                const u = session.students.filter((s) => s.status === "unexcused").length
+                return (
                 <th
                   key={idx}
                   className={cn(
@@ -292,9 +278,8 @@ function UnifiedAttendanceTable({
                   )}
                 >
                   <div className="space-y-0.5">
-                    <p className="font-bold text-sm">{session.period_number}-soat</p>
-                    <p className="text-xs font-medium">{session.subject_name}</p>
-                    <p className="text-xs text-muted-foreground">{session.start_time}–{session.end_time}</p>
+                    <p className="font-bold text-sm">{session.period_number}-soat {session.subject_name}</p>
+                    <p className="text-[10px] text-muted-foreground">{session.start_time}–{session.end_time}</p>
                     {session.started_at && (
                       <p className="text-[10px] text-muted-foreground">
                         {formatTime(session.started_at)}
@@ -307,9 +292,15 @@ function UnifiedAttendanceTable({
                         })()}
                       </p>
                     )}
+                    <div className="flex items-center justify-center gap-1.5 text-[10px]">
+                      <span><span className="font-bold text-[var(--imkon-teal)]">{p}</span> keldi</span>
+                      <span><span className="font-bold text-[var(--imkon-purple)]">{e}</span> sababli</span>
+                      <span><span className="font-bold text-[var(--imkon-red)]">{u}</span> sababsiz</span>
+                    </div>
                   </div>
                 </th>
-              ))}
+                )
+              })}
             </tr>
           </thead>
           <tbody>
