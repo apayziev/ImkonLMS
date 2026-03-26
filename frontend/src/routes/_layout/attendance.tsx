@@ -224,22 +224,15 @@ function UnifiedAttendanceTable({
     }
   })
 
-  // Summary stats
-  const allStatuses = startedSessions.flatMap((s) => s.students.map((st) => st.status))
-  const present = allStatuses.filter((s) => s === "present").length
-  const excused = allStatuses.filter((s) => s === "excused").length
-  const unexcused = allStatuses.filter((s) => s === "unexcused").length
-
   // Title: if all sessions are same subject, show subject name
   const subjects = [...new Set(startedSessions.map((s) => s.subject_name))]
   const teachers = [...new Set(startedSessions.map((s) => s.teacher_name))]
   const titleSubject = subjects.length === 1 ? subjects[0] : "Darslar"
   const titleTeacher = teachers.length === 1 ? teachers[0] : ""
 
-  const formattedDate = new Date(date).toLocaleDateString("uz-UZ", {
-    day: "numeric",
-    month: "long",
-  })
+  const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
+  const dateObj = new Date(date)
+  const formattedDate = `${dateObj.getDate()}-${UZ_MONTHS[dateObj.getMonth()]}`
 
   if (students.length === 0) {
     return (
@@ -265,20 +258,22 @@ function UnifiedAttendanceTable({
         </div>
       </div>
 
-      {/* Summary inline */}
-      <div className="flex items-center gap-6 px-5 py-3 border-b bg-muted/20">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xl font-bold text-[var(--imkon-teal)]">{present}</span>
-          <span className="text-sm text-muted-foreground">Keldi</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xl font-bold text-[var(--imkon-purple)]">{excused}</span>
-          <span className="text-sm text-muted-foreground">Sababli</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xl font-bold text-[var(--imkon-red)]">{unexcused}</span>
-          <span className="text-sm text-muted-foreground">Sababsiz</span>
-        </div>
+      {/* Summary per session */}
+      <div className="flex items-center gap-4 px-5 py-3 border-b bg-muted/20 overflow-x-auto">
+        {startedSessions.map((session, idx) => {
+          const p = session.students.filter((s) => s.status === "present").length
+          const e = session.students.filter((s) => s.status === "excused").length
+          const u = session.students.filter((s) => s.status === "unexcused").length
+          return (
+            <div key={idx} className="flex items-center gap-3 shrink-0">
+              <span className="text-xs font-bold text-muted-foreground">{session.period_number}-soat:</span>
+              <span className="text-sm font-bold text-[var(--imkon-teal)]">{p}</span>
+              <span className="text-sm font-bold text-[var(--imkon-purple)]">{e}</span>
+              <span className="text-sm font-bold text-[var(--imkon-red)]">{u}</span>
+              {idx < startedSessions.length - 1 && <span className="text-border">|</span>}
+            </div>
+          )
+        })}
       </div>
 
       {/* Table */}
@@ -304,6 +299,12 @@ function UnifiedAttendanceTable({
                       <p className="text-[10px] text-muted-foreground">
                         {formatTime(session.started_at)}
                         {session.ended_at ? ` — ${formatTime(session.ended_at)}` : " · davom etmoqda"}
+                        {session.started_at && session.ended_at && (() => {
+                          const diff = Math.floor((new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000)
+                          const min = Math.floor(diff / 60)
+                          const sec = diff % 60
+                          return ` (${min}m ${sec.toString().padStart(2, "0")}s)`
+                        })()}
                       </p>
                     )}
                   </div>
@@ -339,9 +340,14 @@ function UnifiedAttendanceTable({
                         sIdx < startedSessions.length - 1 && "border-r-2",
                       )}
                     >
-                      <span className={cn("text-xs font-medium rounded-md px-2 py-1 inline-block", config.className)}>
-                        {config.label}
-                      </span>
+                      <div className="flex items-center justify-center gap-1">
+                        <span className={cn("text-xs font-medium rounded-md px-2 py-0.5 inline-block", config.className)}>
+                          {config.label}
+                        </span>
+                        {att?.marked_at && (
+                          <span className="text-[10px] text-muted-foreground">- {formatTime(att.marked_at)}</span>
+                        )}
+                      </div>
                     </td>
                   )
                 })}
