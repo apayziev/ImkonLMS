@@ -3,22 +3,28 @@ import { createFileRoute } from "@tanstack/react-router"
 import {
   ArrowLeft,
   BookOpen,
+  CalendarDays,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
+  FileText,
   Loader2,
+  Paperclip,
   Play,
   Square,
+  Trash2,
   TriangleAlert,
+  Upload,
   UserCheck,
   UserX,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
+  LessonMaterialRead,
   SessionDetailRead,
   SessionStudentRead,
   TodayLessonRead,
@@ -39,7 +45,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import {
   getSchoolSettingsQueryOptions,
   getTodayLessonsQueryOptions,
@@ -420,8 +428,9 @@ function SessionView({
         </div>
       )}
 
-      {/* Bulk Actions + Counter */}
-      {/* Student List */}
+      {/* Student List — with point categories */}
+      <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} />
+
       <div className="space-y-2">
         <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
           <span>#</span>
@@ -474,6 +483,254 @@ function SessionView({
     </div>
   )
 }
+
+// ─── Topic & Homework Section ───────────────────────────────────────────────
+
+function TopicHomeworkSection({
+  session,
+  sessionId,
+  disabled,
+}: {
+  session: SessionDetailRead
+  sessionId: number
+  disabled: boolean
+}) {
+  const queryClient = useQueryClient()
+  const [topic, setTopic] = useState(session.topic ?? "")
+  const [homework, setHomework] = useState(session.homework ?? "")
+  const [deadline, setDeadline] = useState(session.homework_deadline ?? "")
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Sync state when session data changes externally
+  useEffect(() => {
+    setTopic(session.topic ?? "")
+    setHomework(session.homework ?? "")
+    setDeadline(session.homework_deadline ?? "")
+  }, [session.topic, session.homework, session.homework_deadline])
+
+  useEffect(() => {
+    return () => clearTimeout(saveTimerRef.current)
+  }, [])
+
+  const mutation = useMutation({
+    mutationFn: (data: { topic?: string | null; homework?: string | null; homework_deadline?: string | null }) =>
+      lessonsApi.updateSession(sessionId, data),
+    onMutate: () => {
+      clearTimeout(saveTimerRef.current)
+      setSaveStatus("saving")
+    },
+    onSuccess: (response) => {
+      setSaveStatus("saved")
+      saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000)
+      queryClient.setQueryData(
+        [...queryKeys.lessonSession, sessionId],
+        (old: SessionDetailRead | undefined) =>
+          old ? { ...old, ...response.data } : old,
+      )
+    },
+    onError: () => {
+      setSaveStatus("error")
+      toast.error("Saqlashda xatolik")
+    },
+  })
+
+  const saveField = useCallback(
+    (field: "topic" | "homework" | "homework_deadline", value: string) => {
+      const original = session[field] ?? ""
+      if (value === original) return
+      mutation.mutate({ [field]: value || null })
+    },
+    [session, mutation],
+  )
+
+  return (
+    <Card className="rounded-xl border p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <FileText className="h-5 w-5 text-muted-foreground" />
+          Dars rejasi
+        </h3>
+        {saveStatus === "saving" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        {saveStatus === "saved" && <Check className="h-4 w-4 text-[var(--imkon-teal)]" />}
+        {saveStatus === "error" && <TriangleAlert className="h-4 w-4 text-red-500" />}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Mavzu</label>
+          <Textarea
+            placeholder="Dars mavzusini kiriting..."
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            onBlur={() => saveField("topic", topic)}
+            disabled={disabled}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Uyga vazifa</label>
+          <Textarea
+            placeholder="Uyga vazifani kiriting..."
+            value={homework}
+            onChange={(e) => setHomework(e.target.value)}
+            onBlur={() => saveField("homework", homework)}
+            disabled={disabled}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <CalendarDays className="h-4 w-4 text-muted-foreground" />
+        <label className="text-sm font-medium text-muted-foreground">Vazifa muddati</label>
+        <Input
+          type="date"
+          value={deadline}
+          onChange={(e) => {
+            setDeadline(e.target.value)
+            saveField("homework_deadline", e.target.value)
+          }}
+          disabled={disabled}
+          className="w-44"
+        />
+      </div>
+
+      {/* Materials */}
+      <MaterialsSection sessionId={sessionId} materials={session.materials ?? []} disabled={disabled} />
+    </Card>
+  )
+}
+
+
+// ─── Materials Section ──────────────────────────────────────────────────────
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function MaterialsSection({
+  sessionId,
+  materials,
+  disabled,
+}: {
+  sessionId: number
+  materials: LessonMaterialRead[]
+  disabled: boolean
+}) {
+  const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => lessonsApi.uploadMaterial(sessionId, file),
+    onSuccess: (response) => {
+      toast.success("Fayl yuklandi")
+      queryClient.setQueryData(
+        [...queryKeys.lessonSession, sessionId],
+        (old: SessionDetailRead | undefined) =>
+          old ? { ...old, materials: [...(old.materials ?? []), response.data] } : old,
+      )
+    },
+    onError: () => toast.error("Fayl yuklashda xatolik"),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (materialId: number) => lessonsApi.deleteMaterial(sessionId, materialId),
+    onSuccess: (_, materialId) => {
+      toast.success("Fayl o'chirildi")
+      queryClient.setQueryData(
+        [...queryKeys.lessonSession, sessionId],
+        (old: SessionDetailRead | undefined) =>
+          old ? { ...old, materials: (old.materials ?? []).filter((m) => m.id !== materialId) } : old,
+      )
+    },
+    onError: () => toast.error("Fayl o'chirishda xatolik"),
+  })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    for (const file of Array.from(files)) {
+      uploadMutation.mutate(file)
+    }
+    e.target.value = ""
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+          <Paperclip className="h-4 w-4" />
+          Materiallar ({materials.length})
+        </label>
+        {!disabled && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadMutation.isPending}
+            >
+              {uploadMutation.isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Fayl yuklash
+            </Button>
+          </>
+        )}
+      </div>
+
+      {materials.length > 0 && (
+        <div className="space-y-1.5">
+          {materials.map((m) => (
+            <div
+              key={m.id}
+              className="flex items-center gap-3 rounded-lg border px-3 py-2 text-sm"
+            >
+              <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <a
+                href={m.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 truncate font-medium hover:underline text-primary"
+              >
+                {m.original_name}
+              </a>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {formatFileSize(m.file_size)}
+              </span>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate(m.id)}
+                  disabled={deleteMutation.isPending}
+                  className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="O'chirish"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 // ─── Student Row ────────────────────────────────────────────────────────────
 
@@ -640,6 +897,7 @@ function StudentRow({
           ))
         )}
       </div>
+
     </div>
   )
 }

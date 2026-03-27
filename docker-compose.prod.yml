@@ -30,6 +30,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
     logging:
       driver: "json-file"
       options:
@@ -114,5 +116,6 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
   certbot_www:
   certbot_certs:

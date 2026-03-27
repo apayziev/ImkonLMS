@@ -52,6 +52,13 @@ class SessionStudentRead(BaseModel):
     grade: int | None = None
 
 
+class LessonMaterialRead(BaseModel):
+    id: int
+    file_url: str
+    original_name: str
+    file_size: int
+
+
 class SessionDetailRead(BaseModel):
     id: int
     schedule_entry_id: int
@@ -67,10 +74,21 @@ class SessionDetailRead(BaseModel):
     end_time: str
     teacher_name: str
 
+    topic: str | None = None
+    homework: str | None = None
+    homework_deadline: str | None = None
+
     students: list[SessionStudentRead]
+    materials: list[LessonMaterialRead] = []
 
 
 # --- Attendance update ---
+
+
+class SessionUpdateRequest(BaseModel):
+    topic: str | None = None
+    homework: str | None = None
+    homework_deadline: str | None = None
 
 
 class AttendanceUpdateRequest(BaseModel):

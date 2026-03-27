@@ -3,6 +3,7 @@
 from .academic_year import AcademicYear
 from .base import BaseModel
 from .grade import Grade
+from .lesson_material import LessonMaterial
 from .lesson_session import LessonSession
 from .schedule_entry import ScheduleEntry
 from .school_settings import SchoolSettings

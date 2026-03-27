@@ -1,8 +1,9 @@
 """Lesson session routes — teacher starts/ends lessons, marks attendance & grades."""
 
 from datetime import UTC, date, datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, File, Query, UploadFile
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
@@ -10,9 +11,11 @@ from app.api.deps import CurrentUser, SessionDep, SuperUser
 from app.core.config import today_local
 from app.core.enums import AttendanceStatus, SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
+from app.core.uploads import validate_and_save_file
 from app.core.utils import format_time
 from app.crud.lessons import crud_lesson_sessions
 from app.models.grade import Grade
+from app.models.lesson_material import LessonMaterial
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.models.session_attendance import SessionAttendance
@@ -22,14 +25,18 @@ from app.schemas.lessons import (
     AttendanceSessionRead,
     AttendanceStudentRead,
     AttendanceUpdateRequest,
+    LessonMaterialRead,
     SessionDetailRead,
     SessionStartRequest,
     SessionStudentRead,
+    SessionUpdateRequest,
     TodayLessonRead,
     TodayLessonsResponse,
 )
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
+
+MATERIALS_UPLOAD_DIR = Path("uploads/materials")
 
 ENTRY_LOAD = [
     selectinload(ScheduleEntry.subject),
@@ -347,6 +354,46 @@ async def unmark_all(
     return {"updated": result.rowcount}
 
 
+# ─── Update Session (topic / homework) ──────────────────────────────────────
+
+
+@router.patch("/sessions/{session_id}", response_model=SessionDetailRead)
+async def update_session(
+    session_id: int,
+    body: SessionUpdateRequest,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> SessionDetailRead:
+    """Update session topic and/or homework."""
+    _require_teacher(current_user)
+
+    session = await _get_teacher_session(db, session_id, current_user.id)
+
+    if body.topic is not None:
+        session.topic = body.topic
+    if body.homework is not None:
+        session.homework = body.homework
+    if body.homework_deadline is not None:
+        from datetime import date as date_type
+        session.homework_deadline = date_type.fromisoformat(body.homework_deadline)
+
+    await db.commit()
+
+    # Reload with relations for response
+    full_session = await _load_session_with_relations(db, session_id)
+    entry = full_session.schedule_entry
+    student_ids = [a.student_id for a in full_session.attendances]
+    students_map: dict[int, User] = {}
+    if student_ids:
+        students_result = await db.execute(select(User).where(User.id.in_(student_ids)))
+        students_map = {s.id: s for s in students_result.scalars().all()}
+    attendances = [
+        (att, students_map.get(att.student_id))
+        for att in sorted(full_session.attendances, key=lambda a: a.student_id)
+    ]
+    return _build_session_detail(full_session, entry, attendances)
+
+
 # ─── End Session ────────────────────────────────────────────────────────────
 
 
@@ -366,6 +413,74 @@ async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser
     return {"message": "Dars tugatildi", "session_id": session_id}
 
 
+# ─── Materials ───────────────────────────────────────────────────────────────
+
+
+@router.post("/sessions/{session_id}/materials", response_model=LessonMaterialRead)
+async def upload_material(
+    session_id: int,
+    db: SessionDep,
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+) -> LessonMaterialRead:
+    """Upload a file to a lesson session."""
+    _require_teacher(current_user)
+    await _get_teacher_session(db, session_id, current_user.id)
+
+    file_url, original_name, file_size = await validate_and_save_file(
+        file, MATERIALS_UPLOAD_DIR, filename_prefix=f"{session_id}_",
+    )
+
+    material = LessonMaterial(
+        lesson_session_id=session_id,
+        file_url=file_url,
+        original_name=original_name,
+        file_size=file_size,
+    )
+    db.add(material)
+    await db.commit()
+    await db.refresh(material)
+
+    return LessonMaterialRead(
+        id=material.id,
+        file_url=material.file_url,
+        original_name=material.original_name,
+        file_size=material.file_size,
+    )
+
+
+@router.delete("/sessions/{session_id}/materials/{material_id}", status_code=200)
+async def delete_material(
+    session_id: int,
+    material_id: int,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> dict:
+    """Delete a material from a lesson session."""
+    _require_teacher(current_user)
+    await _get_teacher_session(db, session_id, current_user.id)
+
+    material = (await db.execute(
+        select(LessonMaterial).where(
+            LessonMaterial.id == material_id,
+            LessonMaterial.lesson_session_id == session_id,
+            LessonMaterial.is_deleted == False,  # noqa: E712
+        )
+    )).scalar_one_or_none()
+    if not material:
+        raise NotFoundException("Material topilmadi")
+
+    # Delete file from disk
+    file_path = Path(material.file_url.lstrip("/")).resolve()
+    if file_path.is_relative_to(MATERIALS_UPLOAD_DIR.resolve()) and file_path.exists():
+        file_path.unlink()
+
+    await db.delete(material)
+    await db.commit()
+
+    return {"message": "Material o'chirildi"}
+
+
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
 
@@ -378,6 +493,7 @@ async def _load_session_with_relations(db: SessionDep, session_id: int) -> Lesso
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.grade),
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
             selectinload(LessonSession.attendances),
+            selectinload(LessonSession.materials),
         )
         .where(LessonSession.id == session_id, LessonSession.is_deleted == False)  # noqa: E712
     )
@@ -419,7 +535,20 @@ def _build_session_detail(
         start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
         end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
         teacher_name=entry.teacher.full_name if entry.teacher else "",
+        topic=session.topic,
+        homework=session.homework,
+        homework_deadline=session.homework_deadline.isoformat() if session.homework_deadline else None,
         students=students,
+        materials=[
+            LessonMaterialRead(
+                id=m.id,
+                file_url=m.file_url,
+                original_name=m.original_name,
+                file_size=m.file_size,
+            )
+            for m in (session.materials if hasattr(session, "materials") and session.materials else [])
+            if not m.is_deleted
+        ],
     )
 
 

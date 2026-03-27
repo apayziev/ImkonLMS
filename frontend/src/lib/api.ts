@@ -420,7 +420,18 @@ export interface SessionDetailRead {
   start_time: string
   end_time: string
   teacher_name: string
+  topic: string | null
+  homework: string | null
+  homework_deadline: string | null
   students: SessionStudentRead[]
+  materials: LessonMaterialRead[]
+}
+
+export interface LessonMaterialRead {
+  id: number
+  file_url: string
+  original_name: string
+  file_size: number
 }
 
 export interface AttendanceUpdateRequest {
@@ -471,10 +482,169 @@ export const lessonsApi = {
     api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/mark-all-present`),
   unmarkAll: (sessionId: number) =>
     api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/unmark-all`),
+  updateSession: (sessionId: number, data: { topic?: string | null; homework?: string | null; homework_deadline?: string | null }) =>
+    api.patch<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`, data),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
+  uploadMaterial: (sessionId: number, file: File) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    return api.post<LessonMaterialRead>(`/api/v1/lessons/sessions/${sessionId}/materials`, formData)
+  },
+  deleteMaterial: (sessionId: number, materialId: number) =>
+    api.delete(`/api/v1/lessons/sessions/${sessionId}/materials/${materialId}`),
   getAttendance: (gradeId: number, date?: string) =>
     api.get<AttendanceDayResponse>("/api/v1/lessons/attendance", {
       params: { grade_id: gradeId, ...(date ? { date } : {}) },
     }),
 }
+
+// ─── Quarters ───────────────────────────────────────────────────────────────
+
+export interface QuarterRead {
+  id: number
+  academic_year_id: number
+  name: string
+  quarter_number: number
+  start_date: string
+  end_date: string
+  is_current: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface QuarterCreate {
+  academic_year_id: number
+  name: string
+  quarter_number: number
+  start_date: string
+  end_date: string
+}
+
+export interface QuarterList {
+  data: QuarterRead[]
+  count: number
+}
+
+export const quartersApi = {
+  list: (academicYearId?: number) =>
+    api.get<QuarterList>("/api/v1/quarters/", { params: academicYearId ? { academic_year_id: academicYearId } : {} }),
+  current: () =>
+    api.get<QuarterRead>("/api/v1/quarters/current"),
+  create: (data: QuarterCreate) =>
+    api.post<QuarterRead>("/api/v1/quarters/", data),
+  update: (id: number, data: Partial<QuarterCreate>) =>
+    api.patch<QuarterRead>(`/api/v1/quarters/${id}`, data),
+}
+
+// ─── Behavior Points ────────────────────────────────────────────────────────
+
+export interface PointCategoryRead {
+  id: number
+  name: string
+  group: string
+  description: string | null
+  default_points: number
+  icon: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface PointCategoryCreate {
+  name: string
+  group?: string
+  description?: string | null
+  default_points: number
+  icon?: string | null
+  sort_order?: number
+}
+
+export interface PointCategoryList {
+  data: PointCategoryRead[]
+  count: number
+}
+
+export interface PointTransactionRead {
+  id: number
+  student_id: number
+  teacher_id: number
+  quarter_id: number
+  category_id: number
+  points: number
+  lesson_session_id: number | null
+  note: string | null
+  teacher_name: string | null
+  category_name: string | null
+  category_icon: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface PointGiveRequest {
+  student_id: number
+  category_id: number
+  points?: number | null
+  lesson_session_id?: number | null
+  note?: string | null
+}
+
+export interface StudentPointSummary {
+  student_id: number
+  full_name: string
+  photo_url: string | null
+  starting_points: number
+  total_earned: number
+  total_deducted: number
+  current_points: number
+  transaction_count: number
+}
+
+export interface GradePointsSummaryResponse {
+  quarter_id: number
+  quarter_name: string
+  grade_id: number
+  grade_display: string
+  default_points: number
+  students: StudentPointSummary[]
+}
+
+export interface StudentPointsDetailResponse {
+  student_id: number
+  full_name: string
+  quarter_id: number
+  quarter_name: string
+  starting_points: number
+  current_points: number
+  transactions: PointTransactionRead[]
+}
+
+export const pointsApi = {
+  // Categories
+  listCategories: (activeOnly = true) =>
+    api.get<PointCategoryList>("/api/v1/points/categories", { params: { active_only: activeOnly } }),
+  createCategory: (data: PointCategoryCreate) =>
+    api.post<PointCategoryRead>("/api/v1/points/categories", data),
+  updateCategory: (id: number, data: Partial<PointCategoryCreate & { is_active: boolean }>) =>
+    api.patch<PointCategoryRead>(`/api/v1/points/categories/${id}`, data),
+  deleteCategory: (id: number) =>
+    api.delete(`/api/v1/points/categories/${id}`),
+
+  // Give points
+  give: (data: PointGiveRequest) =>
+    api.post<PointTransactionRead>("/api/v1/points/give", data),
+  giveBulk: (data: { student_ids: number[]; category_id: number; points?: number; lesson_session_id?: number; note?: string }) =>
+    api.post("/api/v1/points/give/bulk", data),
+
+  // View
+  summary: (gradeId: number, quarterId?: number) =>
+    api.get<GradePointsSummaryResponse>("/api/v1/points/summary", {
+      params: { grade_id: gradeId, ...(quarterId ? { quarter_id: quarterId } : {}) },
+    }),
+  studentDetail: (studentId: number, quarterId?: number) =>
+    api.get<StudentPointsDetailResponse>(`/api/v1/points/student/${studentId}`, {
+      params: quarterId ? { quarter_id: quarterId } : {},
+    }),
+}
+
