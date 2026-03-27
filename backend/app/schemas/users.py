@@ -4,6 +4,7 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.config import today_local
 from app.models.user import UserRole
 
 PASSWORD_MIN_LENGTH = 8
@@ -77,7 +78,7 @@ class UserRead(BaseModel):
     document_id: str
     first_name: str
     last_name: str
-    full_name: str | None = None
+    full_name: str = ""  # from model property via from_attributes
     birth_date: date | None = None
     photo_url: str | None = None
     phone_number: str | None = None
@@ -88,10 +89,9 @@ class UserRead(BaseModel):
     age: int | None = None
 
     @model_validator(mode="after")
-    def compute_full_name_and_age(self) -> Self:
-        self.full_name = f"{self.first_name} {self.last_name}"
+    def compute_age(self) -> Self:
         if self.birth_date:
-            today = date.today()
+            today = today_local()
             self.age = (
                 today.year
                 - self.birth_date.year

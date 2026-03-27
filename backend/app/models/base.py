@@ -20,7 +20,7 @@ class TimestampMixin(MappedAsDataclass):
         DateTime(timezone=True),
         nullable=True,
         default=None,
-        onupdate=datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         server_default=text("current_timestamp(0)"),
     )
 

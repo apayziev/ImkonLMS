@@ -1,14 +1,16 @@
 """Lesson session routes — teacher starts/ends lessons, marks attendance & grades."""
 
 from datetime import UTC, date, datetime
-from typing import Any
 
 from fastapi import APIRouter, Query
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep, SuperUser
+from app.core.config import today_local
+from app.core.enums import AttendanceStatus, SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
+from app.core.utils import format_time
 from app.crud.lessons import crud_lesson_sessions
 from app.models.grade import Grade
 from app.models.lesson_session import LessonSession
@@ -37,15 +39,28 @@ ENTRY_LOAD = [
 ]
 
 
-def _format_time(t: Any) -> str:
-    if hasattr(t, "strftime"):
-        return t.strftime("%H:%M")
-    return str(t)
-
-
 def _require_teacher(user: User) -> None:
     if user.role != UserRole.TEACHER.value:
         raise ForbiddenException("Faqat o'qituvchilar uchun")
+
+
+async def _get_teacher_session(
+    db: SessionDep, session_id: int, teacher_id: int,
+) -> LessonSession:
+    """Load a session verifying teacher ownership. Raises 404 if not found."""
+    query = (
+        select(LessonSession)
+        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+        .where(
+            LessonSession.id == session_id,
+            LessonSession.is_deleted == False,  # noqa: E712
+            ScheduleEntry.teacher_id == teacher_id,
+        )
+    )
+    session = (await db.execute(query)).scalar_one_or_none()
+    if not session:
+        raise NotFoundException("Sessiya topilmadi")
+    return session
 
 
 # ─── Today's Lessons ────────────────────────────────────────────────────────
@@ -56,11 +71,11 @@ async def get_today_lessons(
     db: SessionDep,
     current_user: CurrentUser,
     target_date: date | None = Query(None, alias="date"),
-) -> Any:
+) -> TodayLessonsResponse:
     """Get current teacher's lessons for a given date (defaults to today)."""
     _require_teacher(current_user)
 
-    today = target_date or date.today()
+    today = target_date or today_local()
     # Python: Monday=0 … Sunday=6. DB: Monday=1 … Sunday=7
     day_of_week = today.weekday() + 1
 
@@ -102,8 +117,8 @@ async def get_today_lessons(
                 subject_id=entry.subject_id,
                 subject_name=entry.subject.name if entry.subject else "",
                 period_number=entry.time_slot.period_number if entry.time_slot else 0,
-                start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
-                end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+                start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
+                end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
                 session_id=session.id if session else None,
                 session_status=session.status if session else None,
             )
@@ -118,7 +133,7 @@ async def get_today_lessons(
 @router.post("/sessions", response_model=SessionDetailRead, status_code=201)
 async def start_session(
     body: SessionStartRequest, db: SessionDep, current_user: CurrentUser,
-) -> Any:
+) -> SessionDetailRead:
     """Start a lesson session. Creates attendance records for all students in the grade."""
     _require_teacher(current_user)
 
@@ -138,7 +153,7 @@ async def start_session(
     if entry.teacher_id != current_user.id:
         raise ForbiddenException("Bu dars sizga tegishli emas")
 
-    today = date.today()
+    today = today_local()
 
     # Check if session already exists for today
     existing = await crud_lesson_sessions.get(
@@ -195,7 +210,7 @@ async def start_session(
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetailRead)
-async def get_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> Any:
+async def get_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> SessionDetailRead:
     """Get session details with all student attendance/grades."""
     _require_teacher(current_user)
 
@@ -232,23 +247,11 @@ async def update_attendance(
     body: AttendanceUpdateRequest,
     db: SessionDep,
     current_user: CurrentUser,
-) -> Any:
+) -> SessionStudentRead:
     """Update a single student's attendance status and/or grade. Real-time save."""
     _require_teacher(current_user)
 
-    # Query 1: session + ownership check in one JOIN
-    session_query = (
-        select(LessonSession)
-        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
-        .where(
-            LessonSession.id == session_id,
-            LessonSession.is_deleted == False,  # noqa: E712
-            ScheduleEntry.teacher_id == current_user.id,
-        )
-    )
-    session = (await db.execute(session_query)).scalar_one_or_none()
-    if not session:
-        raise NotFoundException("Sessiya topilmadi")
+    session = await _get_teacher_session(db, session_id, current_user.id)
 
     # Query 2: attendance + student in one JOIN
     att_query = (
@@ -267,11 +270,11 @@ async def update_attendance(
     attendance, student = row
 
     # If unmarked or absent, clear grade
-    grade = body.grade if body.status == "present" else None
+    grade = body.grade if body.status == AttendanceStatus.PRESENT else None
 
     attendance.status = body.status
     attendance.grade = grade
-    attendance.marked_at = None if body.status == "unmarked" else datetime.now(UTC)
+    attendance.marked_at = None if body.status == AttendanceStatus.UNMARKED else datetime.now(UTC)
 
     await db.commit()
     await db.refresh(attendance)
@@ -295,32 +298,21 @@ async def update_attendance(
 @router.post("/sessions/{session_id}/attendance/mark-all-present")
 async def mark_all_present(
     session_id: int, db: SessionDep, current_user: CurrentUser,
-) -> Any:
+) -> dict:
     """Mark all unmarked students as present in one batch."""
     _require_teacher(current_user)
 
-    session_query = (
-        select(LessonSession)
-        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
-        .where(
-            LessonSession.id == session_id,
-            LessonSession.is_deleted == False,  # noqa: E712
-            ScheduleEntry.teacher_id == current_user.id,
-        )
-    )
-    session = (await db.execute(session_query)).scalar_one_or_none()
-    if not session:
-        raise NotFoundException("Sessiya topilmadi")
+    session = await _get_teacher_session(db, session_id, current_user.id)
 
     now = datetime.now(UTC)
     stmt = (
         update(SessionAttendance)
         .where(
             SessionAttendance.lesson_session_id == session_id,
-            SessionAttendance.status == "unmarked",
+            SessionAttendance.status == AttendanceStatus.UNMARKED,
             SessionAttendance.is_deleted == False,  # noqa: E712
         )
-        .values(status="present", marked_at=now)
+        .values(status=AttendanceStatus.PRESENT, marked_at=now)
     )
     result = await db.execute(stmt)
     await db.commit()
@@ -334,31 +326,20 @@ async def mark_all_present(
 @router.post("/sessions/{session_id}/attendance/unmark-all")
 async def unmark_all(
     session_id: int, db: SessionDep, current_user: CurrentUser,
-) -> Any:
+) -> dict:
     """Reset all students back to unmarked in one batch."""
     _require_teacher(current_user)
 
-    session_query = (
-        select(LessonSession)
-        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
-        .where(
-            LessonSession.id == session_id,
-            LessonSession.is_deleted == False,  # noqa: E712
-            ScheduleEntry.teacher_id == current_user.id,
-        )
-    )
-    session = (await db.execute(session_query)).scalar_one_or_none()
-    if not session:
-        raise NotFoundException("Sessiya topilmadi")
+    session = await _get_teacher_session(db, session_id, current_user.id)
 
     stmt = (
         update(SessionAttendance)
         .where(
             SessionAttendance.lesson_session_id == session_id,
-            SessionAttendance.status != "unmarked",
+            SessionAttendance.status != AttendanceStatus.UNMARKED,
             SessionAttendance.is_deleted == False,  # noqa: E712
         )
-        .values(status="unmarked", marked_at=None, grade=None)
+        .values(status=AttendanceStatus.UNMARKED, marked_at=None, grade=None)
     )
     result = await db.execute(stmt)
     await db.commit()
@@ -370,27 +351,15 @@ async def unmark_all(
 
 
 @router.post("/sessions/{session_id}/end", status_code=200)
-async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> Any:
+async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> dict:
     """End a lesson session."""
     _require_teacher(current_user)
 
-    # Session + ownership check in one JOIN
-    query = (
-        select(LessonSession)
-        .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
-        .where(
-            LessonSession.id == session_id,
-            LessonSession.is_deleted == False,  # noqa: E712
-            ScheduleEntry.teacher_id == current_user.id,
-        )
-    )
-    session = (await db.execute(query)).scalar_one_or_none()
-    if not session:
-        raise NotFoundException("Sessiya topilmadi")
-    if session.status != "in_progress":
+    session = await _get_teacher_session(db, session_id, current_user.id)
+    if session.status != SessionStatus.IN_PROGRESS:
         raise BadRequestException("Sessiya allaqachon tugatilgan")
 
-    session.status = "completed"
+    session.status = SessionStatus.COMPLETED
     session.ended_at = datetime.now(UTC)
     await db.commit()
 
@@ -447,8 +416,8 @@ def _build_session_detail(
         grade_display=entry.grade.display_name if entry.grade else "",
         subject_name=entry.subject.name if entry.subject else "",
         period_number=entry.time_slot.period_number if entry.time_slot else 0,
-        start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
-        end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+        start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
+        end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
         teacher_name=entry.teacher.full_name if entry.teacher else "",
         students=students,
     )
@@ -463,9 +432,9 @@ async def get_attendance(
     current_user: SuperUser,
     grade_id: int = Query(...),
     target_date: date | None = Query(None, alias="date"),
-) -> Any:
+) -> AttendanceDayResponse:
     """Admin: view all sessions and attendance for a grade on a date."""
-    day = target_date or date.today()
+    day = target_date or today_local()
 
     # Get grade display name
     grade = (await db.execute(
@@ -513,8 +482,8 @@ async def get_attendance(
             session_id=session.id,
             subject_name=entry.subject.name if entry.subject else "",
             period_number=entry.time_slot.period_number if entry.time_slot else 0,
-            start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else "",
-            end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else "",
+            start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
+            end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
             started_at=session.started_at.isoformat(),
             ended_at=session.ended_at.isoformat() if session.ended_at else None,
             teacher_name=entry.teacher.full_name if entry.teacher else "",

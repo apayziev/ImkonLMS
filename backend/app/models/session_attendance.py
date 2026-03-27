@@ -5,6 +5,8 @@ from datetime import datetime
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.enums import AttendanceStatus
+
 from .base import BaseModel
 
 
@@ -29,8 +31,8 @@ class SessionAttendance(BaseModel):
         ForeignKey("user.id"), index=True, kw_only=True,
     )
     status: Mapped[str] = mapped_column(
-        String(20), default="unmarked", kw_only=True,
-    )  # unmarked | present | excused | unexcused
+        String(20), default=AttendanceStatus.UNMARKED, kw_only=True,
+    )
     marked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None, kw_only=True,
     )

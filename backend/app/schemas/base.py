@@ -1,21 +1,24 @@
-from datetime import UTC, datetime
-from typing import Any
+"""Base schemas — shared by all modules."""
 
-from pydantic import BaseModel, Field, field_serializer
+from datetime import datetime
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel, ConfigDict
+
+T = TypeVar("T")
 
 
 class TimestampSchema(BaseModel):
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
-    updated_at: datetime | None = Field(default=None)
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat() if v else None},
+    )
 
-    @field_serializer("created_at")
-    def serialize_dt(self, created_at: datetime | None, _info: Any) -> str | None:
-        if created_at is not None:
-            return created_at.isoformat()
-        return None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
-    @field_serializer("updated_at")
-    def serialize_updated_at(self, updated_at: datetime | None, _info: Any) -> str | None:
-        if updated_at is not None:
-            return updated_at.isoformat()
-        return None
+
+class PaginatedList(BaseModel, Generic[T]):
+    """Generic paginated list — replaces per-entity XxxList boilerplate."""
+
+    data: list[T]
+    count: int

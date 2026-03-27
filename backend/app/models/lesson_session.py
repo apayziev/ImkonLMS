@@ -5,6 +5,8 @@ from datetime import date, datetime
 from sqlalchemy import Date, DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.enums import SessionStatus
+
 from .base import BaseModel
 
 
@@ -30,8 +32,8 @@ class LessonSession(BaseModel):
         DateTime(timezone=True), nullable=True, default=None, kw_only=True,
     )
     status: Mapped[str] = mapped_column(
-        String(20), default="in_progress", kw_only=True,
-    )  # in_progress | completed
+        String(20), default=SessionStatus.IN_PROGRESS, kw_only=True,
+    )
 
     # === Relationships ===
     schedule_entry: Mapped["ScheduleEntry"] = relationship(init=False)

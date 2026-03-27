@@ -1,31 +1,17 @@
-from pydantic import BaseModel, ConfigDict, Field
+"""Grade schemas — read-only (data synced from Payment)."""
 
-from .base import TimestampSchema
+from pydantic import ConfigDict, Field
 
-
-class GradeBase(BaseModel):
-    level: int = Field(ge=0, le=11)
-    section: str = Field(min_length=1, max_length=50)
+from .base import PaginatedList, TimestampSchema
 
 
-class GradeCreate(GradeBase):
-    pass
-
-
-class GradeUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    level: int | None = Field(default=None, ge=0, le=11)
-    section: str | None = Field(default=None, min_length=1, max_length=50)
-
-
-class GradeRead(GradeBase, TimestampSchema):
+class GradeRead(TimestampSchema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    level: int = Field(ge=0, le=11)
+    section: str = Field(min_length=1, max_length=50)
     display_name: str
 
 
-class GradeList(BaseModel):
-    data: list[GradeRead]
-    count: int
+GradeList = PaginatedList[GradeRead]

@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 
 import httpx
 from fastapi import APIRouter, HTTPException, status

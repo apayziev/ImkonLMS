@@ -2,7 +2,9 @@
 
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
+
+from .base import PaginatedList
 
 
 class TeacherRead(BaseModel):
@@ -13,7 +15,7 @@ class TeacherRead(BaseModel):
     first_name: str
     last_name: str
     middle_name: str | None = None
-    full_name: str | None = None
+    full_name: str = ""  # from model property via from_attributes
     birth_date: date | None = None
     gender: str | None = None
     phone_number: str | None = None
@@ -23,12 +25,5 @@ class TeacherRead(BaseModel):
     teaching_grade_ids: list[int] | None = None
     class_teacher_grade_id: int | None = None
 
-    @model_validator(mode="after")
-    def compute_full_name(self) -> "TeacherRead":
-        self.full_name = f"{self.last_name} {self.first_name}"
-        return self
 
-
-class TeacherList(BaseModel):
-    data: list[TeacherRead]
-    count: int
+TeacherList = PaginatedList[TeacherRead]

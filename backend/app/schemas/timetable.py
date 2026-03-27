@@ -1,7 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import TimestampSchema
-
+from .base import PaginatedList, TimestampSchema
 
 # --- SchoolSettings ---
 
@@ -57,9 +56,7 @@ class TimeSlotRead(TimestampSchema):
     end_time: str
 
 
-class TimeSlotList(BaseModel):
-    data: list[TimeSlotRead]
-    count: int
+TimeSlotList = PaginatedList[TimeSlotRead]
 
 
 # --- ScheduleEntry ---
@@ -101,6 +98,4 @@ class ScheduleEntryRead(TimestampSchema):
     end_time: str | None = None
 
 
-class ScheduleEntryList(BaseModel):
-    data: list[ScheduleEntryRead]
-    count: int
+ScheduleEntryList = PaginatedList[ScheduleEntryRead]

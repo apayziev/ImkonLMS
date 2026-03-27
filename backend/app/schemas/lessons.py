@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.enums import AttendanceStatus, SessionStatus
 
 # --- Today's Lesson (schedule-based) ---
 
@@ -20,7 +21,7 @@ class TodayLessonRead(BaseModel):
 
     # Session info (None if not started)
     session_id: int | None = None
-    session_status: str | None = None  # in_progress | completed
+    session_status: SessionStatus | None = None
 
 
 class TodayLessonsResponse(BaseModel):
@@ -46,7 +47,7 @@ class SessionStudentRead(BaseModel):
     last_name: str
     full_name: str
     photo_url: str | None = None
-    status: str  # unmarked | present | excused | unexcused
+    status: AttendanceStatus
     marked_at: str | None = None
     grade: int | None = None
 
@@ -57,7 +58,7 @@ class SessionDetailRead(BaseModel):
     session_date: str
     started_at: str
     ended_at: str | None = None
-    status: str
+    status: SessionStatus
 
     grade_display: str
     subject_name: str
@@ -74,7 +75,7 @@ class SessionDetailRead(BaseModel):
 
 class AttendanceUpdateRequest(BaseModel):
     student_id: int
-    status: str = Field(pattern=r"^(unmarked|present|excused|unexcused)$")
+    status: AttendanceStatus
     grade: int | None = Field(default=None, ge=1, le=5)
 
 
@@ -85,7 +86,7 @@ class AttendanceStudentRead(BaseModel):
     student_id: int
     full_name: str
     photo_url: str | None = None
-    status: str  # unmarked | present | excused | unexcused
+    status: AttendanceStatus
     marked_at: str | None = None
     grade: int | None = None
 
@@ -99,7 +100,7 @@ class AttendanceSessionRead(BaseModel):
     started_at: str
     ended_at: str | None = None
     teacher_name: str
-    status: str  # in_progress | completed
+    status: SessionStatus
     students: list[AttendanceStudentRead]
 
 

@@ -1,7 +1,6 @@
 """Timetable routes — school settings, time slots, schedule entries."""
 
 from datetime import time
-from typing import Any
 
 from fastapi import APIRouter
 from sqlalchemy import delete, select
@@ -11,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import SessionDep, SuperUser
 from app.core.exceptions import DuplicateValueException, NotFoundException
+from app.core.utils import format_time
 from app.crud.timetable import crud_schedule_entries, crud_school_settings, crud_time_slots
 from app.models.schedule_entry import ScheduleEntry
 from app.models.school_settings import SchoolSettings
@@ -40,8 +40,6 @@ def _parse_time(value: str) -> time:
     return time(int(h), int(m))
 
 
-def _format_time(t: time) -> str:
-    return t.strftime("%H:%M")
 
 
 async def _get_or_create_settings(db: AsyncSession) -> SchoolSettings:
@@ -66,8 +64,8 @@ def _entry_to_read(entry: ScheduleEntry) -> ScheduleEntryRead:
         teacher_name=entry.teacher.full_name if entry.teacher else None,
         grade_display=entry.grade.display_name if entry.grade else None,
         period_number=entry.time_slot.period_number if entry.time_slot else None,
-        start_time=_format_time(entry.time_slot.start_time) if entry.time_slot else None,
-        end_time=_format_time(entry.time_slot.end_time) if entry.time_slot else None,
+        start_time=format_time(entry.time_slot.start_time) if entry.time_slot else None,
+        end_time=format_time(entry.time_slot.end_time) if entry.time_slot else None,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
     )
@@ -107,8 +105,8 @@ async def list_time_slots(db: SessionDep, academic_year_id: int) -> Any:
                 id=s.id,
                 academic_year_id=s.academic_year_id,
                 period_number=s.period_number,
-                start_time=_format_time(s.start_time),
-                end_time=_format_time(s.end_time),
+                start_time=format_time(s.start_time),
+                end_time=format_time(s.end_time),
                 created_at=s.created_at,
                 updated_at=s.updated_at,
             )
@@ -139,8 +137,8 @@ async def create_time_slot(body: TimeSlotCreate, db: SessionDep, admin: SuperUse
         id=slot.id,
         academic_year_id=slot.academic_year_id,
         period_number=slot.period_number,
-        start_time=_format_time(slot.start_time),
-        end_time=_format_time(slot.end_time),
+        start_time=format_time(slot.start_time),
+        end_time=format_time(slot.end_time),
         created_at=slot.created_at,
         updated_at=slot.updated_at,
     )
@@ -280,8 +278,8 @@ async def generate_time_slots(
                 id=s.id,
                 academic_year_id=s.academic_year_id,
                 period_number=s.period_number,
-                start_time=_format_time(s.start_time),
-                end_time=_format_time(s.end_time),
+                start_time=format_time(s.start_time),
+                end_time=format_time(s.end_time),
                 created_at=s.created_at,
                 updated_at=s.updated_at,
             )

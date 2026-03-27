@@ -11,7 +11,8 @@ from sqlalchemy import text
 from app.models import *  # noqa: F403
 
 from .config import EnvironmentOption, settings
-from .db import async_engine as engine, local_session
+from .db import async_engine as engine
+from .db import local_session
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ async def check_database_connection() -> None:
 
 async def _auto_sync_loop() -> None:
     """Background loop that syncs from Payment every AUTO_SYNC_INTERVAL seconds."""
-    from app.api.routes.sync import run_sync, _save_sync_log
+    from app.api.routes.sync import _save_sync_log, run_sync
 
     await asyncio.sleep(AUTO_SYNC_INITIAL_DELAY)
     logger.info("Auto-sync started (interval=%ds)", AUTO_SYNC_INTERVAL)

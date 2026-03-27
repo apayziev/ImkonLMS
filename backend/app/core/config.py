@@ -1,4 +1,6 @@
+from datetime import date, datetime
 from enum import Enum
+from zoneinfo import ZoneInfo
 
 from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,6 +52,7 @@ class EnvironmentOption(str, Enum):
 
 class EnvironmentSettings(BaseSettings):
     ENVIRONMENT: EnvironmentOption = EnvironmentOption.LOCAL
+    TIMEZONE: str = "Asia/Tashkent"
 
 
 class SyncSettings(BaseSettings):
@@ -86,3 +89,17 @@ class Settings(
 
 
 settings = Settings()
+
+# ─── Timezone helpers ───────────────────────────────────────────────────────
+
+LOCAL_TZ = ZoneInfo(settings.TIMEZONE)
+
+
+def today_local() -> date:
+    """Return today's date in the school's local timezone (e.g. Asia/Tashkent)."""
+    return datetime.now(LOCAL_TZ).date()
+
+
+def now_local() -> datetime:
+    """Return current datetime in the school's local timezone."""
+    return datetime.now(LOCAL_TZ)
