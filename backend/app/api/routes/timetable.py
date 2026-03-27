@@ -112,7 +112,7 @@ async def list_time_slots(db: SessionDep, academic_year_id: int) -> Any:
             )
             for s in slots
         ],
-        count=result["total_count"],
+        count=result["count"],
     )
 
 
@@ -318,7 +318,7 @@ async def list_schedule(
     )
     return ScheduleEntryList(
         data=[_entry_to_read(e) for e in result["data"]],
-        count=result["total_count"],
+        count=result["count"],
     )
 
 

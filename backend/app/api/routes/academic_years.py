@@ -1,7 +1,5 @@
 """Academic year routes — read-only (data synced from Payment)."""
 
-from typing import Any
-
 from fastapi import APIRouter
 
 from app.api.deps import SessionDep
@@ -13,16 +11,16 @@ router = APIRouter(prefix="/academic-years", tags=["academic-years"])
 
 
 @router.get("/", response_model=AcademicYearList)
-async def list_academic_years(db: SessionDep) -> Any:
+async def list_academic_years(db: SessionDep) -> AcademicYearList:
     result = await crud_academic_years.get_multi(db, is_deleted=False)
     return AcademicYearList(
         data=[AcademicYearRead.model_validate(a) for a in result["data"]],
-        count=result["total_count"],
+        count=result["count"],
     )
 
 
 @router.get("/current", response_model=AcademicYearRead)
-async def get_current_academic_year(db: SessionDep) -> Any:
+async def get_current_academic_year(db: SessionDep) -> AcademicYearRead:
     current = await crud_academic_years.get(db, is_deleted=False, is_current=True)
     if not current:
         raise NotFoundException("Joriy o'quv yili topilmadi")
@@ -30,7 +28,7 @@ async def get_current_academic_year(db: SessionDep) -> Any:
 
 
 @router.get("/{academic_year_id}", response_model=AcademicYearRead)
-async def get_academic_year(academic_year_id: int, db: SessionDep) -> Any:
+async def get_academic_year(academic_year_id: int, db: SessionDep) -> AcademicYearRead:
     academic_year = await crud_academic_years.get(db, id=academic_year_id, is_deleted=False)
     if not academic_year:
         raise NotFoundException("O'quv yili topilmadi")

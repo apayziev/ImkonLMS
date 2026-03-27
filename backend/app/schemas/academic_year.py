@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import TimestampSchema
+from .base import PaginatedList, TimestampSchema
 
 
 class AcademicYearRead(TimestampSchema):
@@ -15,6 +15,4 @@ class AcademicYearRead(TimestampSchema):
     is_current: bool
 
 
-class AcademicYearList(BaseModel):
-    data: list[AcademicYearRead]
-    count: int
+AcademicYearList = PaginatedList[AcademicYearRead]

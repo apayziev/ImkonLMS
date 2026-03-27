@@ -82,7 +82,7 @@ class BaseCRUD(Generic[ModelType]):
         total_count = total_result.scalar_one()
         data = data_result.scalars().all()
 
-        return {"data": data, "total_count": total_count}
+        return {"data": data, "count": total_count}
 
     async def delete(
         self,
