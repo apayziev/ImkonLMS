@@ -139,6 +139,18 @@ function LessonsList({
     onError: () => toast.error("Darsni boshlashda xatolik"),
   })
 
+  const planMutation = useMutation({
+    mutationFn: (scheduleEntryId: number) =>
+      lessonsApi.planSession(scheduleEntryId, dateStr),
+    onSuccess: (response) => {
+      toast.success("Dars rejasi yaratildi")
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
+      onSessionOpen(response.data.id)
+    },
+    onError: () => toast.error("Dars rejasini yaratishda xatolik"),
+  })
+
   const lessons = data?.data ?? []
 
   const prevWeek = () => {
@@ -211,10 +223,15 @@ function LessonsList({
               key={lesson.schedule_entry_id}
               lesson={lesson}
               onStart={() => startMutation.mutate(lesson.schedule_entry_id)}
+              onPlan={() => planMutation.mutate(lesson.schedule_entry_id)}
               onContinue={() => onSessionOpen(lesson.session_id!)}
               isStarting={
                 startMutation.isPending &&
                 startMutation.variables === lesson.schedule_entry_id
+              }
+              isPlanning={
+                planMutation.isPending &&
+                planMutation.variables === lesson.schedule_entry_id
               }
               canStart={isToday}
             />
@@ -230,18 +247,23 @@ function LessonsList({
 function LessonCard({
   lesson,
   onStart,
+  onPlan,
   onContinue,
   isStarting,
+  isPlanning,
   canStart,
 }: {
   lesson: TodayLessonRead
   onStart: () => void
+  onPlan: () => void
   onContinue: () => void
   isStarting: boolean
+  isPlanning: boolean
   canStart: boolean
 }) {
   const isInProgress = lesson.session_status === "in_progress"
   const isCompleted = lesson.session_status === "completed"
+  const isPlanned = lesson.session_status === "planned"
 
   return (
     <Card
@@ -249,7 +271,8 @@ function LessonCard({
         "rounded-xl border-2 p-5 transition-colors",
         isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
         isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
-        !isInProgress && !isCompleted && "border-border",
+        isPlanned && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
+        !isInProgress && !isCompleted && !isPlanned && "border-border",
       )}
     >
       <div className="flex items-start justify-between mb-4">
@@ -288,26 +311,80 @@ function LessonCard({
           onClick={onContinue}
         >
           <Play className="mr-2 h-5 w-5" />
-          Darsni boshlash
+          Davom etish
         </Button>
+      ) : isPlanned ? (
+        <div className="flex gap-2">
+          <Button
+            size="lg"
+            className="flex-1 text-lg h-12"
+            variant="outline"
+            onClick={onContinue}
+          >
+            <FileText className="mr-2 h-5 w-5" />
+            Rejani tahrirlash
+          </Button>
+          {canStart && (
+            <Button
+              size="lg"
+              className="flex-1 text-lg h-12"
+              onClick={onStart}
+              disabled={isStarting}
+            >
+              {isStarting ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-5 w-5" />
+              )}
+              Darsni boshlash
+            </Button>
+          )}
+        </div>
       ) : canStart ? (
+        <div className="flex gap-2">
+          <Button
+            size="lg"
+            className="flex-1 text-lg h-12"
+            variant="outline"
+            onClick={onPlan}
+            disabled={isPlanning}
+          >
+            {isPlanning ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <FileText className="mr-2 h-5 w-5" />
+            )}
+            Rejalashtirish
+          </Button>
+          <Button
+            size="lg"
+            className="flex-1 text-lg h-12"
+            onClick={onStart}
+            disabled={isStarting}
+          >
+            {isStarting ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-5 w-5" />
+            )}
+            Darsni boshlash
+          </Button>
+        </div>
+      ) : (
         <Button
           size="lg"
           className="w-full text-lg h-12"
-          onClick={onStart}
-          disabled={isStarting}
+          variant="outline"
+          onClick={onPlan}
+          disabled={isPlanning}
         >
-          {isStarting ? (
+          {isPlanning ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
-            <Play className="mr-2 h-5 w-5" />
+            <FileText className="mr-2 h-5 w-5" />
           )}
-          Darsni boshlash
+          Rejalashtirish
         </Button>
-      ) : (
-        <div className="flex items-center gap-2 text-muted-foreground justify-center py-2">
-          <span className="text-sm">Boshlanmagan</span>
-        </div>
       )}
     </Card>
   )
@@ -360,7 +437,20 @@ function SessionView({
   }
 
   const isCompleted = session.status === "completed"
+  const isPlanned = session.status === "planned"
   const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
+
+  const startFromPlanMutation = useMutation({
+    mutationFn: () => lessonsApi.startSession(session.schedule_entry_id),
+    onSuccess: (response) => {
+      toast.success("Dars boshlandi")
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
+      // Redirect to the (now in_progress) session — may be same ID
+      queryClient.setQueryData([...queryKeys.lessonSession, sessionId], response.data)
+    },
+    onError: () => toast.error("Darsni boshlashda xatolik"),
+  })
 
   return (
     <div className="space-y-6">
@@ -380,7 +470,22 @@ function SessionView({
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {!isCompleted && (
+          {isPlanned && (
+            <Button
+              size="lg"
+              className="text-lg h-12 px-6"
+              onClick={() => startFromPlanMutation.mutate()}
+              disabled={startFromPlanMutation.isPending}
+            >
+              {startFromPlanMutation.isPending ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-5 w-5" />
+              )}
+              Darsni boshlash
+            </Button>
+          )}
+          {!isCompleted && !isPlanned && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -431,6 +536,8 @@ function SessionView({
       {/* Student List — with point categories */}
       <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} />
 
+      {!isPlanned && (
+      <>
       <div className="space-y-2">
         <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
           <span>#</span>
@@ -480,6 +587,9 @@ function SessionView({
           <p className="text-lg">Bu sinfda o'quvchilar topilmadi</p>
         </div>
       )}
+      </>
+      )}
+      <MaterialsSection sessionId={sessionId} materials={session.materials} disabled={isCompleted} />
     </div>
   )
 }

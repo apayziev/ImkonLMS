@@ -27,7 +27,9 @@ class LessonSession(BaseModel):
         ForeignKey("schedule_entry.id"), index=True, kw_only=True,
     )
     session_date: Mapped[date] = mapped_column(Date, kw_only=True)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), kw_only=True)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None, kw_only=True,
+    )
     ended_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None, kw_only=True,
     )

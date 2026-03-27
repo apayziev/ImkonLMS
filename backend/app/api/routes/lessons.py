@@ -134,6 +134,51 @@ async def get_today_lessons(
     return TodayLessonsResponse(data=lessons, date=today.isoformat())
 
 
+# ─── Plan Session (create without starting) ─────────────────────────────────
+
+
+@router.post("/sessions/plan", response_model=SessionDetailRead, status_code=201)
+async def plan_session(
+    body: SessionStartRequest, db: SessionDep, current_user: CurrentUser,
+) -> SessionDetailRead:
+    """Create a planned session for a lesson (no attendance yet, just a placeholder for topic/homework/materials)."""
+    _require_teacher(current_user)
+
+    entry_query = (
+        select(ScheduleEntry)
+        .options(*ENTRY_LOAD)
+        .where(
+            ScheduleEntry.id == body.schedule_entry_id,
+            ScheduleEntry.is_deleted == False,  # noqa: E712
+        )
+    )
+    entry = (await db.execute(entry_query)).scalar_one_or_none()
+    if not entry:
+        raise NotFoundException("Dars jadvali topilmadi")
+    if entry.teacher_id != current_user.id:
+        raise ForbiddenException("Bu dars sizga tegishli emas")
+
+    today = body.date or today_local()
+
+    existing = await crud_lesson_sessions.get(
+        db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,
+    )
+    if existing:
+        raise BadRequestException("Bu dars uchun sessiya allaqachon mavjud")
+
+    session = LessonSession(
+        schedule_entry_id=entry.id,
+        session_date=today,
+        started_at=None,
+        status=SessionStatus.PLANNED,
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+
+    return _build_session_detail(session, entry, [])
+
+
 # ─── Start Session ──────────────────────────────────────────────────────────
 
 
@@ -166,20 +211,27 @@ async def start_session(
     existing = await crud_lesson_sessions.get(
         db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,
     )
-    if existing:
+    if existing and existing.status != SessionStatus.PLANNED:
         raise BadRequestException("Bu dars uchun bugun sessiya allaqachon mavjud")
 
     now = datetime.now(UTC)
 
-    # Create session
-    session = LessonSession(
-        schedule_entry_id=entry.id,
-        session_date=today,
-        started_at=now,
-        status="in_progress",
-    )
-    db.add(session)
-    await db.flush()
+    if existing and existing.status == SessionStatus.PLANNED:
+        # Upgrade planned → in_progress
+        session = existing
+        session.started_at = now
+        session.status = SessionStatus.IN_PROGRESS
+        await db.flush()
+    else:
+        # Create new session
+        session = LessonSession(
+            schedule_entry_id=entry.id,
+            session_date=today,
+            started_at=now,
+            status=SessionStatus.IN_PROGRESS,
+        )
+        db.add(session)
+        await db.flush()
 
     # Get all active students in this grade
     students_query = (
