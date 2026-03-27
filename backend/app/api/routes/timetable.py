@@ -1,6 +1,7 @@
 """Timetable routes — school settings, time slots, schedule entries."""
 
 from datetime import time
+from typing import Any
 
 from fastapi import APIRouter
 from sqlalchemy import delete, select
