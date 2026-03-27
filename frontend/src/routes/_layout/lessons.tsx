@@ -424,6 +424,17 @@ function SessionView({
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
+  const startFromPlanMutation = useMutation({
+    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId),
+    onSuccess: (response) => {
+      toast.success("Dars boshlandi")
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
+      queryClient.setQueryData([...queryKeys.lessonSession, sessionId], response.data)
+    },
+    onError: () => toast.error("Darsni boshlashda xatolik"),
+  })
+
   if (isLoading || !session) {
     return (
       <div className="space-y-6">
@@ -439,18 +450,6 @@ function SessionView({
   const isCompleted = session.status === "completed"
   const isPlanned = session.status === "planned"
   const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
-
-  const startFromPlanMutation = useMutation({
-    mutationFn: () => lessonsApi.startSession(session.schedule_entry_id),
-    onSuccess: (response) => {
-      toast.success("Dars boshlandi")
-      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
-      // Redirect to the (now in_progress) session — may be same ID
-      queryClient.setQueryData([...queryKeys.lessonSession, sessionId], response.data)
-    },
-    onError: () => toast.error("Darsni boshlashda xatolik"),
-  })
 
   return (
     <div className="space-y-6">
@@ -474,7 +473,7 @@ function SessionView({
             <Button
               size="lg"
               className="text-lg h-12 px-6"
-              onClick={() => startFromPlanMutation.mutate()}
+              onClick={() => startFromPlanMutation.mutate(session.schedule_entry_id)}
               disabled={startFromPlanMutation.isPending}
             >
               {startFromPlanMutation.isPending ? (
