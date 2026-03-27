@@ -1,7 +1,5 @@
 """Lesson session & attendance schemas."""
 
-from __future__ import annotations
-
 from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -38,7 +36,7 @@ class TodayLessonsResponse(BaseModel):
 
 class SessionStartRequest(BaseModel):
     schedule_entry_id: int
-    date: date | None = None  # If None, defaults to today
+    target_date: date | None = None  # If None, defaults to today
 
 
 class SessionStudentRead(BaseModel):

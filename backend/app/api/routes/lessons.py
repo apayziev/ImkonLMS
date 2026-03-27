@@ -158,7 +158,7 @@ async def plan_session(
     if entry.teacher_id != current_user.id:
         raise ForbiddenException("Bu dars sizga tegishli emas")
 
-    today = body.date or today_local()
+    today = body.target_date or today_local()
 
     existing = await crud_lesson_sessions.get(
         db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,

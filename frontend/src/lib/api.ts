@@ -474,8 +474,8 @@ export const lessonsApi = {
     api.get<TodayLessonsResponse>("/api/v1/lessons/today", { params: date ? { date } : undefined }),
   startSession: (schedule_entry_id: number) =>
     api.post<SessionDetailRead>("/api/v1/lessons/sessions", { schedule_entry_id }),
-  planSession: (schedule_entry_id: number, date?: string) =>
-    api.post<SessionDetailRead>("/api/v1/lessons/sessions/plan", { schedule_entry_id, date }),
+  planSession: (schedule_entry_id: number, target_date?: string) =>
+    api.post<SessionDetailRead>("/api/v1/lessons/sessions/plan", { schedule_entry_id, target_date }),
   getSession: (sessionId: number) =>
     api.get<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`),
   updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
