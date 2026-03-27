@@ -308,7 +308,6 @@ graph LR
 | 10 | **Monitoring** | Sentry yoki Prometheus + Grafana integratsiyasi |
 
 ---
-**Caching** | Redis orqali tez-tez so'raladigan ma'lumotlarni (grades, subjects) keshlash buni qilishim kerakmi? Senior sifatida  nima deysan?
 
 > [!TIP]
 > Loyiha ishga tushirish uchun: `make up` (DB), `make migrate`, `make run` (backend), `cd frontend && npm run dev` (frontend).

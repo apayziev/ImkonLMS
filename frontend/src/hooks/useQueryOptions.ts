@@ -130,6 +130,7 @@ export function getLessonSessionQueryOptions(sessionId: number) {
 }
 
 export function getAttendanceQueryOptions(gradeId: number, date: string) {
+  const isToday = date === new Date().toISOString().split("T")[0]
   return {
     queryKey: queryKeys.attendance(gradeId, date),
     queryFn: async () => {
@@ -137,5 +138,7 @@ export function getAttendanceQueryOptions(gradeId: number, date: string) {
       return data
     },
     enabled: gradeId > 0,
+    // Auto-refresh every 30s on today's date for live attendance updates
+    refetchInterval: isToday ? 30_000 : false as const,
   }
 }
