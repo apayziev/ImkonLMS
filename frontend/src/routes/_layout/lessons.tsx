@@ -414,8 +414,6 @@ function LessonCard({
           Darsni boshlash
         </Button>
       )}
-        </Button>
-      )}
     </Card>
   )
 }
