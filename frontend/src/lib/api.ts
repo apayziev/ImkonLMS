@@ -387,7 +387,8 @@ export interface TodayLessonRead {
   start_time: string
   end_time: string
   session_id: number | null
-  session_status: string | null // in_progress | completed
+  session_status: string | null // planned | in_progress | completed
+  has_plan_content: boolean
 }
 
 export interface TodayLessonsResponse {

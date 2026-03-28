@@ -128,6 +128,12 @@ async def get_today_lessons(
                 end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
                 session_id=session.id if session else None,
                 session_status=session.status if session else None,
+                has_plan_content=bool(
+                    session and (
+                        session.topic or session.lesson_type
+                        or session.objectives or session.keywords
+                    )
+                ),
             )
         )
 

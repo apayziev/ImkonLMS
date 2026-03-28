@@ -24,6 +24,7 @@ class TodayLessonRead(BaseModel):
     # Session info (None if not started)
     session_id: int | None = None
     session_status: SessionStatus | None = None
+    has_plan_content: bool = False
 
 
 class TodayLessonsResponse(BaseModel):

@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
   getSchoolSettingsQueryOptions,
   getTodayLessonsQueryOptions,
@@ -275,7 +276,13 @@ function LessonsList({
               key={lesson.schedule_entry_id}
               lesson={lesson}
               onStart={() => startMutation.mutate(lesson.schedule_entry_id)}
-              onPlan={() => planMutation.mutate(lesson.schedule_entry_id)}
+              onPlan={() => {
+                if (lesson.session_id) {
+                  onSessionOpen(lesson.session_id)
+                } else {
+                  planMutation.mutate(lesson.schedule_entry_id)
+                }
+              }}
               onContinue={() => onSessionOpen(lesson.session_id!)}
               isStarting={
                 startMutation.isPending &&
@@ -315,7 +322,7 @@ function LessonCard({
 }) {
   const isInProgress = lesson.session_status === "in_progress"
   const isCompleted = lesson.session_status === "completed"
-  const isPlanned = lesson.session_status === "planned"
+  const isPlanned = lesson.session_status === "planned" && lesson.has_plan_content
 
   return (
     <Card
@@ -374,7 +381,7 @@ function LessonCard({
             onClick={onContinue}
           >
             <FileText className="mr-2 h-5 w-5" />
-            Rejani tahrirlash
+            Rejani ko'rish
           </Button>
           {canStart && (
             <Button
@@ -392,50 +399,21 @@ function LessonCard({
             </Button>
           )}
         </div>
-      ) : canStart ? (
-        <div className="flex gap-2">
-          <Button
-            size="lg"
-            className="flex-1 text-lg h-12"
-            variant="outline"
-            onClick={onPlan}
-            disabled={isPlanning}
-          >
-            {isPlanning ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <FileText className="mr-2 h-5 w-5" />
-            )}
-            Rejalashtirish
-          </Button>
-          <Button
-            size="lg"
-            className="flex-1 text-lg h-12"
-            onClick={onStart}
-            disabled={isStarting}
-          >
-            {isStarting ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <Play className="mr-2 h-5 w-5" />
-            )}
-            Darsni boshlash
-          </Button>
-        </div>
       ) : (
         <Button
           size="lg"
           className="w-full text-lg h-12"
-          variant="outline"
-          onClick={onPlan}
-          disabled={isPlanning}
+          onClick={canStart ? onStart : onPlan}
+          disabled={canStart ? isStarting : isPlanning}
         >
-          {isPlanning ? (
+          {(canStart ? isStarting : isPlanning) ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
-            <FileText className="mr-2 h-5 w-5" />
+            <Play className="mr-2 h-5 w-5" />
           )}
-          Rejalashtirish
+          Darsni boshlash
+        </Button>
+      )}
         </Button>
       )}
     </Card>
@@ -556,7 +534,8 @@ function WeeklyPlanView({
                   const isPlanned = lesson.session_status === "planned"
                   const isInProgress = lesson.session_status === "in_progress"
                   const isCompleted = lesson.session_status === "completed"
-                  const hasPlan = isPlanned || isInProgress || isCompleted
+                  const hasContent = lesson.has_plan_content
+                  const hasPlan = (isPlanned && hasContent) || isInProgress || isCompleted
 
                   return (
                     <div
@@ -565,7 +544,7 @@ function WeeklyPlanView({
                         "flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
                         isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
                         isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
-                        isPlanned && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
+                        isPlanned && hasContent && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
                         !hasPlan && "border-border hover:bg-muted/20",
                       )}
                       onClick={() => {
@@ -585,7 +564,7 @@ function WeeklyPlanView({
                           "flex items-center justify-center h-8 w-8 rounded-full shrink-0",
                           isCompleted && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
                           isInProgress && "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)]",
-                          isPlanned && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
+                          isPlanned && hasContent && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
                           !hasPlan && "bg-muted text-muted-foreground",
                         )}
                       >
@@ -593,7 +572,7 @@ function WeeklyPlanView({
                           <Check className="h-4 w-4" />
                         ) : isInProgress ? (
                           <Play className="h-4 w-4" />
-                        ) : isPlanned ? (
+                        ) : isPlanned && hasContent ? (
                           <FileText className="h-4 w-4" />
                         ) : (
                           <FileText className="h-4 w-4 opacity-40" />
@@ -624,7 +603,7 @@ function WeeklyPlanView({
                           <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)] font-medium">
                             Davom etmoqda
                           </span>
-                        ) : isPlanned ? (
+                        ) : isPlanned && hasContent ? (
                           <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]/70 font-medium">
                             Rejalashtirilgan
                           </span>
@@ -1003,7 +982,7 @@ function TopicHomeworkSection({
       </div>
 
       {/* Row 1: Lesson Type + Topic */}
-      <div className="grid gap-4 md:grid-cols-2 border-t pt-4">
+      <div className="grid gap-4 md:grid-cols-[180px_1fr] border-t pt-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Dars turi</label>
           <Select
@@ -1146,14 +1125,16 @@ function TopicHomeworkSection({
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <label className="text-sm font-medium text-muted-foreground">Vazifa muddati</label>
           </div>
-          <Input
-            type="date"
+          <DatePicker
             value={deadline}
-            onChange={(e) => {
-              setDeadline(e.target.value)
-              saveImmediate({ homework_deadline: e.target.value || null })
+            onChange={(dateStr) => {
+              setDeadline(dateStr)
+              saveImmediate({ homework_deadline: dateStr || null })
             }}
+            placeholder="Sanani tanlang"
             disabled={disabled}
+            fromYear={new Date().getFullYear()}
+            toYear={new Date().getFullYear() + 1}
           />
         </div>
       </div>
