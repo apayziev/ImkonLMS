@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 
 import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BookOpen } from "lucide-react"
 import { getTodayLessonsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { UZ_WEEKDAYS_SHORT } from "./constants"
@@ -39,17 +38,6 @@ export function LessonsList({
       onSessionOpen(response.data.id)
     },
     onError: () => toast.error("Darsni boshlashda xatolik"),
-  })
-
-  const planMutation = useMutation({
-    mutationFn: (scheduleEntryId: number) => lessonsApi.planSession(scheduleEntryId, dateStr),
-    onSuccess: (response) => {
-      toast.success("Dars rejasi yaratildi")
-      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
-      onSessionOpen(response.data.id)
-    },
-    onError: () => toast.error("Dars rejasini yaratishda xatolik"),
   })
 
   const lessons = data?.data ?? []
@@ -111,16 +99,8 @@ export function LessonsList({
               key={lesson.schedule_entry_id}
               lesson={lesson}
               onStart={() => startMutation.mutate(lesson.schedule_entry_id)}
-              onPlan={() => {
-                if (lesson.session_id) {
-                  onSessionOpen(lesson.session_id)
-                } else {
-                  planMutation.mutate(lesson.schedule_entry_id)
-                }
-              }}
               onContinue={() => onSessionOpen(lesson.session_id!)}
               isStarting={startMutation.isPending && startMutation.variables === lesson.schedule_entry_id}
-              isPlanning={planMutation.isPending && planMutation.variables === lesson.schedule_entry_id}
               canStart={isToday}
             />
           ))}

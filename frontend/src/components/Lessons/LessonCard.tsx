@@ -14,18 +14,14 @@ import { Card } from "@/components/ui/card"
 export function LessonCard({
   lesson,
   onStart,
-  onPlan,
   onContinue,
   isStarting,
-  isPlanning,
   canStart,
 }: {
   lesson: TodayLessonRead
   onStart: () => void
-  onPlan: () => void
   onContinue: () => void
   isStarting: boolean
-  isPlanning: boolean
   canStart: boolean
 }) {
   const isInProgress = lesson.session_status === "in_progress"
@@ -89,10 +85,9 @@ export function LessonCard({
           Darsni boshlash
         </Button>
       ) : (
-        <Button size="lg" className="w-full text-lg h-12" variant="outline" onClick={onPlan} disabled={isPlanning}>
-          {isPlanning ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <FileText className="mr-2 h-5 w-5" />}
-          Rejalashtirish
-        </Button>
+        <p className="text-sm text-center text-muted-foreground py-2">
+          Dars rejasini "Dars rejasi" bo'limidan tuzing
+        </p>
       )}
     </Card>
   )
