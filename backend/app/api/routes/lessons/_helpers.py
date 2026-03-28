@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import SessionDep
-from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.enums import SessionStatus
+from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.core.formatting import format_time
 from app.models.lesson_material import LessonMaterial
 from app.models.lesson_session import LessonSession
@@ -49,6 +50,12 @@ async def _get_teacher_session(db: SessionDep, session_id: int, teacher_id: int)
     if not session:
         raise NotFoundException("Sessiya topilmadi")
     return session
+
+
+def _require_not_completed(session: LessonSession) -> None:
+    """Completed sessions are immutable."""
+    if session.status == SessionStatus.COMPLETED:
+        raise BadRequestException("Tugallangan sessiyani o'zgartirish mumkin emas")
 
 
 async def _load_session_with_relations(db: SessionDep, session_id: int) -> LessonSession | None:

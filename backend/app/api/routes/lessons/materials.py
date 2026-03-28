@@ -25,7 +25,7 @@ async def upload_material(
 ) -> LessonMaterialRead:
     """Upload a file to a lesson session."""
     _require_teacher(current_user)
-    await _get_teacher_session(db, session_id, current_user.id)
+    session = await _get_teacher_session(db, session_id, current_user.id)
 
     file_url, original_name, file_size = await validate_and_save_file(
         file, MATERIALS_UPLOAD_DIR, filename_prefix=f"{session_id}_",
@@ -58,7 +58,7 @@ async def delete_material(
 ) -> dict:
     """Delete a material from a lesson session."""
     _require_teacher(current_user)
-    await _get_teacher_session(db, session_id, current_user.id)
+    session = await _get_teacher_session(db, session_id, current_user.id)
 
     material = (await db.execute(
         select(LessonMaterial).where(

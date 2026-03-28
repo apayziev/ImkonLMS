@@ -24,7 +24,7 @@ from app.schemas.lessons import (
     SessionStudentRead,
 )
 
-from ._helpers import _get_teacher_session, _require_teacher
+from ._helpers import _get_teacher_session, _require_not_completed, _require_teacher
 
 router = APIRouter()
 
@@ -40,6 +40,7 @@ async def update_attendance(
     _require_teacher(current_user)
 
     session = await _get_teacher_session(db, session_id, current_user.id)
+    _require_not_completed(session)
 
     # Query 2: attendance + student in one JOIN
     att_query = (
@@ -88,6 +89,7 @@ async def mark_all_present(
     _require_teacher(current_user)
 
     session = await _get_teacher_session(db, session_id, current_user.id)
+    _require_not_completed(session)
 
     now = datetime.now(UTC)
     stmt = (
@@ -113,6 +115,7 @@ async def unmark_all(
     _require_teacher(current_user)
 
     session = await _get_teacher_session(db, session_id, current_user.id)
+    _require_not_completed(session)
 
     stmt = (
         update(SessionAttendance)
