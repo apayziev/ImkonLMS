@@ -65,7 +65,7 @@ export function SessionView({
   })
 
   const startFromPlanMutation = useMutation({
-    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId),
+    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId, session?.session_date),
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })

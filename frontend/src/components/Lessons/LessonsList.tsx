@@ -30,7 +30,7 @@ export function LessonsList({
   const { data, isLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
   const startMutation = useMutation({
-    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId),
+    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId, dateStr),
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
@@ -105,7 +105,7 @@ export function LessonsList({
               onStart={() => startMutation.mutate(lesson.schedule_entry_id)}
               onContinue={() => onSessionOpen(lesson.session_id!)}
               isStarting={startMutation.isPending && startMutation.variables === lesson.schedule_entry_id}
-              canStart={isToday}
+              canStart
             />
           ))}
         </div>
