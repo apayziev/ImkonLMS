@@ -87,6 +87,7 @@ function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
 function LessonsPage() {
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [activeTab, setActiveTab] = useState<"today" | "plan">("today")
 
   if (activeSessionId) {
     return (
@@ -98,11 +99,53 @@ function LessonsPage() {
   }
 
   return (
-    <LessonsList
-      selectedDate={selectedDate}
-      onDateChange={setSelectedDate}
-      onSessionOpen={setActiveSessionId}
-    />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Darslarim</h1>
+        <div className="flex gap-1 rounded-lg border p-1 bg-muted/30">
+          <button
+            type="button"
+            onClick={() => setActiveTab("today")}
+            className={cn(
+              "rounded-md px-4 py-2 text-sm font-medium transition-all",
+              activeTab === "today"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <CalendarDays className="h-4 w-4 inline mr-1.5" />
+            Darslarim
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("plan")}
+            className={cn(
+              "rounded-md px-4 py-2 text-sm font-medium transition-all",
+              activeTab === "plan"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <FileText className="h-4 w-4 inline mr-1.5" />
+            Dars rejasi
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "today" ? (
+        <LessonsList
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          onSessionOpen={setActiveSessionId}
+        />
+      ) : (
+        <WeeklyPlanView
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          onSessionOpen={setActiveSessionId}
+        />
+      )}
+    </div>
   )
 }
 
@@ -166,8 +209,6 @@ function LessonsList({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Darslarim</h1>
-
       {/* Week day selector */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
@@ -387,6 +428,210 @@ function LessonCard({
         </Button>
       )}
     </Card>
+  )
+}
+
+// ─── Weekly Plan View ───────────────────────────────────────────────────────
+
+function WeeklyPlanView({
+  selectedDate,
+  onDateChange,
+  onSessionOpen,
+}: {
+  selectedDate: Date
+  onDateChange: (d: Date) => void
+  onSessionOpen: (sessionId: number) => void
+}) {
+  const queryClient = useQueryClient()
+  const { data: settings } = useQuery(getSchoolSettingsQueryOptions())
+  const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
+  const weekDays = getWeekDays(selectedDate, workingDays)
+
+  // Fetch lessons for all working days of the week
+  const dayQueries = weekDays.map((d) => {
+    const ds = formatDate(d)
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useQuery({
+      ...getTodayLessonsQueryOptions(ds),
+      staleTime: 5 * 60 * 1000,
+    })
+  })
+
+  const planMutation = useMutation({
+    mutationFn: ({ scheduleEntryId, date }: { scheduleEntryId: number; date: string }) =>
+      lessonsApi.planSession(scheduleEntryId, date),
+    onSuccess: (response) => {
+      toast.success("Dars rejasi yaratildi")
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      weekDays.forEach((d) => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(formatDate(d)) })
+      })
+      onSessionOpen(response.data.id)
+    },
+    onError: () => toast.error("Xatolik"),
+  })
+
+  const prevWeek = () => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() - 7)
+    onDateChange(d)
+  }
+  const nextWeek = () => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + 7)
+    onDateChange(d)
+  }
+
+  const todayStr = formatDate(new Date())
+
+  // Get month-year display for the week
+  const monthNames = [
+    "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+    "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+  ]
+  const firstDay = weekDays[0]
+  const lastDay = weekDays[weekDays.length - 1]
+  const weekLabel =
+    firstDay && lastDay
+      ? firstDay.getMonth() === lastDay.getMonth()
+        ? `${firstDay.getDate()} – ${lastDay.getDate()} ${monthNames[firstDay.getMonth()]} ${firstDay.getFullYear()}`
+        : `${firstDay.getDate()} ${monthNames[firstDay.getMonth()]} – ${lastDay.getDate()} ${monthNames[lastDay.getMonth()]}`
+      : ""
+
+  return (
+    <div className="space-y-4">
+      {/* Week navigation */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" onClick={prevWeek}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
+        <Button variant="ghost" size="icon" onClick={nextWeek}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Days */}
+      {weekDays.map((day, dayIdx) => {
+        const ds = formatDate(day)
+        const isToday = ds === todayStr
+        const dayName = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"][day.getDay()]
+        const query = dayQueries[dayIdx]
+        const lessons = query?.data?.data ?? []
+
+        return (
+          <div key={ds}>
+            <div
+              className={cn(
+                "flex items-center gap-2 py-2 px-3 rounded-lg mb-2",
+                isToday ? "bg-primary/10" : "bg-muted/30",
+              )}
+            >
+              <span className={cn(
+                "text-sm font-bold",
+                isToday ? "text-primary" : "text-muted-foreground",
+              )}>
+                {dayName}, {day.getDate()}{isToday && " (bugun)"}
+              </span>
+              {query?.isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </div>
+
+            {lessons.length === 0 && !query?.isLoading ? (
+              <p className="text-sm text-muted-foreground pl-3 pb-3">Dars yo'q</p>
+            ) : (
+              <div className="space-y-1.5 mb-3">
+                {lessons.map((lesson) => {
+                  const hasSession = !!lesson.session_id
+                  const isPlanned = lesson.session_status === "planned"
+                  const isInProgress = lesson.session_status === "in_progress"
+                  const isCompleted = lesson.session_status === "completed"
+                  const hasPlan = isPlanned || isInProgress || isCompleted
+
+                  return (
+                    <div
+                      key={`${ds}-${lesson.schedule_entry_id}`}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
+                        isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
+                        isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
+                        isPlanned && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
+                        !hasPlan && "border-border hover:bg-muted/20",
+                      )}
+                      onClick={() => {
+                        if (hasSession) {
+                          onSessionOpen(lesson.session_id!)
+                        } else {
+                          planMutation.mutate({
+                            scheduleEntryId: lesson.schedule_entry_id,
+                            date: ds,
+                          })
+                        }
+                      }}
+                    >
+                      {/* Status indicator */}
+                      <div
+                        className={cn(
+                          "flex items-center justify-center h-8 w-8 rounded-full shrink-0",
+                          isCompleted && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
+                          isInProgress && "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)]",
+                          isPlanned && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
+                          !hasPlan && "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {isCompleted ? (
+                          <Check className="h-4 w-4" />
+                        ) : isInProgress ? (
+                          <Play className="h-4 w-4" />
+                        ) : isPlanned ? (
+                          <FileText className="h-4 w-4" />
+                        ) : (
+                          <FileText className="h-4 w-4 opacity-40" />
+                        )}
+                      </div>
+
+                      {/* Lesson info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{lesson.grade_display}</span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-muted-foreground">{lesson.subject_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          <span>{lesson.start_time} – {lesson.end_time}</span>
+                          <span>({lesson.period_number}-soat)</span>
+                        </div>
+                      </div>
+
+                      {/* Status badge */}
+                      <div className="shrink-0">
+                        {isCompleted ? (
+                          <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)] font-medium">
+                            Tugallangan
+                          </span>
+                        ) : isInProgress ? (
+                          <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)] font-medium">
+                            Davom etmoqda
+                          </span>
+                        ) : isPlanned ? (
+                          <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]/70 font-medium">
+                            Rejalashtirilgan
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
+                            Reja yo'q
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
