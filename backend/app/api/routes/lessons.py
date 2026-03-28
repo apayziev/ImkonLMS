@@ -536,6 +536,15 @@ async def delete_material(
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
 
+def _get_loaded_materials(session: LessonSession) -> list:
+    """Safely get materials if relationship is already loaded (avoids MissingGreenlet)."""
+    from sqlalchemy import inspect as sa_inspect
+    state = sa_inspect(session)
+    if "materials" in state.dict:
+        return session.materials or []
+    return []
+
+
 async def _load_session_with_relations(db: SessionDep, session_id: int) -> LessonSession | None:
     query = (
         select(LessonSession)
@@ -598,7 +607,7 @@ def _build_session_detail(
                 original_name=m.original_name,
                 file_size=m.file_size,
             )
-            for m in (session.materials if hasattr(session, "materials") and session.materials else [])
+            for m in (_get_loaded_materials(session))
             if not m.is_deleted
         ],
     )

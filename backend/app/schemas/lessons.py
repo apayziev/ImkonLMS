@@ -66,7 +66,7 @@ class SessionDetailRead(BaseModel):
     id: int
     schedule_entry_id: int
     session_date: str
-    started_at: str
+    started_at: str | None = None
     ended_at: str | None = None
     status: SessionStatus
 
