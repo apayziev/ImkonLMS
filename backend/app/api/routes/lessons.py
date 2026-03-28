@@ -428,6 +428,12 @@ async def update_session(
     if body.homework_deadline is not None:
         from datetime import date as date_type
         session.homework_deadline = date_type.fromisoformat(body.homework_deadline)
+    if body.lesson_type is not None:
+        session.lesson_type = body.lesson_type
+    if body.objectives is not None:
+        session.objectives = body.objectives
+    if body.keywords is not None:
+        session.keywords = body.keywords
 
     await db.commit()
 
@@ -599,6 +605,9 @@ def _build_session_detail(
         topic=session.topic,
         homework=session.homework,
         homework_deadline=session.homework_deadline.isoformat() if session.homework_deadline else None,
+        lesson_type=session.lesson_type,
+        objectives=session.objectives,
+        keywords=session.keywords,
         students=students,
         materials=[
             LessonMaterialRead(

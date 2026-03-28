@@ -423,6 +423,9 @@ export interface SessionDetailRead {
   topic: string | null
   homework: string | null
   homework_deadline: string | null
+  lesson_type: string | null
+  objectives: string[] | null
+  keywords: string[] | null
   students: SessionStudentRead[]
   materials: LessonMaterialRead[]
 }

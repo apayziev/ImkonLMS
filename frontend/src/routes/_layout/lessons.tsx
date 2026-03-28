@@ -13,12 +13,15 @@ import {
   Loader2,
   Paperclip,
   Play,
+  Plus,
   Square,
+  Target,
   Trash2,
   TriangleAlert,
   Upload,
   UserCheck,
   UserX,
+  X,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -43,9 +46,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -833,10 +844,18 @@ function SessionView({
       )}
       </>
       )}
-      <MaterialsSection sessionId={sessionId} materials={session.materials} disabled={isCompleted} />
     </div>
   )
 }
+
+// ─── Lesson Type Options ────────────────────────────────────────────────────
+
+const LESSON_TYPES = [
+  { value: "new_topic", label: "Yangi mavzu" },
+  { value: "reinforcement", label: "Mustahkamlash" },
+  { value: "assessment", label: "Nazorat" },
+  { value: "practical", label: "Amaliy" },
+] as const
 
 // ─── Topic & Homework Section ───────────────────────────────────────────────
 
@@ -850,25 +869,36 @@ function TopicHomeworkSection({
   disabled: boolean
 }) {
   const queryClient = useQueryClient()
+  const [lessonType, setLessonType] = useState(session.lesson_type ?? "")
   const [topic, setTopic] = useState(session.topic ?? "")
   const [homework, setHomework] = useState(session.homework ?? "")
   const [deadline, setDeadline] = useState(session.homework_deadline ?? "")
+  const [objectives, setObjectives] = useState<string[]>(session.objectives ?? [""])
+  const [keywords, setKeywords] = useState<string[]>(session.keywords ?? [])
+  const [keywordInput, setKeywordInput] = useState("")
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Sync state when session data changes externally
   useEffect(() => {
+    setLessonType(session.lesson_type ?? "")
     setTopic(session.topic ?? "")
     setHomework(session.homework ?? "")
     setDeadline(session.homework_deadline ?? "")
-  }, [session.topic, session.homework, session.homework_deadline])
+    setObjectives(session.objectives ?? [""])
+    setKeywords(session.keywords ?? [])
+  }, [session.lesson_type, session.topic, session.homework, session.homework_deadline, session.objectives, session.keywords])
 
   useEffect(() => {
-    return () => clearTimeout(saveTimerRef.current)
+    return () => {
+      clearTimeout(debounceRef.current)
+      clearTimeout(saveTimerRef.current)
+    }
   }, [])
 
   const mutation = useMutation({
-    mutationFn: (data: { topic?: string | null; homework?: string | null; homework_deadline?: string | null }) =>
+    mutationFn: (data: Record<string, unknown>) =>
       lessonsApi.updateSession(sessionId, data),
     onMutate: () => {
       clearTimeout(saveTimerRef.current)
@@ -889,67 +919,240 @@ function TopicHomeworkSection({
     },
   })
 
-  const saveField = useCallback(
-    (field: "topic" | "homework" | "homework_deadline", value: string) => {
-      const original = session[field] ?? ""
-      if (value === original) return
-      mutation.mutate({ [field]: value || null })
+  // Immediate save (for selects, dates, keywords)
+  const saveImmediate = useCallback(
+    (data: Record<string, unknown>) => {
+      clearTimeout(debounceRef.current)
+      mutation.mutate(data)
     },
-    [session, mutation],
+    [mutation],
   )
 
+  // Debounced save (for text fields — auto-save while typing)
+  const saveDebounced = useCallback(
+    (data: Record<string, unknown>) => {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        mutation.mutate(data)
+      }, 1000)
+    },
+    [mutation],
+  )
+
+  // --- Objectives helpers ---
+  const updateObjective = (index: number, value: string) => {
+    const next = [...objectives]
+    next[index] = value
+    setObjectives(next)
+    const filtered = next.filter((o) => o.trim() !== "")
+    saveDebounced({ objectives: filtered.length > 0 ? filtered : null })
+  }
+
+  const addObjective = () => {
+    if (objectives.length < 3) setObjectives([...objectives, ""])
+  }
+
+  const removeObjective = (index: number) => {
+    const next = objectives.filter((_, i) => i !== index)
+    if (next.length === 0) next.push("")
+    setObjectives(next)
+    const filtered = next.filter((o) => o.trim() !== "")
+    saveImmediate({ objectives: filtered.length > 0 ? filtered : null })
+  }
+
+  // --- Keywords helpers ---
+  const addKeyword = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed || keywords.includes(trimmed)) return
+    const next = [...keywords, trimmed]
+    setKeywords(next)
+    setKeywordInput("")
+    saveImmediate({ keywords: next })
+  }
+
+  const removeKeyword = (index: number) => {
+    const next = keywords.filter((_, i) => i !== index)
+    setKeywords(next)
+    saveImmediate({ keywords: next.length > 0 ? next : null })
+  }
+
   return (
-    <Card className="rounded-xl border p-5 space-y-4">
+    <Card className="rounded-xl border p-5 space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <FileText className="h-5 w-5 text-muted-foreground" />
           Dars rejasi
         </h3>
-        {saveStatus === "saving" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-        {saveStatus === "saved" && <Check className="h-4 w-4 text-[var(--imkon-teal)]" />}
-        {saveStatus === "error" && <TriangleAlert className="h-4 w-4 text-red-500" />}
+        <div className="flex items-center gap-2">
+          {saveStatus === "saving" && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saqlanmoqda...
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="flex items-center gap-1.5 text-xs text-[var(--imkon-teal)]">
+              <Check className="h-3.5 w-3.5" /> Saqlandi
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <span className="flex items-center gap-1.5 text-xs text-red-500">
+              <TriangleAlert className="h-3.5 w-3.5" /> Xatolik
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Row 1: Lesson Type + Topic */}
+      <div className="grid gap-4 md:grid-cols-[200px_1fr]">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Dars turi</label>
+          <Select
+            value={lessonType}
+            onValueChange={(v) => {
+              setLessonType(v)
+              saveImmediate({ lesson_type: v })
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Tanlang..." />
+            </SelectTrigger>
+            <SelectContent>
+              {LESSON_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Mavzu</label>
-          <Textarea
+          <Input
             placeholder="Dars mavzusini kiriting..."
             value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            onBlur={() => saveField("topic", topic)}
+            onChange={(e) => {
+              setTopic(e.target.value)
+              saveDebounced({ topic: e.target.value || null })
+            }}
             disabled={disabled}
-            rows={2}
-            className="resize-none"
           />
         </div>
+      </div>
+
+      {/* Row 2: Objectives */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Target className="h-4 w-4 text-muted-foreground" />
+          <label className="text-sm font-medium text-muted-foreground">
+            Dars maqsadlari
+          </label>
+        </div>
+        <div className="space-y-2">
+          {objectives.map((obj, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
+              <Input
+                placeholder={`${i + 1}-maqsadni kiriting...`}
+                value={obj}
+                onChange={(e) => updateObjective(i, e.target.value)}
+                disabled={disabled}
+                className="flex-1"
+              />
+              {objectives.length > 1 && !disabled && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => removeObjective(i)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+          {objectives.length < 3 && !disabled && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={addObjective}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Maqsad qo'shish
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Row 3: Keywords */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-muted-foreground">Kalit so'zlar</label>
+        <div className="flex flex-wrap items-center gap-2">
+          {keywords.map((kw, i) => (
+            <Badge key={i} variant="secondary" className="text-sm gap-1 pr-1">
+              {kw}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removeKeyword(i)}
+                  className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+          {!disabled && (
+            <Input
+              placeholder="Kalit so'z..."
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault()
+                  addKeyword(keywordInput)
+                }
+              }}
+              onBlur={() => {
+                if (keywordInput.trim()) addKeyword(keywordInput)
+              }}
+              className="w-36 h-8 text-sm"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Row 4: Homework + Deadline */}
+      <div className="grid gap-4 md:grid-cols-[1fr_180px]">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Uyga vazifa</label>
           <Textarea
             placeholder="Uyga vazifani kiriting..."
             value={homework}
-            onChange={(e) => setHomework(e.target.value)}
-            onBlur={() => saveField("homework", homework)}
+            onChange={(e) => {
+              setHomework(e.target.value)
+              saveDebounced({ homework: e.target.value || null })
+            }}
             disabled={disabled}
             rows={2}
             className="resize-none"
           />
         </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-        <label className="text-sm font-medium text-muted-foreground">Vazifa muddati</label>
-        <Input
-          type="date"
-          value={deadline}
-          onChange={(e) => {
-            setDeadline(e.target.value)
-            saveField("homework_deadline", e.target.value)
-          }}
-          disabled={disabled}
-          className="w-44"
-        />
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <label className="text-sm font-medium text-muted-foreground">Vazifa muddati</label>
+          </div>
+          <Input
+            type="date"
+            value={deadline}
+            onChange={(e) => {
+              setDeadline(e.target.value)
+              saveImmediate({ homework_deadline: e.target.value || null })
+            }}
+            disabled={disabled}
+          />
+        </div>
       </div>
 
       {/* Materials */}

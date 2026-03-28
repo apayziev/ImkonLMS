@@ -80,6 +80,9 @@ class SessionDetailRead(BaseModel):
     topic: str | None = None
     homework: str | None = None
     homework_deadline: str | None = None
+    lesson_type: str | None = None
+    objectives: list[str] | None = None
+    keywords: list[str] | None = None
 
     students: list[SessionStudentRead]
     materials: list[LessonMaterialRead] = []
@@ -92,6 +95,9 @@ class SessionUpdateRequest(BaseModel):
     topic: str | None = None
     homework: str | None = None
     homework_deadline: str | None = None
+    lesson_type: str | None = None
+    objectives: list[str] | None = None
+    keywords: list[str] | None = None
 
 
 class AttendanceUpdateRequest(BaseModel):

@@ -3,6 +3,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import SessionStatus
@@ -44,6 +45,15 @@ class LessonSession(BaseModel):
     )
     homework_deadline: Mapped[date | None] = mapped_column(
         Date, nullable=True, default=None, kw_only=True,
+    )
+    lesson_type: Mapped[str | None] = mapped_column(
+        String(30), nullable=True, default=None, kw_only=True,
+    )
+    objectives: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True, default=None, kw_only=True,
+    )
+    keywords: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True, default=None, kw_only=True,
     )
 
     # === Relationships ===
