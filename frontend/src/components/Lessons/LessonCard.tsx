@@ -79,15 +79,11 @@ export function LessonCard({
             </Button>
           )}
         </div>
-      ) : canStart ? (
-        <Button size="lg" className="w-full text-lg h-12" onClick={onStart} disabled={isStarting}>
+      ) : (
+        <Button size="lg" className="w-full text-lg h-12" onClick={onStart} disabled={!canStart || isStarting}>
           {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
           Darsni boshlash
         </Button>
-      ) : (
-        <p className="text-sm text-center text-muted-foreground py-2">
-          Dars rejasini "Dars rejasi" bo'limidan tuzing
-        </p>
       )}
     </Card>
   )
