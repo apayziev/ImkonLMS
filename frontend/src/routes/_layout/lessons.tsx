@@ -60,6 +60,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   getSchoolSettingsQueryOptions,
   getTodayLessonsQueryOptions,
@@ -399,19 +405,34 @@ function LessonCard({
             </Button>
           )}
         </div>
-      ) : (
+      ) : canStart ? (
         <Button
           size="lg"
           className="w-full text-lg h-12"
-          onClick={canStart ? onStart : onPlan}
-          disabled={canStart ? isStarting : isPlanning}
+          onClick={onStart}
+          disabled={isStarting}
         >
-          {(canStart ? isStarting : isPlanning) ? (
+          {isStarting ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
             <Play className="mr-2 h-5 w-5" />
           )}
           Darsni boshlash
+        </Button>
+      ) : (
+        <Button
+          size="lg"
+          className="w-full text-lg h-12"
+          variant="outline"
+          onClick={onPlan}
+          disabled={isPlanning}
+        >
+          {isPlanning ? (
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : (
+            <FileText className="mr-2 h-5 w-5" />
+          )}
+          Rejalashtirish
         </Button>
       )}
     </Card>
@@ -492,7 +513,29 @@ function WeeklyPlanView({
         <Button variant="ghost" size="icon" onClick={prevWeek}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-1.5 rounded-md hover:bg-muted/50"
+            >
+              <CalendarDays className="h-3.5 w-3.5 inline mr-1.5" />
+              {weekLabel}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) onDateChange(date)
+              }}
+              defaultMonth={selectedDate}
+              fromYear={2024}
+              toYear={new Date().getFullYear() + 1}
+            />
+          </PopoverContent>
+        </Popover>
         <Button variant="ghost" size="icon" onClick={nextWeek}>
           <ChevronRight className="h-4 w-4" />
         </Button>
