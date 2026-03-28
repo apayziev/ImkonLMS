@@ -37,7 +37,11 @@ export function LessonsList({
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
       onSessionOpen(response.data.id)
     },
-    onError: () => toast.error("Darsni boshlashda xatolik"),
+    onError: () => {
+      toast.error("Darsni boshlashda xatolik")
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
+    },
   })
 
   const lessons = data?.data ?? []

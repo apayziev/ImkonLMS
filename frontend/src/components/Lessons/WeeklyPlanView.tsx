@@ -48,7 +48,12 @@ export function WeeklyPlanView({
       }
       onSessionOpen(response.data.id)
     },
-    onError: () => toast.error("Xatolik"),
+    onError: () => {
+      toast.error("Reja yaratishda xatolik")
+      for (const d of weekDays) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(toDateString(d)) })
+      }
+    },
   })
 
   const today = todayStr()

@@ -72,7 +72,11 @@ export function SessionView({
       queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
       queryClient.setQueryData([...queryKeys.lessonSession, sessionId], response.data)
     },
-    onError: () => toast.error("Darsni boshlashda xatolik"),
+    onError: () => {
+      toast.error("Darsni boshlashda xatolik")
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
+    },
   })
 
   const [showPlan, setShowPlan] = useState(false)
