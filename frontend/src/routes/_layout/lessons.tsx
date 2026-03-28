@@ -668,6 +668,8 @@ function SessionView({
     onError: () => toast.error("Darsni boshlashda xatolik"),
   })
 
+  const [showPlan, setShowPlan] = useState(false)
+
   if (isLoading || !session) {
     return (
       <div className="space-y-6">
@@ -683,7 +685,6 @@ function SessionView({
   const isCompleted = session.status === "completed"
   const isPlanned = session.status === "planned"
   const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
-  const [showPlan, setShowPlan] = useState(isPlanned)
 
   return (
     <div className="space-y-6">
