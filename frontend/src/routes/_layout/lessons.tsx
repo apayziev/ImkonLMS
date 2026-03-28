@@ -683,6 +683,7 @@ function SessionView({
   const isCompleted = session.status === "completed"
   const isPlanned = session.status === "planned"
   const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
+  const [showPlan, setShowPlan] = useState(isPlanned)
 
   return (
     <div className="space-y-6">
@@ -765,8 +766,27 @@ function SessionView({
         </div>
       )}
 
-      {/* Student List — with point categories */}
-      <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} />
+      {/* Dars rejasi — toggle button for in_progress/completed, always open for planned */}
+      {isPlanned ? (
+        <TopicHomeworkSection session={session} sessionId={sessionId} disabled={false} />
+      ) : (
+        <>
+          <Button
+            variant="outline"
+            className="w-full justify-between h-12 text-base"
+            onClick={() => setShowPlan(!showPlan)}
+          >
+            <span className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Dars rejasi
+            </span>
+            <ChevronRight className={cn("h-4 w-4 transition-transform", showPlan && "rotate-90")} />
+          </Button>
+          {showPlan && (
+            <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} />
+          )}
+        </>
+      )}
 
       {!isPlanned && (
       <>
