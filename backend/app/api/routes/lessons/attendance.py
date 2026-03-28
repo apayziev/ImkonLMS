@@ -10,7 +10,7 @@ from app.api.deps import CurrentUser, SessionDep, SuperUser
 from app.core.config import today_local
 from app.core.enums import AttendanceStatus
 from app.core.exceptions import NotFoundException
-from app.core.utils import format_time
+from app.core.formatting import format_time
 from app.models.grade import Grade
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry

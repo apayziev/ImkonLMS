@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getTodayLessonsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { UZ_WEEKDAYS_SHORT } from "./constants"
-import { toDateString, todayStr } from "./helpers"
+import { toDateString, todayStr } from "./formatters"
 import { LessonCard } from "./LessonCard"
 
 export function LessonsList({

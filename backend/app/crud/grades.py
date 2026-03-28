@@ -1,10 +1,4 @@
+from app.crud.base import BaseCRUD
 from app.models.grade import Grade
 
-from .base import BaseCRUD
-
-
-class CRUDGrade(BaseCRUD[Grade]):
-    pass
-
-
-crud_grades = CRUDGrade(Grade)
+crud_grades = BaseCRUD(Grade)

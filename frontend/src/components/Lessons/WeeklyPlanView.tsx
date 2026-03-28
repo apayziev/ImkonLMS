@@ -23,7 +23,7 @@ import {
 import { getTodayLessonsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { UZ_WEEKDAYS_FULL, UZ_MONTHS } from "./constants"
-import { toDateString, todayStr, lessonStatusFlags } from "./helpers"
+import { toDateString, todayStr, lessonStatusFlags } from "./formatters"
 
 export function WeeklyPlanView({
   selectedDate,

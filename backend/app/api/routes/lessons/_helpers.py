@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import SessionDep
 from app.core.exceptions import ForbiddenException, NotFoundException
-from app.core.utils import format_time
+from app.core.formatting import format_time
 from app.models.lesson_material import LessonMaterial
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry

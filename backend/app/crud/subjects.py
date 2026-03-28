@@ -1,10 +1,4 @@
+from app.crud.base import BaseCRUD
 from app.models.subject import Subject
 
-from .base import BaseCRUD
-
-
-class CRUDSubject(BaseCRUD[Subject]):
-    pass
-
-
-crud_subjects = CRUDSubject(Subject)
+crud_subjects = BaseCRUD(Subject)

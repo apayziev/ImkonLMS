@@ -28,7 +28,7 @@ import { FileUploadSection } from "@/components/Common/FileUploadSection"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
 import { LESSON_TYPES } from "./constants"
-import { SaveStatusIndicator } from "./helpers"
+import { SaveStatusIndicator } from "./formatters"
 
 export function TopicHomeworkSection({
   session,

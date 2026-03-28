@@ -1,10 +1,4 @@
+from app.crud.base import BaseCRUD
 from app.models.academic_year import AcademicYear
 
-from .base import BaseCRUD
-
-
-class CRUDAcademicYear(BaseCRUD[AcademicYear]):
-    pass
-
-
-crud_academic_years = CRUDAcademicYear(AcademicYear)
+crud_academic_years = BaseCRUD(AcademicYear)

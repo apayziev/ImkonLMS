@@ -3,16 +3,12 @@
 from datetime import datetime
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 T = TypeVar("T")
 
 
 class TimestampSchema(BaseModel):
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat() if v else None},
-    )
-
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

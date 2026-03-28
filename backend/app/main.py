@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import router
-from .core.setup import create_application
+from .core.lifespan import create_application
 
 logger = logging.getLogger(__name__)
 

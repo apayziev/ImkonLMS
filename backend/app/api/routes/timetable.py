@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import SessionDep, SuperUser
 from app.core.exceptions import DuplicateValueException, NotFoundException
-from app.core.utils import format_time
+from app.core.formatting import format_time
 from app.crud.timetable import crud_schedule_entries, crud_school_settings, crud_time_slots
 from app.models.schedule_entry import ScheduleEntry
 from app.models.school_settings import SchoolSettings
