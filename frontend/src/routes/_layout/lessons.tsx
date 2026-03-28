@@ -70,7 +70,6 @@ function LessonsPage() {
         <WeeklyPlanView
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          onSessionOpen={setActiveSessionId}
         />
       )}
     </div>

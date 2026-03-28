@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  ArrowLeft,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -9,6 +10,7 @@ import {
   Loader2,
   Play,
 } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { lessonsApi } from "@/lib/api"
@@ -20,22 +22,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { getTodayLessonsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getTodayLessonsQueryOptions, getLessonSessionQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
+import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { UZ_WEEKDAYS_FULL, UZ_MONTHS } from "./constants"
 import { toDateString, todayStr, lessonStatusFlags } from "./formatters"
 
 export function WeeklyPlanView({
   selectedDate,
   onDateChange,
-  onSessionOpen,
 }: {
   selectedDate: Date
   onDateChange: (d: Date) => void
-  onSessionOpen: (sessionId: number) => void
 }) {
   const queryClient = useQueryClient()
   const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, onDateChange)
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null)
 
   const planMutation = useMutation({
     mutationFn: ({ scheduleEntryId, date }: { scheduleEntryId: number; date: string }) =>
@@ -46,7 +49,7 @@ export function WeeklyPlanView({
       for (const d of weekDays) {
         queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(toDateString(d)) })
       }
-      onSessionOpen(response.data.id)
+      setEditingSessionId(response.data.id)
     },
     onError: () => {
       toast.error("Reja yaratishda xatolik")
@@ -57,6 +60,15 @@ export function WeeklyPlanView({
   })
 
   const today = todayStr()
+
+  if (editingSessionId) {
+    return (
+      <PlanEditor
+        sessionId={editingSessionId}
+        onBack={() => setEditingSessionId(null)}
+      />
+    )
+  }
 
   // Week label
   const firstDay = weekDays[0]
@@ -109,10 +121,52 @@ export function WeeklyPlanView({
           key={toDateString(day)}
           day={day}
           today={today}
-          onSessionOpen={onSessionOpen}
+          onSessionOpen={setEditingSessionId}
           onPlan={(scheduleEntryId, date) => planMutation.mutate({ scheduleEntryId, date })}
         />
       ))}
+    </div>
+  )
+}
+
+/** Plan editor — shows only TopicHomeworkSection (no attendance/grades) */
+function PlanEditor({
+  sessionId,
+  onBack,
+}: {
+  sessionId: number
+  onBack: () => void
+}) {
+  const { data: session, isLoading } = useQuery(
+    getLessonSessionQueryOptions(sessionId),
+  )
+
+  if (isLoading || !session) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">
+            {session.grade_display} — {session.subject_name}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {session.period_number}-soat · {session.start_time} – {session.end_time}
+          </p>
+        </div>
+      </div>
+
+      <TopicHomeworkSection session={session} sessionId={sessionId} disabled={false} />
     </div>
   )
 }
