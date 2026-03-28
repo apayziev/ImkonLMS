@@ -977,33 +977,33 @@ function TopicHomeworkSection({
   }
 
   return (
-    <Card className="rounded-xl border p-5 space-y-5">
-      <div className="flex items-center justify-between">
+    <Card className="rounded-xl border p-5 space-y-0">
+      <div className="flex items-center justify-between pb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <FileText className="h-5 w-5 text-muted-foreground" />
           Dars rejasi
         </h3>
-        <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saqlanmoqda...
-            </span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="flex items-center gap-1.5 text-xs text-[var(--imkon-teal)]">
-              <Check className="h-3.5 w-3.5" /> Saqlandi
-            </span>
-          )}
-          {saveStatus === "error" && (
-            <span className="flex items-center gap-1.5 text-xs text-red-500">
-              <TriangleAlert className="h-3.5 w-3.5" /> Xatolik
-            </span>
-          )}
-        </div>
+        <span
+          className={`flex items-center gap-1.5 text-xs transition-opacity ${
+            saveStatus === "idle" ? "opacity-0" : "opacity-100"
+          } ${
+            saveStatus === "saving"
+              ? "text-muted-foreground"
+              : saveStatus === "saved"
+                ? "text-[var(--imkon-teal)]"
+                : saveStatus === "error"
+                  ? "text-red-500"
+                  : ""
+          }`}
+        >
+          {saveStatus === "saving" && (<><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saqlanmoqda...</>)}
+          {saveStatus === "saved" && (<><Check className="h-3.5 w-3.5" /> Saqlandi</>)}
+          {saveStatus === "error" && (<><TriangleAlert className="h-3.5 w-3.5" /> Xatolik</>)}
+        </span>
       </div>
 
       {/* Row 1: Lesson Type + Topic */}
-      <div className="grid gap-4 md:grid-cols-[200px_1fr]">
+      <div className="grid gap-4 md:grid-cols-2 border-t pt-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Dars turi</label>
           <Select
@@ -1041,7 +1041,7 @@ function TopicHomeworkSection({
       </div>
 
       {/* Row 2: Objectives */}
-      <div className="space-y-2">
+      <div className="space-y-2 border-t pt-4">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-muted-foreground" />
           <label className="text-sm font-medium text-muted-foreground">
@@ -1073,9 +1073,9 @@ function TopicHomeworkSection({
           ))}
           {objectives.length < 3 && !disabled && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="text-muted-foreground"
+              className="text-muted-foreground border-dashed"
               onClick={addObjective}
             >
               <Plus className="h-4 w-4 mr-1" /> Maqsad qo'shish
@@ -1085,8 +1085,11 @@ function TopicHomeworkSection({
       </div>
 
       {/* Row 3: Keywords */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Kalit so'zlar</label>
+      <div className="space-y-2 border-t pt-4">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-muted-foreground">Kalit so'zlar</label>
+          <span className="text-xs text-muted-foreground/60">Enter yoki vergul bilan qo'shing</span>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {keywords.map((kw, i) => (
             <Badge key={i} variant="secondary" className="text-sm gap-1 pr-1">
@@ -1123,7 +1126,7 @@ function TopicHomeworkSection({
       </div>
 
       {/* Row 4: Homework + Deadline */}
-      <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+      <div className="grid gap-4 md:grid-cols-[1fr_200px] border-t pt-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Uyga vazifa</label>
           <Textarea
@@ -1156,7 +1159,9 @@ function TopicHomeworkSection({
       </div>
 
       {/* Materials */}
-      <MaterialsSection sessionId={sessionId} materials={session.materials ?? []} disabled={disabled} />
+      <div className="border-t pt-4">
+        <MaterialsSection sessionId={sessionId} materials={session.materials ?? []} disabled={disabled} />
+      </div>
     </Card>
   )
 }
