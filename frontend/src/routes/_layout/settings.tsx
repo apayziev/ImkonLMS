@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import type { QuarterRead } from "@/lib/api"
 import { quartersApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -110,6 +111,10 @@ function SettingsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!academicYearId) return
+    if (!form.start_date || !form.end_date) {
+      toast.error("Boshlanish va tugash sanasini tanlang")
+      return
+    }
 
     const payload = {
       number: Number(form.number),
@@ -229,23 +234,23 @@ function SettingsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="start_date">Boshlanish sanasi</Label>
-              <Input
-                id="start_date"
-                type="date"
-                required
-                value={form.start_date}
-                onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
+              <Label>Boshlanish sanasi</Label>
+              <DatePicker
+                value={form.start_date || null}
+                onChange={(d) => setForm((f) => ({ ...f, start_date: d }))}
+                placeholder="Sanani tanlang"
+                fromYear={2020}
+                toYear={2035}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="end_date">Tugash sanasi</Label>
-              <Input
-                id="end_date"
-                type="date"
-                required
-                value={form.end_date}
-                onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
+              <Label>Tugash sanasi</Label>
+              <DatePicker
+                value={form.end_date || null}
+                onChange={(d) => setForm((f) => ({ ...f, end_date: d }))}
+                placeholder="Sanani tanlang"
+                fromYear={2020}
+                toYear={2035}
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
