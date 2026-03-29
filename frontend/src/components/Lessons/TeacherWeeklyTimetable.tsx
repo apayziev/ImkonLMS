@@ -1,0 +1,240 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
+import { buildGrid, DAY_SHORT } from "@/components/timetable/helpers"
+import useAuth from "@/hooks/useAuth"
+import {
+  getCurrentAcademicYearQueryOptions,
+  getScheduleQueryOptions,
+  getTimeSlotsQueryOptions,
+  getTodayLessonsQueryOptions,
+} from "@/hooks/useQueryOptions"
+import { useWeekNavigation } from "@/hooks/useWeekNavigation"
+
+import { UZ_MONTHS } from "./constants"
+import { toDateString, todayStr } from "./formatters"
+
+export function TeacherWeeklyTimetable({
+  onSessionOpen,
+  onDaySelect,
+}: {
+  onSessionOpen: (sessionId: number) => void
+  onDaySelect: (date: Date) => void
+}) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [loadingCell, setLoadingCell] = useState<number | null>(null)
+
+  const { weekDays, workingDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
+  const today = todayStr()
+
+  const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
+  const academicYearId = currentYear?.id ?? 0
+
+  const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
+  const { data: scheduleData, isLoading } = useQuery(
+    getScheduleQueryOptions({ academic_year_id: academicYearId, teacher_id: user?.id }),
+  )
+
+  const timeSlots = timeSlotsData?.data ?? []
+  const entries = scheduleData?.data ?? []
+  const { sorted, cellMap } = buildGrid(timeSlots, entries, workingDays)
+
+  // Only show columns that have at least one lesson entry for this teacher
+  const activeDays = workingDays.filter((day) =>
+    sorted.some((slot) => cellMap.has(`${day}-${slot.id}`)),
+  )
+
+  const dateForDay = (dayOfWeek: number): Date | undefined =>
+    weekDays[workingDays.indexOf(dayOfWeek)]
+
+  const dateStrForDay = (dayOfWeek: number): string => {
+    const d = dateForDay(dayOfWeek)
+    return d ? toDateString(d) : ""
+  }
+
+  const handleCellClick = async (scheduleEntryId: number, dayOfWeek: number) => {
+    const date = dateForDay(dayOfWeek)
+    if (!date) return
+    const dateStr = toDateString(date)
+
+    setLoadingCell(scheduleEntryId)
+    try {
+      const lessons = await queryClient.fetchQuery(getTodayLessonsQueryOptions(dateStr))
+      const lesson = lessons.data.find((l) => l.schedule_entry_id === scheduleEntryId)
+      if (lesson?.session_id) {
+        onSessionOpen(lesson.session_id)
+      } else {
+        onDaySelect(date)
+      }
+    } catch {
+      toast.error("Ma'lumotlarni yuklashda xatolik")
+    } finally {
+      setLoadingCell(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Week navigation */}
+      <div className="flex items-center justify-between">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-1.5 rounded-md hover:bg-muted/50"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              {UZ_MONTHS[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => { if (date) setSelectedDate(date) }}
+              defaultMonth={selectedDate}
+              fromYear={2024}
+              toYear={new Date().getFullYear() + 1}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={prevWeek}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={nextWeek}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Grid */}
+      {isLoading ? (
+        <div className="rounded-xl border overflow-hidden">
+          <div className="bg-muted/50 h-14 border-b" />
+          {Array.from({ length: 5 }).map((_, r) => (
+            <div key={r} className="flex gap-2 px-3 py-2 border-b last:border-0">
+              <Skeleton className="h-16 w-24 shrink-0" />
+              {Array.from({ length: activeDays.length || 5 }).map((_, d) => (
+                <Skeleton key={d} className="h-16 flex-1 rounded-lg" />
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : sorted.length === 0 || activeDays.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <CalendarDays className="h-16 w-16 mb-4 opacity-40" />
+          <p className="text-lg">Jadval hali kiritilmagan</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed" style={{ minWidth: `${activeDays.length * 120 + 110}px` }}>
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="h-14 px-3 text-center w-[110px] text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Vaqt
+                  </th>
+                  {activeDays.map((day) => {
+                    const dateStr = dateStrForDay(day)
+                    const isToday = dateStr === today
+                    const date = dateForDay(day)
+                    return (
+                      <th
+                        key={day}
+                        className={`h-14 px-2 text-center transition-colors ${
+                          isToday ? "bg-primary/10" : ""
+                        }`}
+                      >
+                        <div className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                          {DAY_SHORT[day]}
+                        </div>
+                        {date && (
+                          <div className={`text-lg font-bold leading-tight ${isToday ? "text-primary" : "text-foreground"}`}>
+                            {date.getDate()}
+                          </div>
+                        )}
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((slot) => (
+                  <tr key={slot.id} className="border-b last:border-0">
+                    {/* Time column */}
+                    <td className="px-3 py-2 align-middle border-r bg-muted/20 text-center">
+                      <div className="text-xs font-bold text-primary">
+                        {slot.period_number}-soat
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {slot.start_time}–{slot.end_time}
+                      </div>
+                    </td>
+
+                    {/* Day cells */}
+                    {activeDays.map((day) => {
+                      const entry = cellMap.get(`${day}-${slot.id}`)
+                      const dateStr = dateStrForDay(day)
+                      const isToday = dateStr === today
+                      const isFuture = dateStr > today
+                      const isThisLoading = entry !== undefined && loadingCell === entry.id
+
+                      return (
+                        <td
+                          key={day}
+                          className={`px-1.5 py-1.5 align-top border-r last:border-r-0 ${isToday ? "bg-primary/5" : ""}`}
+                        >
+                          {entry ? (
+                            <button
+                              type="button"
+                              onClick={() => !isThisLoading && handleCellClick(entry.id, day)}
+                              disabled={isThisLoading}
+                              className={`w-full min-h-[64px] rounded-lg px-2.5 py-2 text-left flex flex-col justify-center relative overflow-hidden transition-all
+                                bg-primary/10 border border-primary/20
+                                hover:shadow-md hover:-translate-y-px hover:bg-primary/15
+                                active:translate-y-0
+                                ${isFuture ? "opacity-60" : ""}
+                                ${isThisLoading ? "opacity-60 cursor-wait" : "cursor-pointer"}
+                              `}
+                            >
+                              <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" />
+                              {isThisLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />
+                              ) : (
+                                <>
+                                  <p className="text-sm font-bold truncate">{entry.grade_display}</p>
+                                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
+                                  {entry.room && (
+                                    <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                                      #{entry.room}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <div className="min-h-[64px]" />
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -22,7 +22,6 @@ const adminMenuItems: Item[] = [
 
 const teacherMenuItems: Item[] = [
   { icon: BookOpen, title: "Darslarim", path: "/lessons" },
-  { icon: CalendarDays, title: "Dars jadvali", path: "/timetable" },
 ]
 
 export function AppSidebar() {
