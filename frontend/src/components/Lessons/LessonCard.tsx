@@ -9,7 +9,7 @@ import {
 import type { TodayLessonRead } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { PatternCard } from "@/components/Common/PatternCard"
 import { lessonStatusFlags } from "./formatters"
 
 export function LessonCard({
@@ -28,7 +28,8 @@ export function LessonCard({
   const { isInProgress, isCompleted, isPlanned } = lessonStatusFlags(lesson)
 
   return (
-    <Card
+    <PatternCard
+      pattern={isCompleted ? "green" : "purple"}
       className={cn(
         "rounded-xl border-2 p-5 transition-colors",
         isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
@@ -84,6 +85,6 @@ export function LessonCard({
           Darsni boshlash
         </Button>
       )}
-    </Card>
+    </PatternCard>
   )
 }

@@ -33,15 +33,20 @@ import { SaveStatusIndicator } from "./formatters"
 
 export function TopicHomeworkSection({
   session,
-  sessionId,
+  sessionId: initialSessionId,
   disabled,
+  createSession,
 }: {
   session: SessionDetailRead
   sessionId: number
   disabled: boolean
+  createSession?: () => Promise<SessionDetailRead>
 }) {
   const queryClient = useQueryClient()
   const { status: saveStatus, onMutate, onSuccess, onError } = useSaveStatus()
+
+  // Session ID may be 0 initially for new plans — resolved after lazy creation
+  const sessionIdRef = useRef(initialSessionId)
 
   const [lessonType, setLessonType] = useState(session.lesson_type ?? "")
   const [topic, setTopic] = useState(session.topic ?? "")
@@ -67,13 +72,23 @@ export function TopicHomeworkSection({
   }, [])
 
   const mutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) =>
-      lessonsApi.updateSession(sessionId, data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      // Lazy session creation: if sessionId is 0, create plan first
+      if (!sessionIdRef.current && createSession) {
+        const created = await createSession()
+        sessionIdRef.current = created.id
+        queryClient.setQueryData(
+          [...queryKeys.lessonSession, created.id],
+          created,
+        )
+      }
+      return lessonsApi.updateSession(sessionIdRef.current, data)
+    },
     onMutate,
     onSuccess: (response) => {
       onSuccess()
       queryClient.setQueryData(
-        [...queryKeys.lessonSession, sessionId],
+        [...queryKeys.lessonSession, sessionIdRef.current],
         (old: SessionDetailRead | undefined) =>
           old ? { ...old, ...response.data } : old,
       )
@@ -141,18 +156,29 @@ export function TopicHomeworkSection({
 
   // File upload/delete handlers
   const handleUpload = async (file: File) => {
-    const response = await lessonsApi.uploadMaterial(sessionId, file)
+    // Lazy session creation for file upload
+    if (!sessionIdRef.current && createSession) {
+      const created = await createSession()
+      sessionIdRef.current = created.id
+      queryClient.setQueryData(
+        [...queryKeys.lessonSession, created.id],
+        created,
+      )
+    }
+    const sid = sessionIdRef.current
+    const response = await lessonsApi.uploadMaterial(sid, file)
     queryClient.setQueryData(
-      [...queryKeys.lessonSession, sessionId],
+      [...queryKeys.lessonSession, sid],
       (old: SessionDetailRead | undefined) =>
         old ? { ...old, materials: [...(old.materials ?? []), response.data] } : old,
     )
   }
 
   const handleDelete = async (materialId: number) => {
-    await lessonsApi.deleteMaterial(sessionId, materialId)
+    const sid = sessionIdRef.current
+    await lessonsApi.deleteMaterial(sid, materialId)
     queryClient.setQueryData(
-      [...queryKeys.lessonSession, sessionId],
+      [...queryKeys.lessonSession, sid],
       (old: SessionDetailRead | undefined) =>
         old ? { ...old, materials: (old.materials ?? []).filter((m) => m.id !== materialId) } : old,
     )

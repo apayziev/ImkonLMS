@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
   CalendarDays,
@@ -10,9 +10,9 @@ import {
   Loader2,
   Play,
 } from "lucide-react"
-import { useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useState } from "react"
 
+import type { TodayLessonRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,10 @@ import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { UZ_WEEKDAYS_FULL, UZ_MONTHS } from "./constants"
 import { toDateString, todayStr, lessonStatusFlags } from "./formatters"
 
+type EditingTarget =
+  | { type: "existing"; sessionId: number }
+  | { type: "new"; scheduleEntryId: number; date: string; lesson: TodayLessonRead }
+
 export function WeeklyPlanView({
   selectedDate,
   onDateChange,
@@ -36,36 +40,16 @@ export function WeeklyPlanView({
   selectedDate: Date
   onDateChange: (d: Date) => void
 }) {
-  const queryClient = useQueryClient()
   const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, onDateChange)
-  const [editingSessionId, setEditingSessionId] = useState<number | null>(null)
-
-  const planMutation = useMutation({
-    mutationFn: ({ scheduleEntryId, date }: { scheduleEntryId: number; date: string }) =>
-      lessonsApi.planSession(scheduleEntryId, date),
-    onSuccess: (response) => {
-      toast.success("Dars rejasi yaratildi")
-      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      for (const d of weekDays) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(toDateString(d)) })
-      }
-      setEditingSessionId(response.data.id)
-    },
-    onError: () => {
-      toast.error("Reja yaratishda xatolik")
-      for (const d of weekDays) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(toDateString(d)) })
-      }
-    },
-  })
+  const [editing, setEditing] = useState<EditingTarget | null>(null)
 
   const today = todayStr()
 
-  if (editingSessionId) {
+  if (editing) {
     return (
       <PlanEditor
-        sessionId={editingSessionId}
-        onBack={() => setEditingSessionId(null)}
+        editing={editing}
+        onBack={() => setEditing(null)}
       />
     )
   }
@@ -121,8 +105,8 @@ export function WeeklyPlanView({
           key={toDateString(day)}
           day={day}
           today={today}
-          onSessionOpen={setEditingSessionId}
-          onPlan={(scheduleEntryId, date) => planMutation.mutate({ scheduleEntryId, date })}
+          onSessionOpen={(sessionId) => setEditing({ type: "existing", sessionId })}
+          onNewPlan={(lesson, date) => setEditing({ type: "new", scheduleEntryId: lesson.schedule_entry_id, date, lesson })}
         />
       ))}
     </div>
@@ -131,23 +115,84 @@ export function WeeklyPlanView({
 
 /** Plan editor — shows only TopicHomeworkSection (no attendance/grades) */
 function PlanEditor({
-  sessionId,
+  editing,
   onBack,
 }: {
-  sessionId: number
+  editing: EditingTarget
   onBack: () => void
 }) {
-  const { data: session, isLoading } = useQuery(
-    getLessonSessionQueryOptions(sessionId),
-  )
+  const queryClient = useQueryClient()
 
-  if (isLoading || !session) {
+  // For existing sessions, load from API
+  const { data: session, isLoading } = useQuery({
+    ...getLessonSessionQueryOptions(editing.type === "existing" ? editing.sessionId : 0),
+    enabled: editing.type === "existing",
+  })
+
+  // For new plans: empty session object, lazy creation via callback
+  const createSession = useCallback(async () => {
+    if (editing.type !== "new") throw new Error("Invalid state")
+    const res = await lessonsApi.planSession(editing.scheduleEntryId, editing.date)
+    // Invalidate lesson lists so DayLessons shows updated status when going back
+    queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+    queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(editing.date) })
+    return res.data
+  }, [editing, queryClient])
+
+  if (editing.type === "existing") {
+    if (isLoading || !session) {
+      return (
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-64 rounded-xl" />
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {session.grade_display} — {session.subject_name}
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              {session.period_number}-soat · {session.start_time} – {session.end_time}
+            </p>
+          </div>
+        </div>
+
+        <TopicHomeworkSection session={session} sessionId={session.id} disabled={false} />
       </div>
     )
+  }
+
+  // New plan mode — show empty form, session created lazily on first save
+  const { lesson } = editing
+  const emptySession: import("@/lib/api").SessionDetailRead = {
+    id: 0,
+    schedule_entry_id: editing.scheduleEntryId,
+    session_date: editing.date,
+    started_at: "",
+    ended_at: null,
+    status: "planned",
+    grade_display: lesson.grade_display,
+    subject_name: lesson.subject_name,
+    period_number: lesson.period_number,
+    start_time: lesson.start_time,
+    end_time: lesson.end_time,
+    teacher_name: "",
+    topic: null,
+    homework: null,
+    homework_deadline: null,
+    lesson_type: null,
+    objectives: null,
+    keywords: null,
+    students: [],
+    materials: [],
   }
 
   return (
@@ -158,15 +203,20 @@ function PlanEditor({
         </Button>
         <div>
           <h1 className="text-2xl font-bold">
-            {session.grade_display} — {session.subject_name}
+            {lesson.grade_display} — {lesson.subject_name}
           </h1>
           <p className="text-muted-foreground text-lg">
-            {session.period_number}-soat · {session.start_time} – {session.end_time}
+            {lesson.period_number}-soat · {lesson.start_time} – {lesson.end_time}
           </p>
         </div>
       </div>
 
-      <TopicHomeworkSection session={session} sessionId={sessionId} disabled={false} />
+      <TopicHomeworkSection
+        session={emptySession}
+        sessionId={0}
+        disabled={false}
+        createSession={createSession}
+      />
     </div>
   )
 }
@@ -176,12 +226,12 @@ function DayLessons({
   day,
   today,
   onSessionOpen,
-  onPlan,
+  onNewPlan,
 }: {
   day: Date
   today: string
   onSessionOpen: (sessionId: number) => void
-  onPlan: (scheduleEntryId: number, date: string) => void
+  onNewPlan: (lesson: TodayLessonRead, date: string) => void
 }) {
   const ds = toDateString(day)
   const isToday = ds === today
@@ -233,7 +283,7 @@ function DayLessons({
                   if (hasSession) {
                     onSessionOpen(lesson.session_id!)
                   } else {
-                    onPlan(lesson.schedule_entry_id, ds)
+                    onNewPlan(lesson, ds)
                   }
                 }}
               >
