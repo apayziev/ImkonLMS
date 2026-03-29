@@ -171,7 +171,6 @@ export function TeacherWeeklyTimetable({
                     {activeDays.map((day) => {
                       const entry = cellMap.get(`${day}-${slot.id}`)
                       const dateStr = dateStrForDay(day)
-                      const isToday = dateStr === today
                       const isPast = dateStr < today
                       const isClickable = isCurrentWeek
                       const isThisLoading = entry !== undefined && loadingCell === entry.id
