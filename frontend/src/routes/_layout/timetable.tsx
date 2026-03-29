@@ -21,7 +21,7 @@ import {
   queryKeys,
 } from "@/hooks/useQueryOptions"
 import { EntryDialog } from "@/components/timetable/entry-dialog"
-import { DAY_NAMES, buildGrid, getBreakInfo, type EntryDialogState } from "@/components/timetable/helpers"
+import { DAY_NAMES, buildGrid, getBreakAfter, getBreakBefore, getBreakInfo, type EntryDialogState } from "@/components/timetable/helpers"
 import { SettingsSection } from "@/components/timetable/settings-section"
 
 export const Route = createFileRoute("/_layout/timetable")({
@@ -361,6 +361,20 @@ function TimetablePage() {
               </tr>
             </thead>
             <tbody>
+              {sorted.length > 0 && (() => {
+                const preBreak = getBreakBefore(sorted[0], settingsBreaks)
+                return preBreak ? (
+                  <tr className="border-b bg-muted/30">
+                    <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                      <div className="text-xs font-medium text-muted-foreground">{preBreak.name}</div>
+                      <div className="text-xs text-muted-foreground/70">{preBreak.minutes} min</div>
+                    </td>
+                    {days.map((day) => (
+                      <td key={day} className="border-r last:border-r-0 bg-muted/30" />
+                    ))}
+                  </tr>
+                ) : null
+              })()}
               {sorted.map((slot, idx) => {
                 const brk = getBreakInfo(slot, sorted[idx + 1], settingsBreaks)
 
@@ -431,6 +445,20 @@ function TimetablePage() {
                   </Fragment>
                 )
               })}
+              {sorted.length > 0 && (() => {
+                const postBreak = getBreakAfter(sorted[sorted.length - 1], settingsBreaks)
+                return postBreak ? (
+                  <tr className="border-b bg-muted/30">
+                    <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                      <div className="text-xs font-medium text-muted-foreground">{postBreak.name}</div>
+                      <div className="text-xs text-muted-foreground/70">{postBreak.minutes} min</div>
+                    </td>
+                    {days.map((day) => (
+                      <td key={day} className="border-r last:border-r-0 bg-muted/30" />
+                    ))}
+                  </tr>
+                ) : null
+              })()}
             </tbody>
           </table>
           </div>
