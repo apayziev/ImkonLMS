@@ -24,8 +24,8 @@ class LessonSession(BaseModel):
         ),
     )
 
-    schedule_entry_id: Mapped[int] = mapped_column(
-        ForeignKey("schedule_entry.id"), index=True, kw_only=True,
+    schedule_entry_id: Mapped[int | None] = mapped_column(
+        ForeignKey("schedule_entry.id", ondelete="SET NULL"), nullable=True, index=True, kw_only=True,
     )
     session_date: Mapped[date] = mapped_column(Date, kw_only=True)
     started_at: Mapped[datetime | None] = mapped_column(
