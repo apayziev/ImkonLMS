@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { CalendarDays, Loader2 } from "lucide-react"
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { buildGrid, DAY_SHORT } from "@/components/timetable/helpers"
 import useAuth from "@/hooks/useAuth"
@@ -12,9 +13,23 @@ import {
   getTimeSlotsQueryOptions,
   getTodayLessonsQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { useWeekNavigation } from "@/hooks/useWeekNavigation"
+import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 
 import { toDateString, todayStr } from "./formatters"
+
+const UZ_MONTHS_SHORT = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
+
+function formatWeekRange(days: Date[]): string {
+  if (days.length === 0) return ""
+  const first = days[0]
+  const last = days[days.length - 1]
+  const firstMon = UZ_MONTHS_SHORT[first.getMonth()]
+  const lastMon = UZ_MONTHS_SHORT[last.getMonth()]
+  if (first.getMonth() === last.getMonth()) {
+    return `${first.getDate()} – ${last.getDate()} ${firstMon}`
+  }
+  return `${first.getDate()} ${firstMon} – ${last.getDate()} ${lastMon}`
+}
 
 export function TeacherWeeklyTimetable({
   onSessionOpen,
@@ -26,8 +41,9 @@ export function TeacherWeeklyTimetable({
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [loadingCell, setLoadingCell] = useState<number | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(getEffectiveWeekDate)
 
-  const { weekDays, workingDays } = useWeekNavigation(new Date(), () => {})
+  const { weekDays, workingDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
   const today = todayStr()
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -45,6 +61,11 @@ export function TeacherWeeklyTimetable({
   // Only show columns that have at least one lesson entry for this teacher
   const activeDays = workingDays.filter((day) =>
     sorted.some((slot) => cellMap.has(`${day}-${slot.id}`)),
+  )
+
+  // Only show rows that have at least one entry
+  const activeSlots = sorted.filter((slot) =>
+    activeDays.some((day) => cellMap.has(`${day}-${slot.id}`)),
   )
 
   const dateForDay = (dayOfWeek: number): Date | undefined =>
@@ -78,6 +99,19 @@ export function TeacherWeeklyTimetable({
 
   return (
     <div className="space-y-4">
+      {/* Week navigation */}
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-sm font-semibold min-w-[130px] text-center">
+          {formatWeekRange(weekDays)}
+        </span>
+        <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
       {/* Grid */}
       {isLoading ? (
         <div className="rounded-xl border overflow-hidden">
@@ -130,7 +164,7 @@ export function TeacherWeeklyTimetable({
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((slot) => (
+                {activeSlots.map((slot) => (
                   <tr key={slot.id} className="border-b last:border-0">
                     {/* Time column */}
                     <td className="px-3 py-2 align-middle border-r bg-muted/20 text-center">
@@ -147,7 +181,7 @@ export function TeacherWeeklyTimetable({
                       const entry = cellMap.get(`${day}-${slot.id}`)
                       const dateStr = dateStrForDay(day)
                       const isToday = dateStr === today
-                      const isFuture = dateStr > today
+                      const isPast = dateStr < today
                       const isThisLoading = entry !== undefined && loadingCell === entry.id
 
                       return (
@@ -164,7 +198,7 @@ export function TeacherWeeklyTimetable({
                                 bg-primary/10 border border-primary/20
                                 hover:shadow-md hover:-translate-y-px hover:bg-primary/15
                                 active:translate-y-0
-                                ${isFuture ? "opacity-60" : ""}
+                                ${isPast ? "opacity-50" : ""}
                                 ${isThisLoading ? "opacity-60 cursor-wait" : "cursor-pointer"}
                               `}
                             >
@@ -173,13 +207,13 @@ export function TeacherWeeklyTimetable({
                                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />
                               ) : (
                                 <>
-                                  <p className="text-sm font-bold truncate">{entry.grade_display}</p>
+                                  <div className="flex items-baseline justify-between gap-1">
+                                    <p className="text-sm font-bold truncate">{entry.grade_display}</p>
+                                    {entry.room && (
+                                      <p className="text-[11px] text-muted-foreground shrink-0">#{entry.room}</p>
+                                    )}
+                                  </div>
                                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
-                                  {entry.room && (
-                                    <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
-                                      #{entry.room}
-                                    </p>
-                                  )}
                                 </>
                               )}
                             </button>
