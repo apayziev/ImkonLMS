@@ -71,6 +71,9 @@ async def start_session(
     entry = await _validate_entry_ownership(db, body.schedule_entry_id, current_user.id)
     today = body.target_date or today_local()
 
+    if today > today_local():
+        raise BadRequestException("Kelajakdagi darsni boshlash mumkin emas")
+
     # Check if session already exists for this date
     existing = await crud_lesson_sessions.get(
         db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,

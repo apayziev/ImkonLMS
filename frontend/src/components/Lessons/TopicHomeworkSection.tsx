@@ -214,7 +214,7 @@ export function TopicHomeworkSection({
         </div>
       </div>
 
-      <div className="p-5 space-y-0">
+      <div className="p-5 space-y-5">
 
       {/* Row 1: Lesson Type + Topic */}
       <div className="grid gap-4 md:grid-cols-[180px_1fr] border-t pt-4">

@@ -1,14 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BookOpen, ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 
 import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getTodayLessonsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
-import { UZ_WEEKDAYS_SHORT } from "./constants"
+import { UZ_MONTHS, UZ_WEEKDAYS_SHORT } from "./constants"
 import { toDateString, todayStr } from "./formatters"
 import { LessonCard } from "./LessonCard"
 
@@ -28,6 +34,7 @@ export function LessonsList({
   const isToday = dateStr === today
 
   const { data, isLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
+  const isFutureDate = dateStr > today
 
   const startMutation = useMutation({
     mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId, dateStr),
@@ -48,6 +55,33 @@ export function LessonsList({
 
   return (
     <div className="space-y-6">
+      {/* Month label + Calendar popup */}
+      <div className="flex items-center justify-center">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-1.5 rounded-md hover:bg-muted/50"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              {UZ_MONTHS[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) onDateChange(date)
+              }}
+              defaultMonth={selectedDate}
+              fromYear={2024}
+              toYear={new Date().getFullYear() + 1}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {/* Week day selector */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
@@ -105,7 +139,7 @@ export function LessonsList({
               onStart={() => startMutation.mutate(lesson.schedule_entry_id)}
               onContinue={() => onSessionOpen(lesson.session_id!)}
               isStarting={startMutation.isPending && startMutation.variables === lesson.schedule_entry_id}
-              canStart
+              canStart={!isFutureDate}
             />
           ))}
         </div>
