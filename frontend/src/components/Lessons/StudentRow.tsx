@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Loader2, TriangleAlert } from "lucide-react"
+import { Check, Eye, Loader2, TriangleAlert } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -7,6 +7,7 @@ import type { SessionDetailRead, SessionStudentRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS, GRADES } from "./constants"
 
@@ -67,6 +68,7 @@ export function StudentRow({
 
   const isAbsent = student.status !== "present"
   const isUnmarked = student.status === "unmarked"
+  const [photoOpen, setPhotoOpen] = useState(false)
 
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
@@ -111,12 +113,23 @@ export function StudentRow({
 
       {/* Student Name + Photo */}
       <div className="flex items-center gap-3 min-w-0">
-        <Avatar className="h-8 w-8 shrink-0">
-          <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
-          <AvatarFallback className="text-xs">
-            {student.first_name[0]}{student.last_name[0]}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative group shrink-0">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+            <AvatarFallback className="text-xs">
+              {student.first_name[0]}{student.last_name[0]}
+            </AvatarFallback>
+          </Avatar>
+          {student.photo_url && (
+            <button
+              type="button"
+              onClick={() => setPhotoOpen(true)}
+              className="absolute inset-0 rounded-full flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Eye className="h-3.5 w-3.5 text-white" />
+            </button>
+          )}
+        </div>
         <div className="min-w-0">
           <span className="text-lg font-medium truncate block">
             {student.last_name} {student.first_name}
@@ -180,6 +193,20 @@ export function StudentRow({
           ))
         )}
       </div>
+
+      {/* Photo zoom dialog */}
+      {student.photo_url && (
+        <Dialog open={photoOpen} onOpenChange={setPhotoOpen}>
+          <DialogContent className="flex items-center justify-center bg-transparent border-none shadow-none p-0 max-w-sm">
+            <img
+              src={student.photo_url}
+              alt={student.full_name}
+              className="rounded-xl max-h-[80vh] max-w-full object-contain"
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
+
