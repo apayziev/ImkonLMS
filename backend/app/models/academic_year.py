@@ -1,9 +1,14 @@
 """AcademicYear model — synced from Payment system (read-only)."""
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, Integer, SmallInteger, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
+
+if TYPE_CHECKING:
+    from .quarter import Quarter
 
 
 class AcademicYear(BaseModel):
@@ -47,4 +52,11 @@ class AcademicYear(BaseModel):
         index=True,
         comment="Whether this is the currently active academic year",
         kw_only=True,
+    )
+
+    quarters: Mapped[list["Quarter"]] = relationship(
+        back_populates="academic_year",
+        cascade="all, delete-orphan",
+        order_by="Quarter.number",
+        init=False,
     )

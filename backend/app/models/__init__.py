@@ -5,6 +5,7 @@ from .base import BaseModel
 from .grade import Grade
 from .lesson_material import LessonMaterial
 from .lesson_session import LessonSession
+from .quarter import Quarter
 from .schedule_entry import ScheduleEntry
 from .school_settings import SchoolSettings
 from .session_attendance import SessionAttendance

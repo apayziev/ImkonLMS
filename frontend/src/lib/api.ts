@@ -511,19 +511,16 @@ export const lessonsApi = {
 export interface QuarterRead {
   id: number
   academic_year_id: number
-  name: string
-  quarter_number: number
+  number: number
   start_date: string
   end_date: string
-  is_current: boolean
   created_at: string | null
   updated_at: string | null
 }
 
 export interface QuarterCreate {
   academic_year_id: number
-  name: string
-  quarter_number: number
+  number: number
   start_date: string
   end_date: string
 }
@@ -537,11 +534,13 @@ export const quartersApi = {
   list: (academicYearId?: number) =>
     api.get<QuarterList>("/api/v1/quarters/", { params: academicYearId ? { academic_year_id: academicYearId } : {} }),
   current: () =>
-    api.get<QuarterRead>("/api/v1/quarters/current"),
+    api.get<QuarterRead | null>("/api/v1/quarters/current"),
   create: (data: QuarterCreate) =>
     api.post<QuarterRead>("/api/v1/quarters/", data),
-  update: (id: number, data: Partial<QuarterCreate>) =>
+  update: (id: number, data: Partial<Omit<QuarterCreate, "academic_year_id">>) =>
     api.patch<QuarterRead>(`/api/v1/quarters/${id}`, data),
+  delete: (id: number) =>
+    api.delete(`/api/v1/quarters/${id}`),
 }
 
 // ─── Behavior Points ────────────────────────────────────────────────────────

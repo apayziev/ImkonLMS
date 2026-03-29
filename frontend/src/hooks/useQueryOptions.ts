@@ -1,4 +1,4 @@
-import { academicYearsApi, gradesApi, lessonsApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -16,6 +16,7 @@ export const queryKeys = {
   todayLessons: ["today-lessons"] as const,
   lessonsForDate: (date: string) => ["lessons-for-date", date] as const,
   lessonSession: ["lesson-session"] as const,
+  quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
   attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
 } as const
 
@@ -140,5 +141,15 @@ export function getAttendanceQueryOptions(gradeId: number, date: string) {
     enabled: gradeId > 0,
     // Auto-refresh every 30s on today's date for live attendance updates
     refetchInterval: isToday ? 30_000 : false as const,
+  }
+}
+
+export function getQuartersQueryOptions(academicYearId?: number) {
+  return {
+    queryKey: queryKeys.quarters(academicYearId),
+    queryFn: async () => {
+      const { data } = await quartersApi.list(academicYearId)
+      return data
+    },
   }
 }
