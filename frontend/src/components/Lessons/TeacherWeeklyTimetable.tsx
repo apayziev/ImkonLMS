@@ -1,9 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { CalendarDays, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { buildGrid, DAY_SHORT } from "@/components/timetable/helpers"
 import useAuth from "@/hooks/useAuth"
@@ -13,38 +12,26 @@ import {
   getTimeSlotsQueryOptions,
   getTodayLessonsQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
+import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 
 import { toDateString, todayStr } from "./formatters"
 
-const UZ_MONTHS_SHORT = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
-
-function formatWeekRange(days: Date[]): string {
-  if (days.length === 0) return ""
-  const first = days[0]
-  const last = days[days.length - 1]
-  const firstMon = UZ_MONTHS_SHORT[first.getMonth()]
-  const lastMon = UZ_MONTHS_SHORT[last.getMonth()]
-  if (first.getMonth() === last.getMonth()) {
-    return `${first.getDate()} – ${last.getDate()} ${firstMon}`
-  }
-  return `${first.getDate()} ${firstMon} – ${last.getDate()} ${lastMon}`
-}
-
 export function TeacherWeeklyTimetable({
+  selectedDate,
   onSessionOpen,
   onDaySelect,
 }: {
+  selectedDate: Date
   onSessionOpen: (sessionId: number) => void
   onDaySelect: (date: Date) => void
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [loadingCell, setLoadingCell] = useState<number | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date>(getEffectiveWeekDate)
 
-  const { weekDays, workingDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
+  const { weekDays, workingDays } = useWeekNavigation(selectedDate, () => {})
   const today = todayStr()
+  const isCurrentWeek = weekDays.some((d) => toDateString(d) === today)
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id ?? 0
@@ -99,19 +86,6 @@ export function TeacherWeeklyTimetable({
 
   return (
     <div className="space-y-4">
-      {/* Week navigation */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8">
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="text-sm font-semibold min-w-[130px] text-center">
-          {formatWeekRange(weekDays)}
-        </span>
-        <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8">
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
       {/* Grid */}
       {isLoading ? (
         <div className="rounded-xl border overflow-hidden">
@@ -182,6 +156,7 @@ export function TeacherWeeklyTimetable({
                       const dateStr = dateStrForDay(day)
                       const isToday = dateStr === today
                       const isPast = dateStr < today
+                      const isClickable = isCurrentWeek
                       const isThisLoading = entry !== undefined && loadingCell === entry.id
 
                       return (
@@ -192,14 +167,13 @@ export function TeacherWeeklyTimetable({
                           {entry ? (
                             <button
                               type="button"
-                              onClick={() => !isThisLoading && handleCellClick(entry.id, day)}
-                              disabled={isThisLoading}
+                              onClick={() => isClickable && !isThisLoading && handleCellClick(entry.id, day)}
+                              disabled={!isClickable || isThisLoading}
                               className={`w-full min-h-[64px] rounded-lg px-2.5 py-2 text-left flex flex-col justify-center relative overflow-hidden transition-all
                                 bg-primary/10 border border-primary/20
-                                hover:shadow-md hover:-translate-y-px hover:bg-primary/15
-                                active:translate-y-0
-                                ${isPast ? "opacity-50" : ""}
-                                ${isThisLoading ? "opacity-60 cursor-wait" : "cursor-pointer"}
+                                ${isClickable ? "hover:shadow-md hover:-translate-y-px hover:bg-primary/15 active:translate-y-0 cursor-pointer" : "cursor-default opacity-50"}
+                                ${isClickable && isPast ? "opacity-50" : ""}
+                                ${isThisLoading ? "opacity-60 cursor-wait" : ""}
                               `}
                             >
                               <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" />
