@@ -144,7 +144,7 @@ export function TeacherWeeklyTimetable({
                         </div>
                         {date && (
                           <div className="flex items-center justify-center mt-0.5">
-                            <span className={`text-lg font-bold leading-tight w-9 h-9 flex items-center justify-center rounded-full ${isToday ? "bg-primary text-white" : "text-foreground"}`}>
+                            <span className={`text-lg font-bold leading-tight ${isToday ? "text-primary" : "text-foreground"}`}>
                               {date.getDate()}
                             </span>
                           </div>
@@ -179,7 +179,7 @@ export function TeacherWeeklyTimetable({
                       return (
                         <td
                           key={day}
-                          className={`px-1.5 py-1.5 align-top border-r last:border-r-0 ${isToday ? "bg-primary/5" : ""}`}
+                          className="px-1.5 py-1.5 align-top border-r last:border-r-0"
                         >
                           {entry ? (
                             <button

@@ -270,6 +270,7 @@ function SettingsPage() {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("uz-UZ", { day: "numeric", month: "long" })
+  const UZ_MONTHS = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"]
+  const [, m, d] = dateStr.split("-")
+  return `${parseInt(d)}-${UZ_MONTHS[parseInt(m) - 1]}`
 }
