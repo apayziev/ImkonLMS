@@ -186,7 +186,7 @@ export function TeacherWeeklyTimetable({
                               type="button"
                               onClick={() => isClickable && !isThisLoading && handleCellClick(entry.id, day)}
                               disabled={!isClickable || isThisLoading}
-                              className={`w-full min-h-[64px] rounded-lg px-2.5 py-2 text-left flex flex-col justify-center relative overflow-hidden transition-all
+                              className={`w-full min-h-[96px] rounded-lg px-2.5 py-3 text-left flex flex-col justify-center relative overflow-hidden transition-all
                                 bg-primary/10 border border-primary/20
                                 ${isClickable ? "hover:shadow-md hover:-translate-y-px hover:bg-primary/15 active:translate-y-0 cursor-pointer" : "cursor-default opacity-50"}
                                 ${isClickable && isPast ? "opacity-50" : ""}
@@ -209,7 +209,7 @@ export function TeacherWeeklyTimetable({
                               )}
                             </button>
                           ) : (
-                            <div className="min-h-[64px]" />
+                            <div className="min-h-[96px]" />
                           )}
                         </td>
                       )
