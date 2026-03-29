@@ -69,6 +69,7 @@ class ScheduleEntryCreate(BaseModel):
     teacher_id: int
     time_slot_id: int
     day_of_week: int = Field(ge=1, le=7)
+    room: str | None = Field(None, max_length=20)
 
 
 class ScheduleEntryUpdate(BaseModel):
@@ -76,6 +77,7 @@ class ScheduleEntryUpdate(BaseModel):
 
     subject_id: int | None = None
     teacher_id: int | None = None
+    room: str | None = Field(None, max_length=20)
 
 
 class ScheduleEntryRead(TimestampSchema):
@@ -88,6 +90,8 @@ class ScheduleEntryRead(TimestampSchema):
     teacher_id: int
     time_slot_id: int
     day_of_week: int
+
+    room: str | None = None
 
     # Nested read-only display fields (populated via relationship)
     subject_name: str | None = None

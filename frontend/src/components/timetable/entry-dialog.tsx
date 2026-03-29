@@ -3,6 +3,7 @@ import { useState } from "react"
 
 import type { SubjectRead, TeacherRead, TimeSlotRead } from "@/lib/api"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -38,7 +39,7 @@ export function EntryDialog({
   subjects: SubjectRead[]
   teachers: TeacherRead[]
   timeSlots: TimeSlotRead[]
-  onSave: (subjectId: number, teacherId: number) => void
+  onSave: (subjectId: number, teacherId: number, room: string | null) => void
   onDelete: () => void
   isPending: boolean
   isDeleting: boolean
@@ -46,6 +47,7 @@ export function EntryDialog({
   const slot = timeSlots.find((s) => s.id === state.slotId)
   const [subjectId, setSubjectId] = useState(state.entry?.subject_id?.toString() ?? "")
   const [teacherId, setTeacherId] = useState(state.entry?.teacher_id?.toString() ?? "")
+  const [room, setRoom] = useState(state.entry?.room ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Filter teachers: must have this grade in teaching_grade_ids
@@ -117,6 +119,17 @@ export function EntryDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Room */}
+          <div className="space-y-1.5">
+            <Label>Xona</Label>
+            <Input
+              placeholder="Masalan: 14, 2A, Lab-1"
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              maxLength={20}
+            />
+          </div>
         </div>
 
         <DialogFooter className="flex gap-2 sm:justify-between">
@@ -145,7 +158,7 @@ export function EntryDialog({
           )}
           <Button
             onClick={() => {
-              if (subjectId && teacherId) onSave(Number(subjectId), Number(teacherId))
+              if (subjectId && teacherId) onSave(Number(subjectId), Number(teacherId), room.trim() || null)
             }}
             disabled={!subjectId || !teacherId || isPending}
           >

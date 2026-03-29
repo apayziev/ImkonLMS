@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Index, SmallInteger
+from sqlalchemy import ForeignKey, Index, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -36,6 +36,7 @@ class ScheduleEntry(BaseModel):
         ForeignKey("time_slot.id", ondelete="CASCADE"), index=True, kw_only=True
     )
     day_of_week: Mapped[int] = mapped_column(SmallInteger, kw_only=True)  # 1=Mon … 7=Sun
+    room: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None, kw_only=True)
 
     # === Relationships ===
     academic_year: Mapped["AcademicYear"] = relationship(init=False)

@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   getAttendanceQueryOptions,
   getGradesQueryOptions,
@@ -38,6 +44,11 @@ export const Route = createFileRoute("/_layout/attendance")({
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const UZ_WEEKDAYS_SHORT = ["Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha"]
+
+const UZ_MONTHS_TOP = [
+  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+]
 
 function formatDate(d: Date) {
   return d.toISOString().split("T")[0]
@@ -127,7 +138,29 @@ function AttendancePage() {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex flex-col items-end gap-1 ml-auto">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-1 rounded-md hover:bg-muted/50"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                {UZ_MONTHS_TOP[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => { if (date) setSelectedDate(date) }}
+                defaultMonth={selectedDate}
+                fromYear={2024}
+                toYear={new Date().getFullYear() + 1}
+              />
+            </PopoverContent>
+          </Popover>
+          <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -159,6 +192,7 @@ function AttendancePage() {
           <Button variant="ghost" size="icon" onClick={nextWeek} className="shrink-0">
             <ChevronRight className="h-4 w-4" />
           </Button>
+          </div>
         </div>
       </div>
 

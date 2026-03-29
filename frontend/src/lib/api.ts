@@ -325,6 +325,7 @@ export interface ScheduleEntryRead {
   teacher_id: number
   time_slot_id: number
   day_of_week: number
+  room: string | null
   subject_name: string | null
   teacher_name: string | null
   grade_display: string | null
@@ -366,9 +367,9 @@ export const timetableApi = {
   // Schedule
   listSchedule: (params: { academic_year_id: number; grade_id?: number; teacher_id?: number }) =>
     api.get<ScheduleEntryList>("/api/v1/timetable/schedule", { params }),
-  createEntry: (data: { academic_year_id: number; grade_id: number; subject_id: number; teacher_id: number; time_slot_id: number; day_of_week: number }) =>
+  createEntry: (data: { academic_year_id: number; grade_id: number; subject_id: number; teacher_id: number; time_slot_id: number; day_of_week: number; room?: string | null }) =>
     api.post<ScheduleEntryRead>("/api/v1/timetable/schedule", data),
-  updateEntry: (id: number, data: { subject_id?: number; teacher_id?: number }) =>
+  updateEntry: (id: number, data: { subject_id?: number; teacher_id?: number; room?: string | null }) =>
     api.patch<ScheduleEntryRead>(`/api/v1/timetable/schedule/${id}`, data),
   deleteEntry: (id: number) =>
     api.delete(`/api/v1/timetable/schedule/${id}`),

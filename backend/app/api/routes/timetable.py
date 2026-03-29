@@ -61,6 +61,7 @@ def _entry_to_read(entry: ScheduleEntry) -> ScheduleEntryRead:
         teacher_id=entry.teacher_id,
         time_slot_id=entry.time_slot_id,
         day_of_week=entry.day_of_week,
+        room=entry.room,
         subject_name=entry.subject.name if entry.subject else None,
         teacher_name=entry.teacher.full_name if entry.teacher else None,
         grade_display=entry.grade.display_name if entry.grade else None,
@@ -334,6 +335,7 @@ async def create_schedule_entry(
         teacher_id=body.teacher_id,
         time_slot_id=body.time_slot_id,
         day_of_week=body.day_of_week,
+        room=body.room,
     )
     db.add(entry)
     try:

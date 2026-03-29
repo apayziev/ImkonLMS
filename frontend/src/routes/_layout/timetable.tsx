@@ -144,7 +144,7 @@ function TimetablePage() {
   })
 
   const updateEntryMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { subject_id?: number; teacher_id?: number } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { subject_id?: number; teacher_id?: number; room?: string | null } }) =>
       timetableApi.updateEntry(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
@@ -448,7 +448,7 @@ function TimetablePage() {
           subjects={subjects}
           teachers={teachers}
           timeSlots={sorted}
-          onSave={(subjectId, teacherId) => {
+          onSave={(subjectId, teacherId, room) => {
             if (entryDialog.mode === "create") {
               createEntryMutation.mutate({
                 academic_year_id: academicYearId,
@@ -457,11 +457,12 @@ function TimetablePage() {
                 teacher_id: teacherId,
                 time_slot_id: entryDialog.slotId,
                 day_of_week: entryDialog.day,
+                room,
               })
             } else if (entryDialog.entry) {
               updateEntryMutation.mutate({
                 id: entryDialog.entry.id,
-                data: { subject_id: subjectId, teacher_id: teacherId },
+                data: { subject_id: subjectId, teacher_id: teacherId, room },
               })
             }
           }}
@@ -489,7 +490,7 @@ function ScheduleCell({
 }) {
   return (
     <div
-      className={`h-16 rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all bg-primary/5 border border-primary/15 ${
+      className={`min-h-[60px] rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all bg-primary/5 border border-primary/15 ${
         onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer" : ""
       }`}
       onClick={onClick}
@@ -503,8 +504,11 @@ function ScheduleCell({
       </div>
       <div className="text-xs text-muted-foreground truncate mt-0.5">
         {subtitle ?? "—"}
-      </div>
-    </div>
+      </div>      {entry.room && (
+        <div className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+          Xona: {entry.room}
+        </div>
+      )}    </div>
   )
 }
 
