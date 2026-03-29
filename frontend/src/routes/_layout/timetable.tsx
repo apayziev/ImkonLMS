@@ -83,6 +83,8 @@ function TimetablePage() {
   const settingsBreaks = settings?.breaks ?? []
 
   const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
+  const preBreak = sorted.length > 0 ? getBreakBefore(sorted[0], settingsBreaks) : null
+  const postBreak = sorted.length > 0 ? getBreakAfter(sorted[sorted.length - 1], settingsBreaks) : null
 
   // ─── Stats (all grades) ───────────────────────────────────────────
   const { data: allScheduleData } = useQuery({
@@ -361,20 +363,17 @@ function TimetablePage() {
               </tr>
             </thead>
             <tbody>
-              {sorted.length > 0 && (() => {
-                const preBreak = getBreakBefore(sorted[0], settingsBreaks)
-                return preBreak ? (
-                  <tr className="border-b bg-muted/30">
-                    <td className="px-3 py-1.5 text-center border-r bg-muted/30">
-                      <div className="text-xs font-medium text-muted-foreground">{preBreak.name}</div>
-                      <div className="text-xs text-muted-foreground/70">{preBreak.minutes} min</div>
-                    </td>
-                    {days.map((day) => (
-                      <td key={day} className="border-r last:border-r-0 bg-muted/30" />
-                    ))}
-                  </tr>
-                ) : null
-              })()}
+              {preBreak && (
+                <tr className="border-b bg-muted/30">
+                  <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                    <div className="text-xs font-medium text-muted-foreground">{preBreak.name}</div>
+                    <div className="text-xs text-muted-foreground/70">{preBreak.minutes} min</div>
+                  </td>
+                  {days.map((day) => (
+                    <td key={day} className="border-r last:border-r-0 bg-muted/30" />
+                  ))}
+                </tr>
+              )}
               {sorted.map((slot, idx) => {
                 const brk = getBreakInfo(slot, sorted[idx + 1], settingsBreaks)
 
@@ -445,20 +444,17 @@ function TimetablePage() {
                   </Fragment>
                 )
               })}
-              {sorted.length > 0 && (() => {
-                const postBreak = getBreakAfter(sorted[sorted.length - 1], settingsBreaks)
-                return postBreak ? (
-                  <tr className="border-b bg-muted/30">
-                    <td className="px-3 py-1.5 text-center border-r bg-muted/30">
-                      <div className="text-xs font-medium text-muted-foreground">{postBreak.name}</div>
-                      <div className="text-xs text-muted-foreground/70">{postBreak.minutes} min</div>
-                    </td>
-                    {days.map((day) => (
-                      <td key={day} className="border-r last:border-r-0 bg-muted/30" />
-                    ))}
-                  </tr>
-                ) : null
-              })()}
+              {postBreak && (
+                <tr className="border-b bg-muted/30">
+                  <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                    <div className="text-xs font-medium text-muted-foreground">{postBreak.name}</div>
+                    <div className="text-xs text-muted-foreground/70">{postBreak.minutes} min</div>
+                  </td>
+                  {days.map((day) => (
+                    <td key={day} className="border-r last:border-r-0 bg-muted/30" />
+                  ))}
+                </tr>
+              )}
             </tbody>
           </table>
           </div>
