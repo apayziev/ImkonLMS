@@ -29,7 +29,7 @@ export function LessonCard({
 
   return (
     <PatternCard
-      pattern={isCompleted ? "green" : "purple"}
+      pattern="green"
       className={cn(
         "rounded-xl border-2 p-5 transition-colors",
         isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
@@ -67,23 +67,37 @@ export function LessonCard({
           Davom etish
         </Button>
       ) : isPlanned ? (
-        <div className="flex gap-2">
-          <Button size="lg" className="flex-1 text-lg h-12" variant="outline" onClick={onContinue}>
-            <FileText className="mr-2 h-5 w-5" />
-            Rejani ko'rish
-          </Button>
-          {canStart && (
-            <Button size="lg" className="flex-1 text-lg h-12" onClick={onStart} disabled={isStarting}>
-              {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
-              Darsni boshlash
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button size="lg" className="flex-1 text-lg h-12" variant="outline" onClick={onContinue}>
+              <FileText className="mr-2 h-5 w-5" />
+              Rejani ko'rish
             </Button>
+            {canStart && (
+              <Button size="lg" className="flex-1 text-lg h-12" onClick={onStart} disabled={isStarting}>
+                {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
+                Darsni boshlash
+              </Button>
+            )}
+          </div>
+          {!canStart && (
+            <p className="text-xs text-muted-foreground text-center">
+              Kelajakdagi darsni hali boshlash mumkin emas
+            </p>
           )}
         </div>
       ) : (
-        <Button size="lg" className="w-full text-lg h-12" onClick={onStart} disabled={!canStart || isStarting}>
-          {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
-          Darsni boshlash
-        </Button>
+        <div className="space-y-2">
+          <Button size="lg" className="w-full text-lg h-12" onClick={onStart} disabled={!canStart || isStarting}>
+            {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
+            Darsni boshlash
+          </Button>
+          {!canStart && (
+            <p className="text-xs text-muted-foreground text-center">
+              Kelajakdagi darsni hali boshlash mumkin emas
+            </p>
+          )}
+        </div>
       )}
     </PatternCard>
   )
