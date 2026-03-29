@@ -108,7 +108,7 @@ services:
         # Export env vars for cron - single-quote values to handle special chars in password
         : > /etc/environment
         for var in PGUSER PGPASSWORD PGDATABASE PGHOST TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
-          printf "export %s='%s'\n" "$var" "$(printenv $var)" >> /etc/environment
+          printf "export %s='%s'\n" "$$var" "$$(printenv $$var)" >> /etc/environment
         done
         echo "0 3 * * * . /etc/environment; /backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
         /backup.sh
