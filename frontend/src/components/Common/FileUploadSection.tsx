@@ -1,9 +1,12 @@
+import axios from "axios"
 import { useMutation } from "@tanstack/react-query"
 import { Loader2, Paperclip, Trash2, Upload } from "lucide-react"
 import { useRef } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
 
 export interface FileItem {
   id: number
@@ -40,7 +43,12 @@ export function FileUploadSection({
   const uploadMutation = useMutation({
     mutationFn: onUpload,
     onSuccess: () => toast.success("Fayl yuklandi"),
-    onError: () => toast.error("Fayl yuklashda xatolik"),
+    onError: (err) => {
+      const message = axios.isAxiosError(err) && err.response?.data?.detail
+        ? err.response.data.detail
+        : "Fayl yuklashda xatolik"
+      toast.error(message)
+    },
   })
 
   const deleteMutation = useMutation({
@@ -53,6 +61,10 @@ export function FileUploadSection({
     const selected = e.target.files
     if (!selected) return
     for (const file of Array.from(selected)) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`"${file.name}" hajmi 20MB dan oshib ketdi`)
+        continue
+      }
       uploadMutation.mutate(file)
     }
     e.target.value = ""

@@ -15,11 +15,13 @@ export function StudentRow({
   index,
   sessionId,
   disabled,
+  isLate = false,
 }: {
   student: SessionStudentRead
   index: number
   sessionId: number
   disabled: boolean
+  isLate?: boolean
 }) {
   const queryClient = useQueryClient()
 
@@ -83,11 +85,13 @@ export function StudentRow({
     <div
       className={cn(
         "grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
-        isUnmarked
-          ? "border-dashed border-muted-foreground/30 bg-muted/30"
-          : isAbsent
-            ? "bg-muted/50"
-            : "bg-card",
+        isLate
+          ? "border-amber-400/50 bg-amber-50 dark:bg-amber-950/20"
+          : isUnmarked
+            ? "border-dashed border-muted-foreground/30 bg-muted/30"
+            : isAbsent
+              ? "bg-muted/50"
+              : "bg-card",
         mutation.isPending && "opacity-70",
       )}
     >
@@ -113,9 +117,20 @@ export function StudentRow({
             {student.first_name[0]}{student.last_name[0]}
           </AvatarFallback>
         </Avatar>
-        <span className="text-lg font-medium truncate">
-          {student.last_name} {student.first_name}
-        </span>
+        <div className="min-w-0">
+          <span className="text-lg font-medium truncate block">
+            {student.last_name} {student.first_name}
+          </span>
+          {isLate && (
+            <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              </span>
+              Kechikmoqda
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Attendance Buttons */}
@@ -142,7 +157,9 @@ export function StudentRow({
       {/* Grade Buttons */}
       <div className="flex gap-1 w-28 justify-center">
         {isAbsent ? (
-          <span className="text-sm text-muted-foreground">—</span>
+          <span className="text-xs text-muted-foreground/50 italic" title="Yo'q o'quvchiga baho qo'yilmaydi">
+            baho yo'q
+          </span>
         ) : (
           GRADES.map((g) => (
             <button

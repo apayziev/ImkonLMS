@@ -31,7 +31,7 @@ export function SaveStatusIndicator({ status, className }: { status: SaveStatus;
 export function lessonStatusFlags(lesson: { session_status?: string | null; has_plan_content?: boolean }) {
   const isInProgress = lesson.session_status === "in_progress"
   const isCompleted = lesson.session_status === "completed"
-  const isPlanned = lesson.session_status === "planned" && lesson.has_plan_content
+  const isPlanned = lesson.session_status === "planned"
   const hasPlan = isPlanned || isInProgress || isCompleted
   return { isInProgress, isCompleted, isPlanned, hasPlan }
 }

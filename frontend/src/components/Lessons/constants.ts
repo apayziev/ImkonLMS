@@ -24,3 +24,10 @@ export const ATTENDANCE_OPTIONS = [
 ] as const
 
 export const GRADES = [5, 4, 3, 2, 1] as const
+
+export const SUGGESTED_KEYWORDS = [
+  "nazariya", "amaliyot", "mustaqil ish", "guruh ishi",
+  "taqdimot", "test", "loyiha", "ijodiy ish",
+  "mashqlar", "misol yechish", "munozara", "tahlil",
+  "takrorlash", "laboratoriya", "o'yin",
+] as const

@@ -10,6 +10,7 @@ import type { TodayLessonRead } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { lessonStatusFlags } from "./formatters"
 
 export function LessonCard({
   lesson,
@@ -24,9 +25,7 @@ export function LessonCard({
   isStarting: boolean
   canStart: boolean
 }) {
-  const isInProgress = lesson.session_status === "in_progress"
-  const isCompleted = lesson.session_status === "completed"
-  const isPlanned = lesson.session_status === "planned" && lesson.has_plan_content
+  const { isInProgress, isCompleted, isPlanned } = lessonStatusFlags(lesson)
 
   return (
     <Card

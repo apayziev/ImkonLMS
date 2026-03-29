@@ -11,6 +11,7 @@ import { toast } from "sonner"
 
 import type { SessionDetailRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -27,7 +28,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
-import { LESSON_TYPES } from "./constants"
+import { LESSON_TYPES, SUGGESTED_KEYWORDS } from "./constants"
 import { SaveStatusIndicator } from "./formatters"
 
 export function TopicHomeworkSection({
@@ -138,7 +139,7 @@ export function TopicHomeworkSection({
     saveImmediate({ keywords: next.length > 0 ? next : null })
   }
 
-  // File upload/delete handlers for FileUploadSection
+  // File upload/delete handlers
   const handleUpload = async (file: File) => {
     const response = await lessonsApi.uploadMaterial(sessionId, file)
     queryClient.setQueryData(
@@ -157,20 +158,68 @@ export function TopicHomeworkSection({
     )
   }
 
+  const materialsCount = (session.materials ?? []).length
+
+  // Progress tracking
+  const fields = [
+    { label: "Dars turi", filled: !!lessonType },
+    { label: "Mavzu", filled: !!topic.trim() },
+    { label: "Maqsadlar", filled: objectives.some((o) => o.trim()) },
+    { label: "Kalit so'zlar", filled: keywords.length > 0 },
+    { label: "Uyga vazifa", filled: !!homework.trim() },
+    { label: "Materiallar", filled: materialsCount > 0 },
+  ]
+  const filledCount = fields.filter((f) => f.filled).length
+  const totalCount = fields.length
+  const progressPercent = Math.round((filledCount / totalCount) * 100)
+
   return (
-    <Card className="rounded-xl border p-5 space-y-0">
-      <div className="flex items-center justify-between pb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          Dars rejasi
-        </h3>
-        <SaveStatusIndicator status={saveStatus} />
+    <Card className="rounded-xl border p-0 space-y-0">
+      {/* Sticky header: title + progress + save status */}
+      <div className="sticky top-0 z-10 bg-card rounded-t-xl border-b px-5 py-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+            Dars rejasi
+          </h3>
+          <SaveStatusIndicator status={saveStatus} />
+        </div>
+
+        {/* Progress bar */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-muted-foreground">
+              {filledCount}/{totalCount} maydon to'ldirilgan
+            </span>
+            <span className={cn(
+              "text-xs font-medium",
+              progressPercent === 100 ? "text-[var(--imkon-teal)]" : "text-muted-foreground",
+            )}>
+              {progressPercent}%
+            </span>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                progressPercent === 100
+                  ? "bg-[var(--imkon-teal)]"
+                  : progressPercent >= 50
+                    ? "bg-[var(--imkon-purple)]"
+                    : "bg-[var(--imkon-purple)]/50",
+              )}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
       </div>
+
+      <div className="p-5 space-y-0">
 
       {/* Row 1: Lesson Type + Topic */}
       <div className="grid gap-4 md:grid-cols-[180px_1fr] border-t pt-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Dars turi</label>
+          <label className="text-sm font-medium text-muted-foreground">Dars turi <span className="text-destructive">*</span></label>
           <Select
             value={lessonType}
             onValueChange={(v) => {
@@ -192,7 +241,7 @@ export function TopicHomeworkSection({
           </Select>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Mavzu</label>
+          <label className="text-sm font-medium text-muted-foreground">Mavzu <span className="text-destructive">*</span></label>
           <Input
             placeholder="Dars mavzusini kiriting..."
             value={topic}
@@ -288,6 +337,24 @@ export function TopicHomeworkSection({
             />
           )}
         </div>
+        {/* Suggested tags */}
+        {!disabled && keywords.length < 5 && (
+          <div className="flex flex-wrap gap-1.5">
+            {SUGGESTED_KEYWORDS
+              .filter((kw) => !keywords.includes(kw))
+              .slice(0, 8)
+              .map((kw) => (
+                <button
+                  key={kw}
+                  type="button"
+                  onClick={() => addKeyword(kw)}
+                  className="text-xs px-2 py-1 rounded-full border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  + {kw}
+                </button>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* Row 4: Homework + Deadline */}
@@ -337,7 +404,9 @@ export function TopicHomeworkSection({
           disabled={disabled}
           onUpload={handleUpload}
           onDelete={handleDelete}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.odt,.ods,.odp,.jpg,.jpeg,.png,.webp,.gif,.mp3,.mp4,.wav,.ogg,.zip,.rar,.7z"
         />
+      </div>
       </div>
     </Card>
   )

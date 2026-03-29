@@ -11,6 +11,15 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
+# Allowed extensions for lesson materials (documents, images, archives)
+ALLOWED_MATERIAL_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".txt", ".rtf", ".odt", ".ods", ".odp",
+    ".jpg", ".jpeg", ".png", ".webp", ".gif",
+    ".mp3", ".mp4", ".wav", ".ogg",
+    ".zip", ".rar", ".7z",
+}
+
 
 async def validate_and_save_image(
     file: UploadFile,
@@ -47,12 +56,19 @@ async def validate_and_save_file(
     Returns (relative_url, original_filename, file_size_bytes).
     """
     original_name = file.filename or "file"
+    ext = Path(original_name).suffix.lower()
+
+    if ext not in ALLOWED_MATERIAL_EXTENSIONS:
+        raise BadRequestException(
+            f"Bu fayl turi qabul qilinmaydi. Ruxsat etilgan: "
+            f"{', '.join(sorted(ALLOWED_MATERIAL_EXTENSIONS))}"
+        )
+
     contents = await file.read()
 
     if len(contents) > MAX_FILE_SIZE:
         raise BadRequestException("Fayl hajmi 20MB dan oshmasligi kerak")
 
-    ext = Path(original_name).suffix.lower()
     filename = f"{filename_prefix}{uuid.uuid4().hex[:12]}{ext}"
 
     upload_dir.mkdir(parents=True, exist_ok=True)

@@ -5,7 +5,6 @@ import { API, AUTH } from "@/config"
 const api = axios.create({
   baseURL: API.baseUrl,
   timeout: API.timeout,
-  headers: { "Content-Type": "application/json" },
 })
 
 // Attach token to every request
