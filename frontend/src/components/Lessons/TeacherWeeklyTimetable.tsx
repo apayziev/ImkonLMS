@@ -1,11 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { CalendarDays, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { buildGrid, DAY_SHORT } from "@/components/timetable/helpers"
 import useAuth from "@/hooks/useAuth"
@@ -17,7 +14,6 @@ import {
 } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 
-import { UZ_MONTHS } from "./constants"
 import { toDateString, todayStr } from "./formatters"
 
 export function TeacherWeeklyTimetable({
@@ -29,10 +25,9 @@ export function TeacherWeeklyTimetable({
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [selectedDate, setSelectedDate] = useState(new Date())
   const [loadingCell, setLoadingCell] = useState<number | null>(null)
 
-  const { weekDays, workingDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
+  const { weekDays, workingDays } = useWeekNavigation(new Date(), () => {})
   const today = todayStr()
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -83,40 +78,6 @@ export function TeacherWeeklyTimetable({
 
   return (
     <div className="space-y-4">
-      {/* Week navigation */}
-      <div className="flex items-center justify-between">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-1.5 rounded-md hover:bg-muted/50"
-            >
-              <CalendarDays className="h-3.5 w-3.5" />
-              {UZ_MONTHS[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => { if (date) setSelectedDate(date) }}
-              defaultMonth={selectedDate}
-              fromYear={2024}
-              toYear={new Date().getFullYear() + 1}
-            />
-          </PopoverContent>
-        </Popover>
-
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={prevWeek}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={nextWeek}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       {/* Grid */}
       {isLoading ? (
         <div className="rounded-xl border overflow-hidden">

@@ -55,11 +55,9 @@ function Layout() {
           </div>
         </header>
         <main className="flex-1 p-6 md:p-8 relative z-[1]">
-          <div className="mx-auto max-w-7xl">
-            <ErrorBoundary fallback={<ErrorComponent />}>
-              <Outlet />
-            </ErrorBoundary>
-          </div>
+          <ErrorBoundary fallback={<ErrorComponent />}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
         <Footer />
       </SidebarInset>

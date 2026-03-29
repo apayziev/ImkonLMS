@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Home, Users } from "lucide-react"
+import { BookOpen, CalendarDays, ClipboardList, FileText, GraduationCap, Home, Users } from "lucide-react"
 import { useMemo } from "react"
 
 import { Logo } from "@/components/Common/Logo"
@@ -21,7 +21,8 @@ const adminMenuItems: Item[] = [
 ]
 
 const teacherMenuItems: Item[] = [
-  { icon: BookOpen, title: "Darslarim", path: "/lessons" },
+  { icon: BookOpen, title: "Dars jadvali", path: "/lessons" },
+  { icon: FileText, title: "Dars rejasi", path: "/lesson-plan" },
 ]
 
 export function AppSidebar() {
