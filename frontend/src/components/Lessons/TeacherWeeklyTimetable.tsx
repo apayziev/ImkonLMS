@@ -4,7 +4,17 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { Skeleton } from "@/components/ui/skeleton"
-import { buildGrid, DAY_SHORT } from "@/components/timetable/helpers"
+import { buildGrid } from "@/components/timetable/helpers"
+
+const DAY_FULL: Record<number, string> = {
+  1: "Dushanba",
+  2: "Seshanba",
+  3: "Chorshanba",
+  4: "Payshanba",
+  5: "Juma",
+  6: "Shanba",
+  7: "Yakshanba",
+}
 import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
@@ -12,7 +22,7 @@ import {
   getTimeSlotsQueryOptions,
   getTodayLessonsQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { useWeekNavigation } from "@/hooks/useWeekNavigation"
+import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 
 import { toDateString, todayStr } from "./formatters"
 
@@ -31,7 +41,14 @@ export function TeacherWeeklyTimetable({
 
   const { weekDays, workingDays } = useWeekNavigation(selectedDate, () => {})
   const today = todayStr()
-  const isCurrentWeek = weekDays.some((d) => toDateString(d) === today)
+
+  // Compare week by Monday — effective week (next Mon if today is Sat/Sun) is also active
+  const getMonday = (d: Date): string => {
+    const copy = new Date(d)
+    copy.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+    return toDateString(copy)
+  }
+  const isCurrentWeek = getMonday(selectedDate) === getMonday(getEffectiveWeekDate())
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id ?? 0
@@ -125,7 +142,7 @@ export function TeacherWeeklyTimetable({
                         }`}
                       >
                         <div className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                          {DAY_SHORT[day]}
+                          {DAY_FULL[day]}
                         </div>
                         {date && (
                           <div className={`text-lg font-bold leading-tight ${isToday ? "text-primary" : "text-foreground"}`}>
