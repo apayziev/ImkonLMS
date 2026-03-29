@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.deps import SessionDep, SuperUser
 from app.core.exceptions import NotFoundException
 from app.crud.quarters import crud_quarters
+from app.models.quarter import Quarter
 from app.schemas.quarter import QuarterCreate, QuarterList, QuarterRead, QuarterUpdate
 
 router = APIRouter(prefix="/quarters", tags=["quarters"])
@@ -41,7 +42,10 @@ async def get_current_quarter(db: SessionDep, _: SuperUser) -> QuarterRead | Non
 
 @router.post("/", response_model=QuarterRead, status_code=201)
 async def create_quarter(body: QuarterCreate, db: SessionDep, _: SuperUser) -> QuarterRead:
-    quarter = await crud_quarters.create(db, obj_in=body.model_dump())
+    quarter = Quarter(**body.model_dump())
+    db.add(quarter)
+    await db.commit()
+    await db.refresh(quarter)
     return QuarterRead.model_validate(quarter)
 
 
@@ -52,7 +56,7 @@ async def update_quarter(
     quarter = await crud_quarters.get(db, id=quarter_id, is_deleted=False)
     if not quarter:
         raise NotFoundException("Chorak topilmadi")
-    updated = await crud_quarters.update(db, db_obj=quarter, obj_in=body.model_dump(exclude_none=True))
+    updated = await crud_quarters.update(db, db_obj=quarter, update_data=body.model_dump(exclude_none=True))
     return QuarterRead.model_validate(updated)
 
 
@@ -61,4 +65,6 @@ async def delete_quarter(quarter_id: int, db: SessionDep, _: SuperUser) -> None:
     quarter = await crud_quarters.get(db, id=quarter_id, is_deleted=False)
     if not quarter:
         raise NotFoundException("Chorak topilmadi")
-    await crud_quarters.soft_delete(db, db_obj=quarter)
+    deleted = await crud_quarters.delete(db, id=quarter_id, is_deleted=False)
+    if not deleted:
+        raise NotFoundException("Chorak topilmadi")
