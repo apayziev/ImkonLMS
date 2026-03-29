@@ -71,6 +71,7 @@ async def get_today_lessons(
                 period_number=entry.time_slot.period_number if entry.time_slot else 0,
                 start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
                 end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
+                room=entry.room,
                 session_id=session.id if session else None,
                 session_status=session.status if session else None,
                 has_plan_content=bool(

@@ -29,7 +29,7 @@ export function LessonCard({
 
   return (
     <PatternCard
-      pattern="green"
+      pattern={isCompleted ? "green" : "purple"}
       className={cn(
         "rounded-xl border-2 p-5 transition-colors",
         isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
@@ -51,7 +51,7 @@ export function LessonCard({
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {lesson.period_number}-soat
+            {lesson.period_number}-soat{lesson.room ? ` · Xona ${lesson.room}` : ""}
           </p>
         </div>
       </div>

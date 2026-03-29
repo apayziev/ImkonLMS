@@ -386,6 +386,7 @@ export interface TodayLessonRead {
   period_number: number
   start_time: string
   end_time: string
+  room: string | null
   session_id: number | null
   session_status: string | null // planned | in_progress | completed
   has_plan_content: boolean

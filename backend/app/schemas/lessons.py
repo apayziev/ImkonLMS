@@ -20,6 +20,7 @@ class TodayLessonRead(BaseModel):
     period_number: int
     start_time: str
     end_time: str
+    room: str | None = None
 
     # Session info (None if not started)
     session_id: int | None = None
