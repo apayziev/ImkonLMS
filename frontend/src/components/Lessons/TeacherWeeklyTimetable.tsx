@@ -137,16 +137,16 @@ export function TeacherWeeklyTimetable({
                     return (
                       <th
                         key={day}
-                        className={`h-14 px-2 text-center transition-colors ${
-                          isToday ? "bg-primary/10" : ""
-                        }`}
+                        className="h-14 px-2 text-center"
                       >
                         <div className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}>
                           {DAY_FULL[day]}
                         </div>
                         {date && (
-                          <div className={`text-lg font-bold leading-tight ${isToday ? "text-primary" : "text-foreground"}`}>
-                            {date.getDate()}
+                          <div className="flex items-center justify-center mt-0.5">
+                            <span className={`text-lg font-bold leading-tight w-9 h-9 flex items-center justify-center rounded-full ${isToday ? "bg-primary text-white" : "text-foreground"}`}>
+                              {date.getDate()}
+                            </span>
                           </div>
                         )}
                       </th>
