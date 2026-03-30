@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react"
 import { useState } from "react"
 
 import { LessonsList, SessionView } from "@/components/Lessons"
+import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
@@ -12,9 +13,10 @@ import {
   getCurrentQuarterQueryOptions,
   getScheduleQueryOptions,
 } from "@/hooks/useQueryOptions"
+import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { cn } from "@/lib/utils"
 
-const UZ_MONTHS = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
+const UZ_MONTHS_SHORT = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
 
 function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0]
@@ -23,8 +25,7 @@ function toDateStr(d: Date): string {
 function getWeekStart(d: Date): Date {
   const copy = new Date(d)
   const day = copy.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  copy.setDate(copy.getDate() + diff)
+  copy.setDate(copy.getDate() + (day === 0 ? -6 : 1 - day))
   return copy
 }
 
@@ -33,6 +34,16 @@ function getWeekEnd(d: Date): Date {
   const end = new Date(start)
   end.setDate(start.getDate() + 6)
   return end
+}
+
+function formatWeekRange(days: Date[]): string {
+  if (days.length === 0) return ""
+  const first = days[0]
+  const last = days[days.length - 1]
+  if (first.getMonth() === last.getMonth()) {
+    return `${first.getDate()} – ${last.getDate()} ${UZ_MONTHS_SHORT[first.getMonth()]}`
+  }
+  return `${first.getDate()} ${UZ_MONTHS_SHORT[first.getMonth()]} – ${last.getDate()} ${UZ_MONTHS_SHORT[last.getMonth()]}`
 }
 
 function generateLessonDates(
@@ -64,18 +75,21 @@ export const Route = createFileRoute("/_layout/lessons")({
 })
 
 type View =
+  | { type: "timetable" }
   | { type: "quarter" }
   | { type: "day"; date: Date }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
-  const [view, setView] = useState<View>({ type: "quarter" })
+  const [view, setView] = useState<View>({ type: "timetable" })
+  const [selectedDate, setSelectedDate] = useState<Date>(getEffectiveWeekDate)
+  const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
 
   if (view.type === "session") {
     return (
       <SessionView
         sessionId={view.sessionId}
-        onBack={() => setView({ type: "quarter" })}
+        onBack={() => setView({ type: "timetable" })}
       />
     )
   }
@@ -90,7 +104,7 @@ function LessonsPage() {
           onClick={() => setView({ type: "quarter" })}
         >
           <ArrowLeft className="h-4 w-4" />
-          Chorakka qaytish
+          Chorak jadvaliga qaytish
         </Button>
         <LessonsList
           selectedDate={view.date}
@@ -101,10 +115,53 @@ function LessonsPage() {
     )
   }
 
-  return <QuarterView onDaySelect={(date) => setView({ type: "day", date })} />
+  if (view.type === "quarter") {
+    return (
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-muted-foreground"
+          onClick={() => setView({ type: "timetable" })}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Jadvalga qaytish
+        </Button>
+        <QuarterDatesView onDaySelect={(date) => setView({ type: "day", date })} />
+      </div>
+    )
+  }
+
+  // Default: timetable
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Dars jadvali</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </Button>
+          <span className="text-sm font-semibold min-w-[130px] text-center">
+            {formatWeekRange(weekDays)}
+          </span>
+          <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </Button>
+        </div>
+      </div>
+      <TeacherWeeklyTimetable
+        selectedDate={selectedDate}
+        onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
+        onDaySelect={(date) => {
+          setView({ type: "quarter" })
+          void date
+        }}
+      />
+    </div>
+  )
 }
 
-function QuarterView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
+function QuarterDatesView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
   const { user } = useAuth()
   const [expanded, setExpanded] = useState(false)
 
@@ -123,7 +180,6 @@ function QuarterView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
   const weekEnd = toDateStr(getWeekEnd(new Date()))
 
   const entries = scheduleData?.data ?? []
-
   const entriesPerDow: Record<number, number> = {}
   for (const e of entries) {
     entriesPerDow[e.day_of_week] = (entriesPerDow[e.day_of_week] ?? 0) + 1
@@ -143,20 +199,17 @@ function QuarterView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
-          ))}
-        </div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 rounded-xl" />
+        ))}
       </div>
     )
   }
 
   if (!currentQuarter) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
         <p>Hozir aktiv chorak mavjud emas</p>
       </div>
     )
@@ -165,10 +218,10 @@ function QuarterView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dars jadvali</h1>
-        <p className="text-sm text-muted-foreground">
-          {currentQuarter.number}-chorak · {allDates.length} ta dars kuni
-        </p>
+        <h2 className="text-lg font-semibold">
+          {currentQuarter.number}-chorak dars kunlari
+        </h2>
+        <p className="text-sm text-muted-foreground">{allDates.length} ta dars kuni</p>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
@@ -193,7 +246,7 @@ function QuarterView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
               )}
             >
               <span className={cn("text-sm font-bold", isPast && !isToday && "text-muted-foreground")}>
-                {date.getDate()} {UZ_MONTHS[date.getMonth()]}
+                {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]}
               </span>
               <span className={cn(
                 "text-xs mt-0.5",
