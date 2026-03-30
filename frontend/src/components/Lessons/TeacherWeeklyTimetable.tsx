@@ -18,6 +18,7 @@ const DAY_FULL: Record<number, string> = {
 import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
+  getCurrentQuarterQueryOptions,
   getScheduleQueryOptions,
   getTimeSlotsQueryOptions,
   getTodayLessonsQueryOptions,
@@ -25,6 +26,17 @@ import {
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 
 import { toDateString, todayStr } from "./formatters"
+
+/** "day_of_week" (1=Dush…7=Yak) mos keladigan kunlar sonini hisoblaydi */
+function countDayInRange(dayOfWeek: number, start: string, end: string): number {
+  const jsDow = dayOfWeek === 7 ? 0 : dayOfWeek
+  const startDate = new Date(start + "T00:00:00")
+  const endDate = new Date(end + "T00:00:00")
+  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1
+  const offset = (jsDow - startDate.getDay() + 7) % 7
+  if (offset >= totalDays) return 0
+  return Math.floor((totalDays - offset - 1) / 7) + 1
+}
 
 export function TeacherWeeklyTimetable({
   selectedDate,
@@ -52,6 +64,8 @@ export function TeacherWeeklyTimetable({
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id ?? 0
+
+  const { data: currentQuarter } = useQuery(getCurrentQuarterQueryOptions())
 
   const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
   const { data: scheduleData, isLoading } = useQuery(
@@ -204,6 +218,11 @@ export function TeacherWeeklyTimetable({
                                     )}
                                   </div>
                                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
+                                  {currentQuarter && (
+                                    <p className="text-[10px] text-muted-foreground mt-1.5">
+                                      {countDayInRange(entry.day_of_week, currentQuarter.start_date, currentQuarter.end_date)}-dars / chorak
+                                    </p>
+                                  )}
                                 </>
                               )}
                             </button>

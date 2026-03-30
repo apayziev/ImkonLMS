@@ -153,3 +153,14 @@ export function getQuartersQueryOptions(academicYearId?: number) {
     },
   }
 }
+
+export function getCurrentQuarterQueryOptions() {
+  return {
+    queryKey: ["quarters", "current"] as const,
+    queryFn: async () => {
+      const { data } = await quartersApi.current()
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  }
+}
