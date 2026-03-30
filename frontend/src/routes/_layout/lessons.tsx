@@ -177,12 +177,12 @@ function QuarterDatesView({
   const allIndexed = allDates.map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
 
   const clickedDs = toDateStr(selectedDate)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run once when data loads
   useEffect(() => {
-    if (allIndexed.length === 0 || selectedCard) return
+    if (allIndexed.length === 0) return
     const match = allIndexed.find((c) => c.ds === clickedDs && c.entryId === clickedEntryId)
     if (match) setSelectedCard(match)
-  }, [allIndexed.length])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allIndexed.length, clickedEntryId, clickedDs])
 
   const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
   const visibleGroups = expanded ? allIndexed : weekGroups
