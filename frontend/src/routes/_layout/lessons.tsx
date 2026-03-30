@@ -190,8 +190,18 @@ function QuarterDatesView({
     : []
 
   const allIndexed = allDates.map((ds, i) => ({ ds, i }))
-  const weekIndexed = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
-  const visibleIndexed = expanded ? allIndexed : weekIndexed
+  // Group consecutive same-day entries into one card (e.g. 10-11-dars)
+  const allGroups: Array<{ ds: string; start: number; end: number }> = []
+  for (const { ds, i } of allIndexed) {
+    const last = allGroups[allGroups.length - 1]
+    if (last && last.ds === ds) {
+      last.end = i + 1
+    } else {
+      allGroups.push({ ds, start: i + 1, end: i + 1 })
+    }
+  }
+  const weekGroups = allGroups.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
+  const visibleGroups = expanded ? allGroups : weekGroups
 
   if (isLoading) {
     return (
@@ -219,14 +229,14 @@ function QuarterDatesView({
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {visibleIndexed.map(({ ds, i }) => {
-          const lessonNumber = i + 1
+        {visibleGroups.map(({ ds, start, end }) => {
+          const lessonLabel = start === end ? `${start}-dars` : `${start}-${end}-dars`
           const isToday = ds === today
           const isPast = ds < today
           const date = new Date(ds + "T00:00:00")
           return (
             <button
-              key={i}
+              key={ds}
               type="button"
               onClick={() => onDaySelect(date)}
               className={cn(
@@ -245,14 +255,14 @@ function QuarterDatesView({
                 "text-xs mt-0.5",
                 isToday ? "text-primary-foreground/80" : "text-muted-foreground",
               )}>
-                {lessonNumber}-dars
+                {lessonLabel}
               </span>
             </button>
           )
         })}
       </div>
 
-      {allDates.length > weekIndexed.length && (
+      {allGroups.length > weekGroups.length && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
