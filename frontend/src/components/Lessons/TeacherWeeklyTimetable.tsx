@@ -218,11 +218,16 @@ export function TeacherWeeklyTimetable({
                                     )}
                                   </div>
                                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
-                                  {currentQuarter && (
-                                    <p className="text-[10px] text-muted-foreground mt-1.5">
-                                      {currentQuarter.number}-chorak · {countDayInRange(entry.day_of_week, currentQuarter.start_date, currentQuarter.end_date)}-dars
-                                    </p>
-                                  )}
+                                  {currentQuarter && (() => {
+                                    const total = entries
+                                      .filter(e => e.grade_display === entry.grade_display && e.subject_name === entry.subject_name)
+                                      .reduce((sum, e) => sum + countDayInRange(e.day_of_week, currentQuarter.start_date, currentQuarter.end_date), 0)
+                                    return (
+                                      <p className="text-[10px] text-muted-foreground mt-1.5">
+                                        {currentQuarter.number}-chorak · {total} ta dars
+                                      </p>
+                                    )
+                                  })()}
                                 </>
                               )}
                             </button>
