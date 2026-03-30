@@ -50,19 +50,23 @@ function generateLessonDates(
   daysOfWeek: number[],
   holidays: string[],
 ): string[] {
-  const result: string[] = []
   const holidaySet = new Set(holidays)
-  const cur = new Date(start + "T00:00:00")
   const endDate = new Date(end + "T00:00:00")
-  const dowSet = new Set(daysOfWeek)
-  while (cur <= endDate) {
-    const jsDow = cur.getDay()
-    const dbDow = jsDow === 0 ? 7 : jsDow
-    const ds = toDateStr(cur)
-    if (dowSet.has(dbDow) && !holidaySet.has(ds)) result.push(ds)
-    cur.setDate(cur.getDate() + 1)
+  const dates: string[] = []
+  for (const dow of daysOfWeek) {
+    const jsDow = dow === 7 ? 0 : dow
+    const cur = new Date(start + "T00:00:00")
+    while (cur <= endDate) {
+      if (cur.getDay() === jsDow) {
+        const ds = toDateStr(cur)
+        if (!holidaySet.has(ds)) dates.push(ds)
+        cur.setDate(cur.getDate() + 7)
+      } else {
+        cur.setDate(cur.getDate() + 1)
+      }
+    }
   }
-  return result
+  return dates.sort()
 }
 
 export const Route = createFileRoute("/_layout/lessons")({
@@ -194,8 +198,9 @@ function QuarterDatesView({
       )
     : []
 
-  const weekDates = allDates.filter((ds) => ds >= weekStart && ds <= weekEnd)
-  const visibleDates = expanded ? allDates : weekDates
+  const allIndexed = allDates.map((ds, i) => ({ ds, i }))
+  const weekIndexed = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
+  const visibleIndexed = expanded ? allIndexed : weekIndexed
 
   if (isLoading) {
     return (
@@ -219,18 +224,18 @@ function QuarterDatesView({
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">{grade} · {subject}</h2>
-        <p className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta kun</p>
+        <p className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars</p>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {visibleDates.map((ds) => {
-          const lessonNumber = allDates.indexOf(ds) + 1
+        {visibleIndexed.map(({ ds, i }) => {
+          const lessonNumber = i + 1
           const isToday = ds === today
           const isPast = ds < today
           const date = new Date(ds + "T00:00:00")
           return (
             <button
-              key={ds}
+              key={i}
               type="button"
               onClick={() => onDaySelect(date)}
               className={cn(
@@ -256,7 +261,7 @@ function QuarterDatesView({
         })}
       </div>
 
-      {allDates.length > weekDates.length && (
+      {allDates.length > weekIndexed.length && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -270,7 +275,7 @@ function QuarterDatesView({
           ) : (
             <>
               <ChevronDown className="h-4 w-4" />
-              Barcha {allDates.length} ta dars kunini ko'rish
+              Barcha {allDates.length} ta darsni ko'rish
             </>
           )}
         </button>
