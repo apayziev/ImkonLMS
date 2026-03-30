@@ -20,20 +20,6 @@ function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0]
 }
 
-function getWeekStart(d: Date): Date {
-  const copy = new Date(d)
-  const day = copy.getDay()
-  copy.setDate(copy.getDate() + (day === 0 ? -6 : 1 - day))
-  return copy
-}
-
-function getWeekEnd(d: Date): Date {
-  const start = getWeekStart(d)
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6)
-  return end
-}
-
 function formatWeekRange(days: Date[]): string {
   if (days.length === 0) return ""
   const first = days[0]
