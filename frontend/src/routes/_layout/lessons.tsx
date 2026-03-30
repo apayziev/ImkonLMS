@@ -229,26 +229,6 @@ function QuarterView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
   )
 }
 
-  start: string,
-  end: string,
-  daysOfWeek: number[],
-  holidays: string[],
-): string[] {
-  const result: string[] = []
-  const holidaySet = new Set(holidays)
-  const cur = new Date(start + "T00:00:00")
-  const endDate = new Date(end + "T00:00:00")
-  const dowSet = new Set(daysOfWeek)
-  while (cur <= endDate) {
-    const jsDow = cur.getDay()
-    const dbDow = jsDow === 0 ? 7 : jsDow
-    const ds = toDateStr(cur)
-    if (dowSet.has(dbDow) && !holidaySet.has(ds)) result.push(ds)
-    cur.setDate(cur.getDate() + 1)
-  }
-  return result
-}
-
 export const Route = createFileRoute("/_layout/lessons")({
   component: LessonsPage,
   head: () => ({
