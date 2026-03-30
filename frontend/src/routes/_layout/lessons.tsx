@@ -78,8 +78,8 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 type View =
   | { type: "timetable" }
-  | { type: "quarter"; daysOfWeek: number[]; grade: string; subject: string }
-  | { type: "day"; date: Date; daysOfWeek: number[]; grade: string; subject: string }
+  | { type: "quarter"; daysOfWeek: number[]; grade: string; subject: string; selectedDate: Date }
+  | { type: "day"; date: Date; daysOfWeek: number[]; grade: string; subject: string; selectedDate: Date }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
@@ -103,14 +103,14 @@ function LessonsPage() {
           variant="ghost"
           size="sm"
           className="gap-1.5 text-muted-foreground"
-          onClick={() => setView({ type: "quarter", daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject })}
+          onClick={() => setView({ type: "quarter", daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
         >
           <ArrowLeft className="h-4 w-4" />
           Chorak jadvaliga qaytish
         </Button>
         <LessonsList
           selectedDate={view.date}
-          onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject })}
+          onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
           onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
         />
       </div>
@@ -133,7 +133,8 @@ function LessonsPage() {
           daysOfWeek={view.daysOfWeek}
           grade={view.grade}
           subject={view.subject}
-          onDaySelect={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject })}
+          selectedDate={view.selectedDate}
+          onDaySelect={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
         />
       </div>
     )
@@ -161,7 +162,7 @@ function LessonsPage() {
         onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
         onDaySelect={(date, daysOfWeek, grade, subject) => {
           void date
-          setView({ type: "quarter", daysOfWeek, grade, subject })
+          setView({ type: "quarter", daysOfWeek, grade, subject, selectedDate })
         }}
       />
     </div>
@@ -172,22 +173,26 @@ function QuarterDatesView({
   daysOfWeek,
   grade,
   subject,
+  selectedDate,
   onDaySelect,
 }: {
   daysOfWeek: number[]
   grade: string
   subject: string
+  selectedDate: Date
   onDaySelect: (date: Date) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { data: currentQuarter, isLoading: quarterLoading } = useQuery(getCurrentQuarterQueryOptions())
 
   const isLoading = quarterLoading || !currentYear
   const today = toDateStr(new Date())
-  const weekStart = toDateStr(getWeekStart(new Date()))
-  const weekEnd = toDateStr(getWeekEnd(new Date()))
+  // Use workingDays-aware week range (matches timetable's week display)
+  const weekStart = weekDays.length > 0 ? toDateStr(weekDays[0]) : ""
+  const weekEnd = weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
 
   const allDates = currentQuarter && daysOfWeek.length > 0
     ? generateLessonDates(
