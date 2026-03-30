@@ -4,7 +4,7 @@ from datetime import date
 
 from fastapi import APIRouter
 
-from app.api.deps import SessionDep, SuperUser
+from app.api.deps import CurrentUser, SessionDep, SuperUser
 from app.core.exceptions import NotFoundException
 from app.crud.quarters import crud_quarters
 from app.models.quarter import Quarter
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/quarters", tags=["quarters"])
 @router.get("/", response_model=QuarterList)
 async def list_quarters(
     db: SessionDep,
-    _: SuperUser,
+    _: CurrentUser,
     academic_year_id: int | None = None,
 ) -> QuarterList:
     filters: dict = {"is_deleted": False}
@@ -30,7 +30,7 @@ async def list_quarters(
 
 
 @router.get("/current", response_model=QuarterRead | None)
-async def get_current_quarter(db: SessionDep, _: SuperUser) -> QuarterRead | None:
+async def get_current_quarter(db: SessionDep, _: CurrentUser) -> QuarterRead | None:
     """Bugungi sanaga mos aktiv chorakni qaytaradi."""
     today = date.today()
     result = await crud_quarters.get_multi(db, is_deleted=False)
