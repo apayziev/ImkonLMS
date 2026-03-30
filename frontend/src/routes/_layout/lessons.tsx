@@ -320,12 +320,6 @@ function DayAttendanceView({
     )
   }
 
-  if (!matchedLesson) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">Bu kunda dars yo'q</p>
-    )
-  }
-
   if (!session) {
     return (
       <div className="py-6 flex flex-col items-center gap-3">
