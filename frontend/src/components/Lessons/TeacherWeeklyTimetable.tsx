@@ -50,7 +50,7 @@ export function TeacherWeeklyTimetable({
 }: {
   selectedDate: Date
   onSessionOpen: (sessionId: number) => void
-  onDaySelect: (date: Date) => void
+  onDaySelect: (date: Date, daysOfWeek: number[]) => void
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -111,7 +111,17 @@ export function TeacherWeeklyTimetable({
       if (lesson?.session_id) {
         onSessionOpen(lesson.session_id)
       } else {
-        onDaySelect(date)
+        const clickedEntry = entries.find((e) => e.id === scheduleEntryId)
+        const groupDays = clickedEntry
+          ? entries
+              .filter(
+                (e) =>
+                  e.grade_display === clickedEntry.grade_display &&
+                  e.subject_name === clickedEntry.subject_name,
+              )
+              .map((e) => e.day_of_week)
+          : [dayOfWeek]
+        onDaySelect(date, groupDays)
       }
     } catch {
       toast.error("Ma'lumotlarni yuklashda xatolik")

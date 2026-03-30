@@ -76,8 +76,8 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 type View =
   | { type: "timetable" }
-  | { type: "quarter" }
-  | { type: "day"; date: Date }
+  | { type: "quarter"; daysOfWeek: number[] }
+  | { type: "day"; date: Date; daysOfWeek: number[] }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
@@ -101,14 +101,14 @@ function LessonsPage() {
           variant="ghost"
           size="sm"
           className="gap-1.5 text-muted-foreground"
-          onClick={() => setView({ type: "quarter" })}
+          onClick={() => setView({ type: "quarter", daysOfWeek: view.daysOfWeek })}
         >
           <ArrowLeft className="h-4 w-4" />
           Chorak jadvaliga qaytish
         </Button>
         <LessonsList
           selectedDate={view.date}
-          onDateChange={(date) => setView({ type: "day", date })}
+          onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek })}
           onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
         />
       </div>
@@ -127,7 +127,10 @@ function LessonsPage() {
           <ArrowLeft className="h-4 w-4" />
           Jadvalga qaytish
         </Button>
-        <QuarterDatesView onDaySelect={(date) => setView({ type: "day", date })} />
+        <QuarterDatesView
+          daysOfWeek={view.daysOfWeek}
+          onDaySelect={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek })}
+        />
       </div>
     )
   }
@@ -152,16 +155,22 @@ function LessonsPage() {
       <TeacherWeeklyTimetable
         selectedDate={selectedDate}
         onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
-        onDaySelect={(date) => {
-          setView({ type: "quarter" })
+        onDaySelect={(date, daysOfWeek) => {
           void date
+          setView({ type: "quarter", daysOfWeek })
         }}
       />
     </div>
   )
 }
 
-function QuarterDatesView({ onDaySelect }: { onDaySelect: (date: Date) => void }) {
+function QuarterDatesView({
+  daysOfWeek,
+  onDaySelect,
+}: {
+  daysOfWeek: number[]
+  onDaySelect: (date: Date) => void
+}) {
   const { user } = useAuth()
   const [expanded, setExpanded] = useState(false)
 
@@ -180,16 +189,12 @@ function QuarterDatesView({ onDaySelect }: { onDaySelect: (date: Date) => void }
   const weekEnd = toDateStr(getWeekEnd(new Date()))
 
   const entries = scheduleData?.data ?? []
-  const entriesPerDow: Record<number, number> = {}
-  for (const e of entries) {
-    entriesPerDow[e.day_of_week] = (entriesPerDow[e.day_of_week] ?? 0) + 1
-  }
 
-  const allDates = currentQuarter && entries.length > 0
+  const allDates = currentQuarter && daysOfWeek.length > 0
     ? generateLessonDates(
         currentQuarter.start_date,
         currentQuarter.end_date,
-        [...new Set(entries.map((e) => e.day_of_week))],
+        daysOfWeek,
         currentQuarter.holidays,
       )
     : []
@@ -226,11 +231,10 @@ function QuarterDatesView({ onDaySelect }: { onDaySelect: (date: Date) => void }
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
         {visibleDates.map((ds) => {
+          const lessonNumber = allDates.indexOf(ds) + 1
           const isToday = ds === today
           const isPast = ds < today
           const date = new Date(ds + "T00:00:00")
-          const dbDow = date.getDay() === 0 ? 7 : date.getDay()
-          const count = entriesPerDow[dbDow] ?? 0
           return (
             <button
               key={ds}
@@ -252,7 +256,7 @@ function QuarterDatesView({ onDaySelect }: { onDaySelect: (date: Date) => void }
                 "text-xs mt-0.5",
                 isToday ? "text-primary-foreground/80" : "text-muted-foreground",
               )}>
-                {count} ta dars
+                {lessonNumber}-dars
               </span>
             </button>
           )
