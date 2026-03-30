@@ -38,26 +38,26 @@ function formatWeekRange(days: Date[]): string {
 function generateLessonDates(
   start: string,
   end: string,
-  daysOfWeek: number[],
+  scheduleEntries: { id: number; dow: number }[],
   holidays: string[],
-): string[] {
+): { ds: string; entryId: number }[] {
   const holidaySet = new Set(holidays)
   const endDate = new Date(end + "T00:00:00")
-  const dates: string[] = []
-  for (const dow of daysOfWeek) {
+  const result: { ds: string; entryId: number }[] = []
+  for (const { id, dow } of scheduleEntries) {
     const jsDow = dow === 7 ? 0 : dow
     const cur = new Date(start + "T00:00:00")
     while (cur <= endDate) {
       if (cur.getDay() === jsDow) {
         const ds = toDateStr(cur)
-        if (!holidaySet.has(ds)) dates.push(ds)
+        if (!holidaySet.has(ds)) result.push({ ds, entryId: id })
         cur.setDate(cur.getDate() + 7)
       } else {
         cur.setDate(cur.getDate() + 1)
       }
     }
   }
-  return dates.sort()
+  return result.sort((a, b) => a.ds < b.ds ? -1 : a.ds > b.ds ? 1 : 0)
 }
 
 export const Route = createFileRoute("/_layout/lessons")({
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 type View =
   | { type: "timetable" }
-  | { type: "quarter"; daysOfWeek: number[]; grade: string; subject: string; selectedDate: Date }
+  | { type: "quarter"; scheduleEntries: { id: number; dow: number }[]; grade: string; subject: string; selectedDate: Date }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
@@ -99,7 +99,7 @@ function LessonsPage() {
           Jadvalga qaytish
         </Button>
         <QuarterDatesView
-          daysOfWeek={view.daysOfWeek}
+          scheduleEntries={view.scheduleEntries}
           grade={view.grade}
           subject={view.subject}
           selectedDate={view.selectedDate}
@@ -128,9 +128,9 @@ function LessonsPage() {
       <TeacherWeeklyTimetable
         selectedDate={selectedDate}
         onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
-        onDaySelect={(date, daysOfWeek, grade, subject) => {
+        onDaySelect={(date, scheduleEntries, grade, subject) => {
           void date
-          setView({ type: "quarter", daysOfWeek, grade, subject, selectedDate })
+          setView({ type: "quarter", scheduleEntries, grade, subject, selectedDate })
         }}
       />
     </div>
@@ -138,18 +138,18 @@ function LessonsPage() {
 }
 
 function QuarterDatesView({
-  daysOfWeek,
+  scheduleEntries,
   grade,
   subject,
   selectedDate,
 }: {
-  daysOfWeek: number[]
+  scheduleEntries: { id: number; dow: number }[]
   grade: string
   subject: string
   selectedDate: Date
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; periodIndex: number } | null>(null)
+  const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; entryId: number } | null>(null)
   const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -161,16 +161,16 @@ function QuarterDatesView({
   const weekStart = weekDays.length > 0 ? toDateStr(weekDays[0]) : ""
   const weekEnd = weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
 
-  const allDates = currentQuarter && daysOfWeek.length > 0
+  const allDates = currentQuarter && scheduleEntries.length > 0
     ? generateLessonDates(
         currentQuarter.start_date,
         currentQuarter.end_date,
-        daysOfWeek,
+        scheduleEntries,
         currentQuarter.holidays,
       )
     : []
 
-  const allIndexed = allDates.map((ds, i) => ({ ds, lessonNumber: i + 1 }))
+  const allIndexed = allDates.map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
   const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
   const visibleGroups = expanded ? allIndexed : weekGroups
 
@@ -199,23 +199,19 @@ function QuarterDatesView({
         <span className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars</span>
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {visibleGroups.map(({ ds, lessonNumber }) => {
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {visibleGroups.map(({ ds, lessonNumber, entryId }) => {
           const isToday = ds === today
           const isPast = ds < today
           const date = new Date(ds + "T00:00:00")
-          const isSelected = selectedCard?.ds === ds && selectedCard?.lessonNumber === lessonNumber
+          const isSelected = selectedCard?.ds === ds && selectedCard?.entryId === entryId
           return (
             <button
-              key={`${ds}-${lessonNumber}`}
+              key={`${ds}-${entryId}`}
               type="button"
-              onClick={() => {
-                const sameDay = allIndexed.filter((e) => e.ds === ds)
-                const periodIndex = sameDay.findIndex((e) => e.lessonNumber === lessonNumber)
-                setSelectedCard({ ds, lessonNumber, periodIndex })
-              }}
+              onClick={() => setSelectedCard({ ds, lessonNumber, entryId })}
               className={cn(
-                "flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors",
+                "flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors shrink-0 w-28",
                 isSelected
                   ? "bg-primary text-primary-foreground border-primary"
                   : isToday
@@ -275,9 +271,7 @@ function QuarterDatesView({
           </div>
           <DayAttendanceView
             selectedDate={new Date(selectedCard.ds + "T00:00:00")}
-            grade={grade}
-            subject={subject}
-            periodIndex={selectedCard.periodIndex}
+            entryId={selectedCard.entryId}
           />
         </div>
       )}
@@ -287,14 +281,10 @@ function QuarterDatesView({
 
 function DayAttendanceView({
   selectedDate,
-  grade,
-  subject,
-  periodIndex,
+  entryId,
 }: {
   selectedDate: Date
-  grade: string
-  subject: string
-  periodIndex: number
+  entryId: number
 }) {
   const dateStr = toDateStr(selectedDate)
   const queryClient = useQueryClient()
@@ -302,10 +292,7 @@ function DayAttendanceView({
 
   const { data: lessonsData, isLoading: lessonsLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
-  const matchingLessons = lessonsData?.data.filter(
-    (l) => l.grade_display === grade && l.subject_name === subject,
-  ) ?? []
-  const matchedLesson = matchingLessons[periodIndex]
+  const matchedLesson = lessonsData?.data.find((l) => l.schedule_entry_id === entryId)
 
   const sessionId = activeSessionId || (matchedLesson?.session_id ?? 0)
   const { data: session, isLoading: sessionLoading } = useQuery({
@@ -314,7 +301,7 @@ function DayAttendanceView({
   })
 
   const startMutation = useMutation({
-    mutationFn: () => lessonsApi.startSession(matchedLesson!.schedule_entry_id, dateStr),
+    mutationFn: () => lessonsApi.startSession(entryId, dateStr),
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
