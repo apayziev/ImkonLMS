@@ -209,8 +209,8 @@ export function SessionView({
                   </button>
                   Keldi
                 </span>
-                <span className="px-3 py-1.5">Sababli</span>
-                <span className="px-3 py-1.5">Sababsiz</span>
+                <span className="px-3 py-1.5">Kech</span>
+                <span className="px-3 py-1.5">Kelmadi</span>
               </div>
               <span className="w-28 text-center">Baho</span>
             </div>

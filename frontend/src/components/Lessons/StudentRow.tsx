@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Eye, Loader2, TriangleAlert } from "lucide-react"
+import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -9,7 +9,13 @@ import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { queryKeys } from "@/hooks/useQueryOptions"
-import { ATTENDANCE_OPTIONS, GRADES } from "./constants"
+import { ATTENDANCE_OPTIONS, GRADED_STATUSES, GRADES } from "./constants"
+
+const ATTENDANCE_ICONS = {
+  present: <Check className="h-4 w-4" />,
+  late: <Clock className="h-4 w-4" />,
+  absent: <X className="h-4 w-4" />,
+} as const
 
 export function StudentRow({
   student,
@@ -66,14 +72,15 @@ export function StudentRow({
     },
   })
 
-  const isAbsent = student.status !== "present"
+  const isAbsent = !GRADED_STATUSES.has(student.status as "present" | "late")
   const isUnmarked = student.status === "unmarked"
   const [photoOpen, setPhotoOpen] = useState(false)
 
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
     const resolved = newStatus === student.status ? "unmarked" : newStatus
-    const grade = resolved === "present" ? student.grade : null
+    const canHaveGrade = GRADED_STATUSES.has(resolved as "present" | "late")
+    const grade = canHaveGrade ? student.grade : null
     mutation.mutate({ status: resolved, grade })
   }
 
@@ -147,22 +154,23 @@ export function StudentRow({
       </div>
 
       {/* Attendance Buttons */}
-      <div className="flex gap-1.5 w-56 justify-center">
+      <div className="flex gap-3 w-56 justify-center">
         {ATTENDANCE_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
             disabled={disabled}
+            title={opt.label}
             onClick={() => handleStatusChange(opt.value)}
             className={cn(
-              "rounded-md border px-3 py-1.5 text-sm font-medium transition-all",
+              "h-9 w-9 rounded-full border flex items-center justify-center transition-all",
               student.status === opt.value
                 ? opt.color
-                : "bg-background text-muted-foreground border-border hover:bg-accent",
+                : "bg-background text-muted-foreground/40 border-border hover:text-muted-foreground hover:bg-accent",
               disabled && "cursor-not-allowed opacity-60",
             )}
           >
-            {opt.label}
+            {ATTENDANCE_ICONS[opt.value]}
           </button>
         ))}
       </div>

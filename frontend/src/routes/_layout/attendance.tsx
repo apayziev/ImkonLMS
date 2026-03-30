@@ -33,6 +33,7 @@ import {
   getGradesQueryOptions,
   getSchoolSettingsQueryOptions,
 } from "@/hooks/useQueryOptions"
+import { ATTENDANCE_OPTIONS } from "@/components/Lessons/constants"
 
 export const Route = createFileRoute("/_layout/attendance")({
   component: AttendancePage,
@@ -65,12 +66,12 @@ function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
   })
 }
 
-const STATUS_CONFIG = {
-  present: { label: "Keldi", className: "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)]" },
-  excused: { label: "Sababli", className: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple-dark)]" },
-  unexcused: { label: "Sababsiz", className: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]" },
-  unmarked: { label: "Belgilanmagan", className: "bg-muted text-muted-foreground" },
-} as const
+const STATUS_CONFIG = Object.fromEntries(
+  [
+    ...ATTENDANCE_OPTIONS.map((o) => [o.value, { label: o.label, className: o.badgeClassName }]),
+    ["unmarked", { label: "Belgilanmagan", className: "bg-muted text-muted-foreground" }],
+  ]
+) as Record<string, { label: string; className: string }>
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
@@ -301,8 +302,8 @@ function UnifiedAttendanceTable({
               <th className="sticky left-10 z-20 py-2.5 px-3 text-left text-xs font-medium text-muted-foreground min-w-[180px] border-r bg-muted/30">O'quvchi</th>
               {startedSessions.map((session, idx) => {
                 const p = session.students.filter((s) => s.status === "present").length
-                const e = session.students.filter((s) => s.status === "excused").length
-                const u = session.students.filter((s) => s.status === "unexcused").length
+                const e = session.students.filter((s) => s.status === "late").length
+                const u = session.students.filter((s) => s.status === "absent").length
                 return (
                 <th
                   key={idx}
@@ -328,8 +329,8 @@ function UnifiedAttendanceTable({
                     )}
                     <div className="flex items-center justify-center gap-1.5 text-[10px]">
                       <span><span className="font-bold text-[var(--imkon-teal)]">{p}</span> keldi</span>
-                      <span><span className="font-bold text-[var(--imkon-purple)]">{e}</span> sababli</span>
-                      <span><span className="font-bold text-[var(--imkon-red)]">{u}</span> sababsiz</span>
+                      <span><span className="font-bold text-amber-500">{e}</span> kech</span>
+                      <span><span className="font-bold text-[var(--imkon-red)]">{u}</span> kelmadi</span>
                     </div>
                   </div>
                 </th>

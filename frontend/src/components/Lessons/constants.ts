@@ -18,10 +18,14 @@ export const LESSON_TYPES = [
 ] as const
 
 export const ATTENDANCE_OPTIONS = [
-  { value: "present", label: "Keldi", color: "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)] border-[var(--imkon-teal)]/40" },
-  { value: "excused", label: "Sababli", color: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple-dark)] border-[var(--imkon-purple)]/30" },
-  { value: "unexcused", label: "Sababsiz", color: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)] border-[var(--imkon-red)]/30" },
+  { value: "present", label: "Keldi", color: "bg-[var(--imkon-teal)] text-white border-[var(--imkon-teal)]", badgeClassName: "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)]", canHaveGrade: true },
+  { value: "late", label: "Kech", color: "bg-amber-100 text-amber-600 border-amber-400", badgeClassName: "bg-amber-100 text-amber-700", canHaveGrade: true },
+  { value: "absent", label: "Kelmadi", color: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)] border-[var(--imkon-red)]/60", badgeClassName: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]", canHaveGrade: false },
 ] as const
+
+export const GRADED_STATUSES = new Set(
+  ATTENDANCE_OPTIONS.filter((o) => o.canHaveGrade).map((o) => o.value),
+)
 
 export const GRADES = [5, 4, 3, 2, 1] as const
 

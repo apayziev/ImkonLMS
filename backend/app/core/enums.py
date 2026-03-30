@@ -12,5 +12,5 @@ class SessionStatus(str, Enum):
 class AttendanceStatus(str, Enum):
     UNMARKED = "unmarked"
     PRESENT = "present"
-    EXCUSED = "excused"
-    UNEXCUSED = "unexcused"
+    LATE = "late"
+    ABSENT = "absent"

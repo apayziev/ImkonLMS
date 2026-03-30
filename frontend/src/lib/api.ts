@@ -404,7 +404,7 @@ export interface SessionStudentRead {
   last_name: string
   full_name: string
   photo_url: string | null
-  status: string // unmarked | present | excused | unexcused
+  status: string // unmarked | present | late | absent
   marked_at: string | null
   grade: number | null
 }
@@ -450,7 +450,7 @@ export interface AttendanceStudentRead {
   student_id: number
   full_name: string
   photo_url: string | null
-  status: string // unmarked | present | excused | unexcused
+  status: string // unmarked | present | late | absent
   marked_at: string | null
   grade: number | null
 }
