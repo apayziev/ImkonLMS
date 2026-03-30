@@ -146,7 +146,7 @@ function QuarterDatesView({
   selectedDate: Date
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; periodIndex: number } | null>(null)
   const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -167,19 +167,9 @@ function QuarterDatesView({
       )
     : []
 
-  const allIndexed = allDates.map((ds, i) => ({ ds, i }))
-  // Group consecutive same-day entries into one card (e.g. 10-11-dars)
-  const allGroups: Array<{ ds: string; start: number; end: number }> = []
-  for (const { ds, i } of allIndexed) {
-    const last = allGroups[allGroups.length - 1]
-    if (last && last.ds === ds) {
-      last.end = i + 1
-    } else {
-      allGroups.push({ ds, start: i + 1, end: i + 1 })
-    }
-  }
-  const weekGroups = allGroups.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
-  const visibleGroups = expanded ? allGroups : weekGroups
+  const allIndexed = allDates.map((ds, i) => ({ ds, lessonNumber: i + 1 }))
+  const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
+  const visibleGroups = expanded ? allIndexed : weekGroups
 
   if (isLoading) {
     return (
@@ -207,19 +197,23 @@ function QuarterDatesView({
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {visibleGroups.map(({ ds, start, end }) => {
-          const lessonLabel = start === end ? `${start}-dars` : `${start}-${end}-dars`
+        {visibleGroups.map(({ ds, lessonNumber }) => {
           const isToday = ds === today
           const isPast = ds < today
           const date = new Date(ds + "T00:00:00")
+          const isSelected = selectedCard?.ds === ds && selectedCard?.lessonNumber === lessonNumber
           return (
             <button
-              key={ds}
+              key={`${ds}-${lessonNumber}`}
               type="button"
-              onClick={() => setSelectedDay(date)}
+              onClick={() => {
+                const sameDay = allIndexed.filter((e) => e.ds === ds)
+                const periodIndex = sameDay.findIndex((e) => e.lessonNumber === lessonNumber)
+                setSelectedCard({ ds, lessonNumber, periodIndex })
+              }}
               className={cn(
                 "flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors",
-                selectedDay && toDateStr(selectedDay) === ds
+                isSelected
                   ? "bg-primary text-primary-foreground border-primary"
                   : isToday
                     ? "bg-primary/10 border-primary/40 hover:border-primary"
@@ -228,25 +222,25 @@ function QuarterDatesView({
                       : "bg-card border-border hover:bg-accent",
               )}
             >
-              <span className={cn("text-sm font-bold", isPast && !(selectedDay && toDateStr(selectedDay) === ds) && !isToday && "text-muted-foreground")}>
+              <span className={cn("text-sm font-bold", isPast && !isSelected && !isToday && "text-muted-foreground")}>
                 {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]}
               </span>
               <span className={cn(
                 "text-xs mt-0.5",
-                selectedDay && toDateStr(selectedDay) === ds
+                isSelected
                   ? "text-primary-foreground/80"
                   : isToday
                     ? "text-primary"
                     : "text-muted-foreground",
               )}>
-                {lessonLabel}
+                {lessonNumber}-dars
               </span>
             </button>
           )
         })}
       </div>
 
-      {allGroups.length > weekGroups.length && (
+      {allIndexed.length > weekGroups.length && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -266,7 +260,7 @@ function QuarterDatesView({
         </button>
       )}
 
-      {selectedDay && (
+      {selectedCard && (
         <div className="border-t pt-4">
           <div className="flex border-b overflow-x-auto mb-4">
             <button
@@ -277,9 +271,10 @@ function QuarterDatesView({
             </button>
           </div>
           <DayAttendanceView
-            selectedDate={selectedDay}
+            selectedDate={new Date(selectedCard.ds + "T00:00:00")}
             grade={grade}
             subject={subject}
+            periodIndex={selectedCard.periodIndex}
           />
         </div>
       )}
@@ -291,18 +286,21 @@ function DayAttendanceView({
   selectedDate,
   grade,
   subject,
+  periodIndex,
 }: {
   selectedDate: Date
   grade: string
   subject: string
+  periodIndex: number
 }) {
   const dateStr = toDateStr(selectedDate)
 
   const { data: lessonsData, isLoading: lessonsLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
-  const matchedLesson = lessonsData?.data.find(
+  const matchingLessons = lessonsData?.data.filter(
     (l) => l.grade_display === grade && l.subject_name === subject,
-  )
+  ) ?? []
+  const matchedLesson = matchingLessons[periodIndex]
 
   const sessionId = matchedLesson?.session_id ?? 0
   const { data: session, isLoading: sessionLoading } = useQuery({
