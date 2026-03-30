@@ -18,7 +18,7 @@ const DAY_FULL: Record<number, string> = {
 import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
-  getCurrentQuarterQueryOptions,
+  getQuartersQueryOptions,
   getScheduleQueryOptions,
   getTimeSlotsQueryOptions,
   getTodayLessonsQueryOptions,
@@ -65,7 +65,10 @@ export function TeacherWeeklyTimetable({
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id ?? 0
 
-  const { data: currentQuarter } = useQuery(getCurrentQuarterQueryOptions())
+  const { data: quartersData } = useQuery(getQuartersQueryOptions(academicYearId))
+  const currentQuarter = (quartersData?.data ?? []).find(
+    (q) => q.start_date <= today && today <= q.end_date,
+  )
 
   const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
   const { data: scheduleData, isLoading } = useQuery(
