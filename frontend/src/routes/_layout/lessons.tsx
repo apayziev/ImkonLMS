@@ -100,7 +100,6 @@ function LessonsPage() {
           grade={view.grade}
           subject={view.subject}
           selectedDate={view.selectedDate}
-          onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
         />
       </div>
     )
@@ -140,13 +139,11 @@ function QuarterDatesView({
   grade,
   subject,
   selectedDate,
-  onSessionOpen,
 }: {
   daysOfWeek: number[]
   grade: string
   subject: string
   selectedDate: Date
-  onSessionOpen: (sessionId: number) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
