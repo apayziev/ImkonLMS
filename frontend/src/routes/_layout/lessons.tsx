@@ -65,7 +65,6 @@ export const Route = createFileRoute("/_layout/lessons")({
 type View =
   | { type: "timetable" }
   | { type: "quarter"; daysOfWeek: number[]; grade: string; subject: string; selectedDate: Date }
-  | { type: "day"; date: Date; daysOfWeek: number[]; grade: string; subject: string; selectedDate: Date }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
@@ -79,36 +78,6 @@ function LessonsPage() {
         sessionId={view.sessionId}
         onBack={() => setView({ type: "timetable" })}
       />
-    )
-  }
-
-  if (view.type === "day") {
-    return (
-      <div className="space-y-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 text-muted-foreground"
-          onClick={() => setView({ type: "quarter", daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Chorak jadvaliga qaytish
-        </Button>
-        {/* Tab bar — JAHON SCHOOL uslubi */}
-        <div className="flex border-b overflow-x-auto">
-          <button
-            type="button"
-            className="px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 border-primary text-primary"
-          >
-            Darsdagi faollik
-          </button>
-        </div>
-        <LessonsList
-          selectedDate={view.date}
-          onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
-          onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
-        />
-      </div>
     )
   }
 
@@ -129,7 +98,7 @@ function LessonsPage() {
           grade={view.grade}
           subject={view.subject}
           selectedDate={view.selectedDate}
-          onDaySelect={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
+          onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
         />
       </div>
     )
@@ -169,15 +138,16 @@ function QuarterDatesView({
   grade,
   subject,
   selectedDate,
-  onDaySelect,
+  onSessionOpen,
 }: {
   daysOfWeek: number[]
   grade: string
   subject: string
   selectedDate: Date
-  onDaySelect: (date: Date) => void
+  onSessionOpen: (sessionId: number) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -247,22 +217,28 @@ function QuarterDatesView({
             <button
               key={ds}
               type="button"
-              onClick={() => onDaySelect(date)}
+              onClick={() => setSelectedDay(date)}
               className={cn(
-                "flex flex-col items-start p-3 rounded-xl border text-left transition-colors",
-                isToday
+                "flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors",
+                selectedDay && toDateStr(selectedDay) === ds
                   ? "bg-primary text-primary-foreground border-primary"
-                  : isPast
-                    ? "bg-muted/30 border-border hover:bg-muted/50"
-                    : "bg-card border-border hover:bg-accent",
+                  : isToday
+                    ? "bg-primary/10 border-primary/40 hover:border-primary"
+                    : isPast
+                      ? "bg-muted/30 border-border hover:bg-muted/50"
+                      : "bg-card border-border hover:bg-accent",
               )}
             >
-              <span className={cn("text-sm font-bold", isPast && !isToday && "text-muted-foreground")}>
+              <span className={cn("text-sm font-bold", isPast && !(selectedDay && toDateStr(selectedDay) === ds) && !isToday && "text-muted-foreground")}>
                 {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]}
               </span>
               <span className={cn(
                 "text-xs mt-0.5",
-                isToday ? "text-primary-foreground/80" : "text-muted-foreground",
+                selectedDay && toDateStr(selectedDay) === ds
+                  ? "text-primary-foreground/80"
+                  : isToday
+                    ? "text-primary"
+                    : "text-muted-foreground",
               )}>
                 {lessonLabel}
               </span>
@@ -289,6 +265,24 @@ function QuarterDatesView({
             </>
           )}
         </button>
+      )}
+
+      {selectedDay && (
+        <div className="space-y-0 border-t pt-4">
+          <div className="flex border-b overflow-x-auto mb-4">
+            <button
+              type="button"
+              className="px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 border-primary text-primary"
+            >
+              Darsdagi faollik
+            </button>
+          </div>
+          <LessonsList
+            selectedDate={selectedDay}
+            onDateChange={setSelectedDay}
+            onSessionOpen={onSessionOpen}
+          />
+        </div>
       )}
     </div>
   )
