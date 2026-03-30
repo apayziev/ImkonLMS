@@ -3,6 +3,7 @@
 from datetime import date
 
 from sqlalchemy import Date, ForeignKey, SmallInteger, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -36,6 +37,13 @@ class Quarter(BaseModel):
     end_date: Mapped[date] = mapped_column(
         Date,
         comment="Chorak tugash sanasi",
+        kw_only=True,
+    )
+    holidays: Mapped[list[date]] = mapped_column(
+        ARRAY(Date),
+        default=list,
+        server_default="{}",
+        comment="Dam kunlari (public holidays) ro'yxati",
         kw_only=True,
     )
 

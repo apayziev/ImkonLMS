@@ -514,6 +514,7 @@ export interface QuarterRead {
   number: number
   start_date: string
   end_date: string
+  holidays: string[]
   created_at: string | null
   updated_at: string | null
 }
@@ -523,6 +524,7 @@ export interface QuarterCreate {
   number: number
   start_date: string
   end_date: string
+  holidays: string[]
 }
 
 export interface QuarterList {

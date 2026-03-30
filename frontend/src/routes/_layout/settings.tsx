@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -36,9 +36,10 @@ interface QuarterForm {
   number: string
   start_date: string
   end_date: string
+  holidays: string[]
 }
 
-const EMPTY_FORM: QuarterForm = { number: "", start_date: "", end_date: "" }
+const EMPTY_FORM: QuarterForm = { number: "", start_date: "", end_date: "", holidays: [] }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ function SettingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<QuarterRead | null>(null)
   const [form, setForm] = useState<QuarterForm>(EMPTY_FORM)
+  const [holidayPickerKey, setHolidayPickerKey] = useState(0)
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id
@@ -73,7 +75,9 @@ function SettingsPage() {
       number: String(q.number),
       start_date: q.start_date,
       end_date: q.end_date,
+      holidays: q.holidays,
     })
+    setHolidayPickerKey((k) => k + 1)
     setDialogOpen(true)
   }
 
@@ -120,6 +124,7 @@ function SettingsPage() {
       number: Number(form.number),
       start_date: form.start_date,
       end_date: form.end_date,
+      holidays: form.holidays,
     }
 
     if (editing) {
@@ -249,6 +254,40 @@ function SettingsPage() {
                 value={form.end_date || null}
                 onChange={(d) => setForm((f) => ({ ...f, end_date: d }))}
                 placeholder="Sanani tanlang"
+                fromYear={2020}
+                toYear={2035}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Dam kunlari</Label>
+              {form.holidays.length > 0 && (
+                <div className="space-y-1">
+                  {form.holidays.map((h) => (
+                    <div key={h} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
+                      <span>{formatDate(h)}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setForm((f) => ({ ...f, holidays: f.holidays.filter((d) => d !== h) }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <DatePicker
+                key={holidayPickerKey}
+                value={null}
+                onChange={(d) => {
+                  if (d && !form.holidays.includes(d)) {
+                    setForm((f) => ({ ...f, holidays: [...f.holidays, d].sort() }))
+                  }
+                  setHolidayPickerKey((k) => k + 1)
+                }}
+                placeholder="Dam kuni qo'shish"
                 fromYear={2020}
                 toYear={2035}
               />
