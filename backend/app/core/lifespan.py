@@ -2,15 +2,16 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, time
 
 import anyio
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from app.models import *  # noqa: F403
 
-from .config import EnvironmentOption, settings
+from .config import LOCAL_TZ, EnvironmentOption, settings
 from .db import async_engine as engine
 from .db import local_session
 
@@ -18,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 AUTO_SYNC_INTERVAL = 15 * 60  # 15 minutes
 AUTO_SYNC_INITIAL_DELAY = 60  # 1 minute after startup
+
+AUTO_END_INTERVAL = 60  # check every 1 minute
+AUTO_END_GRACE_MINUTES = 5  # end session 5 min after scheduled end_time
 
 
 async def check_database_connection() -> None:
@@ -67,6 +71,67 @@ async def _auto_sync_loop() -> None:
         await asyncio.sleep(AUTO_SYNC_INTERVAL)
 
 
+async def _auto_end_sessions_loop() -> None:
+    """Auto-end in_progress sessions that ran past their scheduled end_time + grace period."""
+    from app.core.enums import SessionStatus
+    from app.models.lesson_session import LessonSession
+    from app.models.schedule_entry import ScheduleEntry
+    from app.models.time_slot import TimeSlot
+
+    logger.info("Auto-end sessions loop started (grace=%dm)", AUTO_END_GRACE_MINUTES)
+
+    while True:
+        await asyncio.sleep(AUTO_END_INTERVAL)
+        try:
+            async with local_session() as db:
+                now_utc = datetime.now(UTC)
+                now_local = now_utc.astimezone(LOCAL_TZ)
+                today = now_local.date()
+                now_time = now_local.time()
+
+                result = await db.execute(
+                    select(LessonSession)
+                    .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+                    .join(TimeSlot, ScheduleEntry.time_slot_id == TimeSlot.id)
+                    .where(
+                        LessonSession.status == SessionStatus.IN_PROGRESS,
+                        LessonSession.is_deleted == False,  # noqa: E712
+                        LessonSession.session_date == today,
+                    )
+                    .with_for_update(skip_locked=True)
+                )
+                sessions = result.scalars().all()
+
+                ended = 0
+                for session in sessions:
+                    entry = await db.get(ScheduleEntry, session.schedule_entry_id)
+                    if not entry:
+                        continue
+                    slot = await db.get(TimeSlot, entry.time_slot_id)
+                    if not slot:
+                        continue
+
+                    # slot.end_time is a time object (TIME column)
+                    end_t = slot.end_time if isinstance(slot.end_time, time) else time.fromisoformat(str(slot.end_time))
+                    deadline_dt = datetime.combine(today, end_t, tzinfo=LOCAL_TZ)
+                    grace_seconds = AUTO_END_GRACE_MINUTES * 60
+
+                    if (now_local - deadline_dt).total_seconds() >= grace_seconds:
+                        session.status = SessionStatus.COMPLETED
+                        session.ended_at = now_utc
+                        ended += 1
+
+                if ended:
+                    await db.commit()
+                    logger.info("Auto-ended %d session(s)", ended)
+
+        except asyncio.CancelledError:
+            logger.info("Auto-end sessions loop stopped")
+            return
+        except Exception as e:
+            logger.error("Auto-end sessions loop error: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     await check_database_connection()
@@ -75,7 +140,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     if settings.PAYMENT_SYNC_API_KEY:
         sync_task = asyncio.create_task(_auto_sync_loop())
 
+    auto_end_task = asyncio.create_task(_auto_end_sessions_loop())
+
     yield
+
+    auto_end_task.cancel()
+    try:
+        await auto_end_task
+    except asyncio.CancelledError:
+        pass
 
     if sync_task:
         sync_task.cancel()

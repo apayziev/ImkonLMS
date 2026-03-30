@@ -180,7 +180,7 @@ export function SessionView({
             <ChevronRight className={cn("h-4 w-4 transition-transform", showPlan && "rotate-90")} />
           </Button>
           {showPlan && (
-            <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} />
+            <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} homeworkEditable={isInProgress} />
           )}
         </>
       )}
@@ -191,30 +191,26 @@ export function SessionView({
             <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
-              <div className="flex gap-1.5 w-56 justify-center">
-                <span className="flex items-center gap-1 px-3 py-1.5">
-                  <button
-                    type="button"
-                    title={unmarkedCount > 0 ? "Hammasini keldi" : "Hammasini bekor qilish"}
-                    onClick={() => markAllMutation.mutate(unmarkedCount > 0 ? "mark" : "unmark")}
-                    disabled={markAllMutation.isPending}
-                    className={cn(
-                      "inline-flex items-center justify-center h-5 w-5 rounded-full transition-colors disabled:opacity-50",
-                      unmarkedCount > 0
-                        ? "bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white"
-                        : "bg-muted-foreground/20 hover:bg-muted-foreground/30 text-muted-foreground",
-                    )}
-                  >
-                    {markAllMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <UserCheck className="h-3 w-3" />
-                    )}
-                  </button>
-                  Keldi
-                </span>
-                <span className="px-3 py-1.5">Kech</span>
-                <span className="px-3 py-1.5">Kelmadi</span>
+              <div className="flex gap-1.5 w-56 justify-center items-center">
+                <button
+                  type="button"
+                  title={unmarkedCount > 0 ? "Hammasini keldi" : "Hammasini bekor qilish"}
+                  onClick={() => markAllMutation.mutate(unmarkedCount > 0 ? "mark" : "unmark")}
+                  disabled={markAllMutation.isPending}
+                  className={cn(
+                    "inline-flex items-center justify-center h-5 w-5 rounded-full transition-colors disabled:opacity-50",
+                    unmarkedCount > 0
+                      ? "bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white"
+                      : "bg-muted-foreground/20 hover:bg-muted-foreground/30 text-muted-foreground",
+                  )}
+                >
+                  {markAllMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <UserCheck className="h-3 w-3" />
+                  )}
+                </button>
+                <span>Davomat</span>
               </div>
               <span className="w-28 text-center">Baho</span>
             </div>

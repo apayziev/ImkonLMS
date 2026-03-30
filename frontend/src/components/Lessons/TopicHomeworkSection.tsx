@@ -35,11 +35,13 @@ export function TopicHomeworkSection({
   session,
   sessionId: initialSessionId,
   disabled,
+  homeworkEditable = false,
   createSession,
 }: {
   session: SessionDetailRead
   sessionId: number
   disabled: boolean
+  homeworkEditable?: boolean
   createSession?: () => Promise<SessionDetailRead>
 }) {
   const queryClient = useQueryClient()
@@ -394,7 +396,7 @@ export function TopicHomeworkSection({
               setHomework(e.target.value)
               saveDebounced({ homework: e.target.value || null })
             }}
-            disabled={disabled}
+            disabled={disabled && !homeworkEditable}
             rows={2}
             className="resize-none"
           />
@@ -411,7 +413,7 @@ export function TopicHomeworkSection({
               saveImmediate({ homework_deadline: dateStr || null })
             }}
             placeholder="Sanani tanlang"
-            disabled={disabled}
+            disabled={disabled && !homeworkEditable}
             fromYear={new Date().getFullYear()}
             toYear={new Date().getFullYear() + 1}
           />
