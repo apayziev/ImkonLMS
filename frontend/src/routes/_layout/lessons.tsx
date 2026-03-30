@@ -3,13 +3,15 @@ import { createFileRoute } from "@tanstack/react-router"
 import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react"
 import { useState } from "react"
 
-import { LessonsList, SessionView } from "@/components/Lessons"
+import { SessionView, StudentRow } from "@/components/Lessons"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCurrentAcademicYearQueryOptions,
   getCurrentQuarterQueryOptions,
+  getLessonSessionQueryOptions,
+  getTodayLessonsQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { cn } from "@/lib/utils"
@@ -268,7 +270,7 @@ function QuarterDatesView({
       )}
 
       {selectedDay && (
-        <div className="space-y-0 border-t pt-4">
+        <div className="border-t pt-4">
           <div className="flex border-b overflow-x-auto mb-4">
             <button
               type="button"
@@ -277,12 +279,86 @@ function QuarterDatesView({
               Darsdagi faollik
             </button>
           </div>
-          <LessonsList
+          <DayAttendanceView
             selectedDate={selectedDay}
-            onDateChange={setSelectedDay}
+            grade={grade}
+            subject={subject}
             onSessionOpen={onSessionOpen}
           />
         </div>
+      )}
+    </div>
+  )
+}
+
+function DayAttendanceView({
+  selectedDate,
+  grade,
+  subject,
+  onSessionOpen,
+}: {
+  selectedDate: Date
+  grade: string
+  subject: string
+  onSessionOpen: (sessionId: number) => void
+}) {
+  const dateStr = toDateStr(selectedDate)
+
+  const { data: lessonsData, isLoading: lessonsLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
+
+  const matchedLesson = lessonsData?.data.find(
+    (l) => l.grade_display === grade && l.subject_name === subject,
+  )
+
+  const sessionId = matchedLesson?.session_id ?? 0
+  const { data: session, isLoading: sessionLoading } = useQuery({
+    ...getLessonSessionQueryOptions(sessionId),
+    enabled: sessionId > 0,
+  })
+
+  if (lessonsLoading || (sessionId > 0 && sessionLoading)) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 rounded-lg" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!matchedLesson) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">Bu kunda dars yo'q</p>
+    )
+  }
+
+  if (!session) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">Dars hali boshlanmagan</p>
+    )
+  }
+
+  const isCompleted = session.status === "completed"
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-1 text-xs font-medium text-muted-foreground">
+        <span>#</span>
+        <span>O'quvchi</span>
+        <span className="w-56 text-center">Davomat</span>
+        <span className="w-20 text-center">Baho</span>
+      </div>
+      {session.students.map((student, i) => (
+        <StudentRow
+          key={student.student_id}
+          student={student}
+          index={i + 1}
+          sessionId={session.id}
+          disabled={isCompleted}
+        />
+      ))}
+      {session.students.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted-foreground">O'quvchilar yo'q</p>
       )}
     </div>
   )
