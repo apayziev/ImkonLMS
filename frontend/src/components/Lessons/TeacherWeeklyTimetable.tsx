@@ -220,14 +220,16 @@ export function TeacherWeeklyTimetable({
                                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
                                   {currentQuarter && (
                                     <p className="text-[10px] text-muted-foreground mt-1.5">
-                                      {countDayInRange(entry.day_of_week, currentQuarter.start_date, currentQuarter.end_date)}-dars / chorak
+                                      {currentQuarter.number}-chorak · {countDayInRange(entry.day_of_week, currentQuarter.start_date, currentQuarter.end_date)}-dars
                                     </p>
                                   )}
                                 </>
                               )}
                             </button>
                           ) : (
-                            <div className="min-h-[96px]" />
+                            <div className="min-h-[96px] flex items-center justify-center">
+                              <span className="text-[11px] text-muted-foreground/50">Dars yo'q</span>
+                            </div>
                           )}
                         </td>
                       )
