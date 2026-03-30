@@ -94,6 +94,15 @@ function LessonsPage() {
           <ArrowLeft className="h-4 w-4" />
           Chorak jadvaliga qaytish
         </Button>
+        {/* Tab bar — JAHON SCHOOL uslubi */}
+        <div className="flex border-b overflow-x-auto">
+          <button
+            type="button"
+            className="px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 border-primary text-primary"
+          >
+            Darsdagi faollik
+          </button>
+        </div>
         <LessonsList
           selectedDate={view.date}
           onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject, selectedDate: view.selectedDate })}
@@ -223,9 +232,9 @@ function QuarterDatesView({
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-baseline gap-2 flex-wrap">
         <h2 className="text-lg font-semibold">{grade} · {subject}</h2>
-        <p className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars</p>
+        <span className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars</span>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
