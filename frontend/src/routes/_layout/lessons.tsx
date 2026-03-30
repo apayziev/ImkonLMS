@@ -280,7 +280,7 @@ function QuarterDatesView({
             </button>
           </div>
           <DayAttendanceView
-            selectedDate={new Date(selectedCard.ds + "T00:00:00")}
+            dateStr={selectedCard.ds}
             entryId={selectedCard.entryId}
           />
         </div>
@@ -290,13 +290,12 @@ function QuarterDatesView({
 }
 
 function DayAttendanceView({
-  selectedDate,
+  dateStr,
   entryId,
 }: {
-  selectedDate: Date
+  dateStr: string
   entryId: number
 }) {
-  const dateStr = toDateStr(selectedDate)
   const queryClient = useQueryClient()
   const [activeSessionId, setActiveSessionId] = useState<number>(0)
 
