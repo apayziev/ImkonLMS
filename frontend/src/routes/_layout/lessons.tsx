@@ -7,11 +7,9 @@ import { LessonsList, SessionView } from "@/components/Lessons"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
   getCurrentQuarterQueryOptions,
-  getScheduleQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { cn } from "@/lib/utils"
@@ -171,24 +169,15 @@ function QuarterDatesView({
   daysOfWeek: number[]
   onDaySelect: (date: Date) => void
 }) {
-  const { user } = useAuth()
   const [expanded, setExpanded] = useState(false)
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { data: currentQuarter, isLoading: quarterLoading } = useQuery(getCurrentQuarterQueryOptions())
-  const { data: scheduleData, isLoading: scheduleLoading } = useQuery(
-    getScheduleQueryOptions({
-      academic_year_id: currentYear?.id ?? 0,
-      teacher_id: user?.id,
-    }),
-  )
 
-  const isLoading = quarterLoading || scheduleLoading || !currentYear
+  const isLoading = quarterLoading || !currentYear
   const today = toDateStr(new Date())
   const weekStart = toDateStr(getWeekStart(new Date()))
   const weekEnd = toDateStr(getWeekEnd(new Date()))
-
-  const entries = scheduleData?.data ?? []
 
   const allDates = currentQuarter && daysOfWeek.length > 0
     ? generateLessonDates(
