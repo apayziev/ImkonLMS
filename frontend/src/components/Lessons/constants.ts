@@ -19,8 +19,8 @@ export const LESSON_TYPES = [
 
 export const ATTENDANCE_OPTIONS = [
   { value: "present", label: "Keldi", color: "bg-[var(--imkon-teal)] text-white border-[var(--imkon-teal)]", badgeClassName: "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)]", canHaveGrade: true },
-  { value: "late", label: "Kech", color: "bg-amber-100 text-amber-600 border-amber-400", badgeClassName: "bg-amber-100 text-amber-700", canHaveGrade: true },
-  { value: "absent", label: "Kelmadi", color: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)] border-[var(--imkon-red)]/60", badgeClassName: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]", canHaveGrade: false },
+  { value: "late", label: "Kech", color: "bg-amber-400 text-white border-amber-400", badgeClassName: "bg-amber-100 text-amber-700", canHaveGrade: true },
+  { value: "absent", label: "Kelmadi", color: "bg-[var(--imkon-red)] text-white border-[var(--imkon-red)]", badgeClassName: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]", canHaveGrade: false },
 ] as const
 
 export const GRADED_STATUSES = new Set(
