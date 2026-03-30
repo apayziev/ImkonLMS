@@ -38,9 +38,11 @@ import { ATTENDANCE_OPTIONS } from "./constants"
 export function SessionView({
   sessionId,
   onBack,
+  hideBack = false,
 }: {
   sessionId: number
   onBack: () => void
+  hideBack?: boolean
 }) {
   const queryClient = useQueryClient()
   const { data: session, isLoading } = useQuery(
@@ -112,9 +114,11 @@ export function SessionView({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          {!hideBack && (
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
           <div>
             <h1 className="text-2xl font-bold">
               {session.grade_display} — {session.subject_name}

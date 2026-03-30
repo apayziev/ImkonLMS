@@ -4,14 +4,13 @@ import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Play } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { SessionView, StudentRow } from "@/components/Lessons"
+import { SessionView } from "@/components/Lessons"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCurrentAcademicYearQueryOptions,
   getCurrentQuarterQueryOptions,
-  getLessonSessionQueryOptions,
   getSessionStatusesQueryOptions,
   getTodayLessonsQueryOptions,
   queryKeys,
@@ -340,12 +339,7 @@ function DayAttendanceView({
   const { data: lessonsData, isLoading: lessonsLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
   const matchedLesson = lessonsData?.data.find((l) => l.schedule_entry_id === entryId)
-
   const sessionId = activeSessionId || (matchedLesson?.session_id ?? 0)
-  const { data: session, isLoading: sessionLoading } = useQuery({
-    ...getLessonSessionQueryOptions(sessionId),
-    enabled: sessionId > 0,
-  })
 
   const startMutation = useMutation({
     mutationFn: () => lessonsApi.startSession(entryId, dateStr),
@@ -357,7 +351,7 @@ function DayAttendanceView({
     onError: () => toast.error("Darsni boshlashda xatolik"),
   })
 
-  if (lessonsLoading || (sessionId > 0 && sessionLoading)) {
+  if (lessonsLoading) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -367,7 +361,7 @@ function DayAttendanceView({
     )
   }
 
-  if (!session) {
+  if (!sessionId) {
     return (
       <div className="py-6 flex flex-col items-center gap-3">
         <p className="text-sm text-muted-foreground">Dars hali boshlanmagan</p>
@@ -385,28 +379,5 @@ function DayAttendanceView({
     )
   }
 
-  const isCompleted = session.status === "completed"
-
-  return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-1 text-xs font-medium text-muted-foreground">
-        <span>#</span>
-        <span>O'quvchi</span>
-        <span className="w-56 text-center">Davomat</span>
-        <span className="w-20 text-center">Baho</span>
-      </div>
-      {session.students.map((student, i) => (
-        <StudentRow
-          key={student.student_id}
-          student={student}
-          index={i + 1}
-          sessionId={session.id}
-          disabled={isCompleted}
-        />
-      ))}
-      {session.students.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted-foreground">O'quvchilar yo'q</p>
-      )}
-    </div>
-  )
+  return <SessionView sessionId={sessionId} onBack={() => {}} hideBack />
 }
