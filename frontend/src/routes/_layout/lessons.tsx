@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Play } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { SessionView, StudentRow } from "@/components/Lessons"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
@@ -12,8 +13,10 @@ import {
   getCurrentQuarterQueryOptions,
   getLessonSessionQueryOptions,
   getTodayLessonsQueryOptions,
+  queryKeys,
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
+import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const UZ_MONTHS_SHORT = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
@@ -294,6 +297,8 @@ function DayAttendanceView({
   periodIndex: number
 }) {
   const dateStr = toDateStr(selectedDate)
+  const queryClient = useQueryClient()
+  const [activeSessionId, setActiveSessionId] = useState<number>(0)
 
   const { data: lessonsData, isLoading: lessonsLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
 
@@ -302,10 +307,20 @@ function DayAttendanceView({
   ) ?? []
   const matchedLesson = matchingLessons[periodIndex]
 
-  const sessionId = matchedLesson?.session_id ?? 0
+  const sessionId = activeSessionId || (matchedLesson?.session_id ?? 0)
   const { data: session, isLoading: sessionLoading } = useQuery({
     ...getLessonSessionQueryOptions(sessionId),
     enabled: sessionId > 0,
+  })
+
+  const startMutation = useMutation({
+    mutationFn: () => lessonsApi.startSession(matchedLesson!.schedule_entry_id, dateStr),
+    onSuccess: (response) => {
+      toast.success("Dars boshlandi")
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
+      setActiveSessionId(response.data.id)
+    },
+    onError: () => toast.error("Darsni boshlashda xatolik"),
   })
 
   if (lessonsLoading || (sessionId > 0 && sessionLoading)) {
@@ -326,7 +341,19 @@ function DayAttendanceView({
 
   if (!session) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">Dars hali boshlanmagan</p>
+      <div className="py-6 flex flex-col items-center gap-3">
+        <p className="text-sm text-muted-foreground">Dars hali boshlanmagan</p>
+        <Button
+          size="sm"
+          onClick={() => startMutation.mutate()}
+          disabled={startMutation.isPending}
+        >
+          {startMutation.isPending
+            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            : <Play className="mr-2 h-4 w-4" />}
+          Darsni boshlash
+        </Button>
+      </div>
     )
   }
 
