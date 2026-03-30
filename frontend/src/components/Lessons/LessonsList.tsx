@@ -52,6 +52,10 @@ export function LessonsList({
   })
 
   const lessons = data?.data ?? []
+  const hasInProgressLesson = lessons.some((l) => l.session_status === "in_progress")
+  const visibleLessons = hasInProgressLesson
+    ? lessons.filter((l) => l.session_status === "in_progress" || l.session_status === "completed")
+    : lessons
 
   return (
     <div className="space-y-6">
@@ -132,7 +136,7 @@ export function LessonsList({
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {lessons.map((lesson) => (
+          {visibleLessons.map((lesson) => (
             <LessonCard
               key={lesson.schedule_entry_id}
               lesson={lesson}
