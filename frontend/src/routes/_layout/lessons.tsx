@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Play } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { SessionView, StudentRow } from "@/components/Lessons"
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 type View =
   | { type: "timetable" }
-  | { type: "quarter"; scheduleEntries: { id: number; dow: number }[]; grade: string; subject: string; selectedDate: Date }
+  | { type: "quarter"; scheduleEntries: { id: number; dow: number }[]; grade: string; subject: string; selectedDate: Date; clickedEntryId: number }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
@@ -103,6 +103,7 @@ function LessonsPage() {
           grade={view.grade}
           subject={view.subject}
           selectedDate={view.selectedDate}
+          clickedEntryId={view.clickedEntryId}
         />
       </div>
     )
@@ -127,10 +128,8 @@ function LessonsPage() {
       </div>
       <TeacherWeeklyTimetable
         selectedDate={selectedDate}
-        onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
-        onDaySelect={(date, scheduleEntries, grade, subject) => {
-          void date
-          setView({ type: "quarter", scheduleEntries, grade, subject, selectedDate })
+        onDaySelect={(date, scheduleEntries, grade, subject, clickedEntryId) => {
+          setView({ type: "quarter", scheduleEntries, grade, subject, selectedDate: date, clickedEntryId })
         }}
       />
     </div>
@@ -142,11 +141,13 @@ function QuarterDatesView({
   grade,
   subject,
   selectedDate,
+  clickedEntryId,
 }: {
   scheduleEntries: { id: number; dow: number }[]
   grade: string
   subject: string
   selectedDate: Date
+  clickedEntryId: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; entryId: number } | null>(null)
@@ -171,6 +172,15 @@ function QuarterDatesView({
     : []
 
   const allIndexed = allDates.map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
+
+  const clickedDs = toDateStr(selectedDate)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run once when data loads
+  useEffect(() => {
+    if (allIndexed.length === 0 || selectedCard) return
+    const match = allIndexed.find((c) => c.ds === clickedDs && c.entryId === clickedEntryId)
+    if (match) setSelectedCard(match)
+  }, [allIndexed.length])
+
   const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
   const visibleGroups = expanded ? allIndexed : weekGroups
 

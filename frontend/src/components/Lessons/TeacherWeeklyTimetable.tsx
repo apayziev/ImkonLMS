@@ -1,7 +1,6 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { CalendarDays, Loader2 } from "lucide-react"
 import { useState } from "react"
-import { toast } from "sonner"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { buildGrid } from "@/components/timetable/helpers"
@@ -21,7 +20,6 @@ import {
   getCurrentQuarterQueryOptions,
   getScheduleQueryOptions,
   getTimeSlotsQueryOptions,
-  getTodayLessonsQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 
@@ -45,15 +43,12 @@ function countDayInRange(dayOfWeek: number, start: string, end: string, holidays
 
 export function TeacherWeeklyTimetable({
   selectedDate,
-  onSessionOpen,
   onDaySelect,
 }: {
   selectedDate: Date
-  onSessionOpen: (sessionId: number) => void
-  onDaySelect: (date: Date, scheduleEntries: { id: number; dow: number }[], grade: string, subject: string) => void
+  onDaySelect: (date: Date, scheduleEntries: { id: number; dow: number }[], grade: string, subject: string, clickedEntryId: number) => void
 }) {
   const { user } = useAuth()
-  const queryClient = useQueryClient()
   const [loadingCell, setLoadingCell] = useState<number | null>(null)
 
   const { weekDays, workingDays } = useWeekNavigation(selectedDate, () => {})
@@ -99,32 +94,23 @@ export function TeacherWeeklyTimetable({
     return d ? toDateString(d) : ""
   }
 
-  const handleCellClick = async (scheduleEntryId: number, dayOfWeek: number) => {
+  const handleCellClick = (scheduleEntryId: number, dayOfWeek: number) => {
     const date = dateForDay(dayOfWeek)
     if (!date) return
-    const dateStr = toDateString(date)
 
     setLoadingCell(scheduleEntryId)
     try {
-      const lessons = await queryClient.fetchQuery(getTodayLessonsQueryOptions(dateStr))
-      const lesson = lessons.data.find((l) => l.schedule_entry_id === scheduleEntryId)
-      if (lesson?.session_id) {
-        onSessionOpen(lesson.session_id)
-      } else {
-        const clickedEntry = entries.find((e) => e.id === scheduleEntryId)
-        const matchingEntries = clickedEntry
-          ? entries
-              .filter(
-                (e) =>
-                  e.grade_display === clickedEntry.grade_display &&
-                  e.subject_name === clickedEntry.subject_name,
-              )
-              .map((e) => ({ id: e.id, dow: e.day_of_week }))
-          : [{ id: scheduleEntryId, dow: dayOfWeek }]
-        onDaySelect(date, matchingEntries, clickedEntry?.grade_display ?? "", clickedEntry?.subject_name ?? "")
-      }
-    } catch {
-      toast.error("Ma'lumotlarni yuklashda xatolik")
+      const clickedEntry = entries.find((e) => e.id === scheduleEntryId)
+      const matchingEntries = clickedEntry
+        ? entries
+            .filter(
+              (e) =>
+                e.grade_display === clickedEntry.grade_display &&
+                e.subject_name === clickedEntry.subject_name,
+            )
+            .map((e) => ({ id: e.id, dow: e.day_of_week }))
+        : [{ id: scheduleEntryId, dow: dayOfWeek }]
+      onDaySelect(date, matchingEntries, clickedEntry?.grade_display ?? "", clickedEntry?.subject_name ?? "", scheduleEntryId)
     } finally {
       setLoadingCell(null)
     }
