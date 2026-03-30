@@ -18,6 +18,8 @@ export const queryKeys = {
   lessonSession: ["lesson-session"] as const,
   quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
   attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
+  sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
+    ["session-statuses", entryIds.join(","), startDate, endDate] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -116,6 +118,22 @@ export function getTodayLessonsQueryOptions(date?: string) {
       const { data } = await lessonsApi.today(date)
       return data
     },
+  }
+}
+
+export function getSessionStatusesQueryOptions(
+  entryIds: number[],
+  startDate: string,
+  endDate: string,
+) {
+  return {
+    queryKey: queryKeys.sessionStatuses(entryIds, startDate, endDate),
+    queryFn: async () => {
+      const { data } = await lessonsApi.sessionStatuses(entryIds, startDate, endDate)
+      return data
+    },
+    enabled: entryIds.length > 0 && !!startDate && !!endDate,
+    staleTime: 60 * 1000,
   }
 }
 

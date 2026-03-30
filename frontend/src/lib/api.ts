@@ -474,9 +474,31 @@ export interface AttendanceDayResponse {
   sessions: AttendanceSessionRead[]
 }
 
+export interface SessionStatusItem {
+  schedule_entry_id: number
+  session_date: string
+  status: string // planned | in_progress | completed
+}
+
+export interface SessionStatusesResponse {
+  data: SessionStatusItem[]
+}
+
 export const lessonsApi = {
   today: (date?: string) =>
     api.get<TodayLessonsResponse>("/api/v1/lessons/today", { params: date ? { date } : undefined }),
+  sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
+    api.get<SessionStatusesResponse>("/api/v1/lessons/sessions/statuses", {
+      params: { entry_id: entryIds, start_date: startDate, end_date: endDate },
+      paramsSerializer: (params) => {
+        const parts: string[] = []
+        for (const [k, v] of Object.entries(params)) {
+          if (Array.isArray(v)) v.forEach((item) => parts.push(`${k}=${item}`))
+          else parts.push(`${k}=${v}`)
+        }
+        return parts.join("&")
+      },
+    }),
   startSession: (schedule_entry_id: number, target_date?: string) =>
     api.post<SessionDetailRead>("/api/v1/lessons/sessions", { schedule_entry_id, target_date }),
   planSession: (schedule_entry_id: number, target_date?: string) =>

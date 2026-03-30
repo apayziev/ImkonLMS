@@ -33,6 +33,16 @@ class TodayLessonsResponse(BaseModel):
     date: str
 
 
+class SessionStatusItem(BaseModel):
+    schedule_entry_id: int
+    session_date: str
+    status: SessionStatus
+
+
+class SessionStatusesResponse(BaseModel):
+    data: list[SessionStatusItem]
+
+
 # --- Session ---
 
 

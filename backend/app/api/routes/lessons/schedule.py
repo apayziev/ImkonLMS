@@ -11,11 +11,43 @@ from app.core.formatting import format_time
 from app.crud.lessons import crud_lesson_sessions
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
-from app.schemas.lessons import TodayLessonRead, TodayLessonsResponse
+from app.schemas.lessons import SessionStatusItem, SessionStatusesResponse, TodayLessonRead, TodayLessonsResponse
 
 from ._helpers import ENTRY_LOAD, _require_teacher
 
 router = APIRouter()
+
+
+@router.get("/sessions/statuses", response_model=SessionStatusesResponse)
+async def get_session_statuses(
+    db: SessionDep,
+    current_user: CurrentUser,
+    entry_ids: list[int] = Query(..., alias="entry_id"),
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+) -> SessionStatusesResponse:
+    """Get session statuses for given schedule entries within a date range."""
+    _require_teacher(current_user)
+
+    result = await db.execute(
+        select(LessonSession).where(
+            LessonSession.schedule_entry_id.in_(entry_ids),
+            LessonSession.session_date >= start_date,
+            LessonSession.session_date <= end_date,
+            LessonSession.is_deleted == False,  # noqa: E712
+        )
+    )
+    sessions = result.scalars().all()
+    return SessionStatusesResponse(
+        data=[
+            SessionStatusItem(
+                schedule_entry_id=s.schedule_entry_id,
+                session_date=s.session_date.isoformat(),
+                status=s.status,
+            )
+            for s in sessions
+        ]
+    )
 
 
 @router.get("/today", response_model=TodayLessonsResponse)

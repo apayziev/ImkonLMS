@@ -12,6 +12,7 @@ import {
   getCurrentAcademicYearQueryOptions,
   getCurrentQuarterQueryOptions,
   getLessonSessionQueryOptions,
+  getSessionStatusesQueryOptions,
   getTodayLessonsQueryOptions,
   queryKeys,
 } from "@/hooks/useQueryOptions"
@@ -176,6 +177,19 @@ function QuarterDatesView({
 
   const allIndexed = allDates.map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
 
+  const entryIds = scheduleEntries.map((e) => e.id)
+  const { data: statusesData } = useQuery(
+    getSessionStatusesQueryOptions(
+      entryIds,
+      currentQuarter?.start_date ?? "",
+      currentQuarter?.end_date ?? "",
+    ),
+  )
+  // Map: `${entryId}-${ds}` → status
+  const sessionStatusMap = new Map<string, string>(
+    statusesData?.data.map((s) => [`${s.schedule_entry_id}-${s.session_date}`, s.status]) ?? [],
+  )
+
   const clickedDs = toDateStr(selectedDate)
   useEffect(() => {
     if (allIndexed.length === 0) return
@@ -222,6 +236,9 @@ function QuarterDatesView({
           const isPast = ds < today
           const date = new Date(ds + "T00:00:00")
           const isSelected = selectedCard?.ds === ds && selectedCard?.entryId === entryId
+          const sessionStatus = sessionStatusMap.get(`${entryId}-${ds}`)
+          const isCompleted = sessionStatus === "completed"
+          const isInProgress = sessionStatus === "in_progress"
           return (
             <button
               key={`${ds}-${entryId}`}
@@ -232,23 +249,36 @@ function QuarterDatesView({
                 expanded ? "w-full" : "shrink-0 w-28",
                 isSelected
                   ? "bg-primary text-primary-foreground border-primary"
-                  : isToday
-                    ? "bg-primary/10 border-primary/40 hover:border-primary"
-                    : isPast
-                      ? "bg-muted/30 border-border hover:bg-muted/50"
-                      : "bg-card border-border hover:bg-accent",
+                  : isCompleted
+                    ? "bg-green-50 border-green-400 hover:border-green-500 dark:bg-green-950/30 dark:border-green-700"
+                    : isInProgress
+                      ? "bg-amber-50 border-amber-400 hover:border-amber-500 dark:bg-amber-950/30 dark:border-amber-700"
+                      : isToday
+                        ? "bg-primary/10 border-primary/40 hover:border-primary"
+                        : isPast
+                          ? "bg-muted/30 border-border hover:bg-muted/50"
+                          : "bg-card border-border hover:bg-accent",
               )}
             >
-              <span className={cn("text-sm font-bold", isPast && !isSelected && !isToday && "text-muted-foreground")}>
+              <span className={cn(
+                "text-sm font-bold",
+                !isSelected && isCompleted && "text-green-700 dark:text-green-400",
+                !isSelected && isInProgress && "text-amber-700 dark:text-amber-400",
+                !isSelected && !isCompleted && !isInProgress && isPast && !isToday && "text-muted-foreground",
+              )}>
                 {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]}
               </span>
               <span className={cn(
                 "text-xs mt-0.5",
                 isSelected
                   ? "text-primary-foreground/80"
-                  : isToday
-                    ? "text-primary"
-                    : "text-muted-foreground",
+                  : isCompleted
+                    ? "text-green-600 dark:text-green-500"
+                    : isInProgress
+                      ? "text-amber-600 dark:text-amber-500"
+                      : isToday
+                        ? "text-primary"
+                        : "text-muted-foreground",
               )}>
                 {lessonNumber}-dars
               </span>
