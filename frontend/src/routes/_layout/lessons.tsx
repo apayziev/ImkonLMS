@@ -50,25 +50,19 @@ function generateLessonDates(
   daysOfWeek: number[],
   holidays: string[],
 ): string[] {
+  const result: string[] = []
   const holidaySet = new Set(holidays)
+  const cur = new Date(start + "T00:00:00")
   const endDate = new Date(end + "T00:00:00")
-  // daysOfWeek can have duplicates (e.g. [1, 1, 3] = two Monday periods + one Wednesday)
-  // generate one date series per occurrence so total count matches lesson periods
-  const dates: string[] = []
-  for (const dow of daysOfWeek) {
-    const jsDow = dow === 7 ? 0 : dow
-    const cur = new Date(start + "T00:00:00")
-    while (cur <= endDate) {
-      if (cur.getDay() === jsDow) {
-        const ds = toDateStr(cur)
-        if (!holidaySet.has(ds)) dates.push(ds)
-        cur.setDate(cur.getDate() + 7)
-      } else {
-        cur.setDate(cur.getDate() + 1)
-      }
-    }
+  const dowSet = new Set(daysOfWeek)
+  while (cur <= endDate) {
+    const jsDow = cur.getDay()
+    const dbDow = jsDow === 0 ? 7 : jsDow
+    const ds = toDateStr(cur)
+    if (dowSet.has(dbDow) && !holidaySet.has(ds)) result.push(ds)
+    cur.setDate(cur.getDate() + 1)
   }
-  return dates.sort()
+  return result
 }
 
 export const Route = createFileRoute("/_layout/lessons")({
@@ -225,7 +219,7 @@ function QuarterDatesView({
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">{grade} · {subject}</h2>
-        <p className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars kuni</p>
+        <p className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta kun</p>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
