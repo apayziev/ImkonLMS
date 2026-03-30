@@ -50,19 +50,25 @@ function generateLessonDates(
   daysOfWeek: number[],
   holidays: string[],
 ): string[] {
-  const result: string[] = []
   const holidaySet = new Set(holidays)
-  const cur = new Date(start + "T00:00:00")
   const endDate = new Date(end + "T00:00:00")
-  const dowSet = new Set(daysOfWeek)
-  while (cur <= endDate) {
-    const jsDow = cur.getDay()
-    const dbDow = jsDow === 0 ? 7 : jsDow
-    const ds = toDateStr(cur)
-    if (dowSet.has(dbDow) && !holidaySet.has(ds)) result.push(ds)
-    cur.setDate(cur.getDate() + 1)
+  // daysOfWeek can have duplicates (e.g. [1, 1, 3] = two Monday periods + one Wednesday)
+  // generate one date series per occurrence so total count matches lesson periods
+  const dates: string[] = []
+  for (const dow of daysOfWeek) {
+    const jsDow = dow === 7 ? 0 : dow
+    const cur = new Date(start + "T00:00:00")
+    while (cur <= endDate) {
+      if (cur.getDay() === jsDow) {
+        const ds = toDateStr(cur)
+        if (!holidaySet.has(ds)) dates.push(ds)
+        cur.setDate(cur.getDate() + 7)
+      } else {
+        cur.setDate(cur.getDate() + 1)
+      }
+    }
   }
-  return result
+  return dates.sort()
 }
 
 export const Route = createFileRoute("/_layout/lessons")({
@@ -74,8 +80,8 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 type View =
   | { type: "timetable" }
-  | { type: "quarter"; daysOfWeek: number[] }
-  | { type: "day"; date: Date; daysOfWeek: number[] }
+  | { type: "quarter"; daysOfWeek: number[]; grade: string; subject: string }
+  | { type: "day"; date: Date; daysOfWeek: number[]; grade: string; subject: string }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
@@ -99,14 +105,14 @@ function LessonsPage() {
           variant="ghost"
           size="sm"
           className="gap-1.5 text-muted-foreground"
-          onClick={() => setView({ type: "quarter", daysOfWeek: view.daysOfWeek })}
+          onClick={() => setView({ type: "quarter", daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject })}
         >
           <ArrowLeft className="h-4 w-4" />
           Chorak jadvaliga qaytish
         </Button>
         <LessonsList
           selectedDate={view.date}
-          onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek })}
+          onDateChange={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject })}
           onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
         />
       </div>
@@ -127,7 +133,9 @@ function LessonsPage() {
         </Button>
         <QuarterDatesView
           daysOfWeek={view.daysOfWeek}
-          onDaySelect={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek })}
+          grade={view.grade}
+          subject={view.subject}
+          onDaySelect={(date) => setView({ type: "day", date, daysOfWeek: view.daysOfWeek, grade: view.grade, subject: view.subject })}
         />
       </div>
     )
@@ -153,9 +161,9 @@ function LessonsPage() {
       <TeacherWeeklyTimetable
         selectedDate={selectedDate}
         onSessionOpen={(sessionId) => setView({ type: "session", sessionId })}
-        onDaySelect={(date, daysOfWeek) => {
+        onDaySelect={(date, daysOfWeek, grade, subject) => {
           void date
-          setView({ type: "quarter", daysOfWeek })
+          setView({ type: "quarter", daysOfWeek, grade, subject })
         }}
       />
     </div>
@@ -164,9 +172,13 @@ function LessonsPage() {
 
 function QuarterDatesView({
   daysOfWeek,
+  grade,
+  subject,
   onDaySelect,
 }: {
   daysOfWeek: number[]
+  grade: string
+  subject: string
   onDaySelect: (date: Date) => void
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -212,10 +224,8 @@ function QuarterDatesView({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">
-          {currentQuarter.number}-chorak dars kunlari
-        </h2>
-        <p className="text-sm text-muted-foreground">{allDates.length} ta dars kuni</p>
+        <h2 className="text-lg font-semibold">{grade} · {subject}</h2>
+        <p className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars kuni</p>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">

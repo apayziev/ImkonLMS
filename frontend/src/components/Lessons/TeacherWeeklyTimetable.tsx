@@ -50,7 +50,7 @@ export function TeacherWeeklyTimetable({
 }: {
   selectedDate: Date
   onSessionOpen: (sessionId: number) => void
-  onDaySelect: (date: Date, daysOfWeek: number[]) => void
+  onDaySelect: (date: Date, daysOfWeek: number[], grade: string, subject: string) => void
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -121,7 +121,7 @@ export function TeacherWeeklyTimetable({
               )
               .map((e) => e.day_of_week)
           : [dayOfWeek]
-        onDaySelect(date, groupDays)
+        onDaySelect(date, groupDays, clickedEntry?.grade_display ?? "", clickedEntry?.subject_name ?? "")
       }
     } catch {
       toast.error("Ma'lumotlarni yuklashda xatolik")
