@@ -283,7 +283,6 @@ function QuarterDatesView({
             selectedDate={selectedDay}
             grade={grade}
             subject={subject}
-            onSessionOpen={onSessionOpen}
           />
         </div>
       )}
@@ -295,12 +294,10 @@ function DayAttendanceView({
   selectedDate,
   grade,
   subject,
-  onSessionOpen,
 }: {
   selectedDate: Date
   grade: string
   subject: string
-  onSessionOpen: (sessionId: number) => void
 }) {
   const dateStr = toDateStr(selectedDate)
 
