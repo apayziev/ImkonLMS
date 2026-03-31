@@ -260,7 +260,7 @@ function EndSessionDialog({
 
   const markMutation = useMutation({
     mutationFn: (data: { student_id: number; status: string }) =>
-      lessonsApi.updateAttendance(sessionId, { ...data, grade: null }),
+      lessonsApi.updateAttendance(sessionId, data),
     onSuccess: (response) => {
       queryClient.setQueryData(
         [...queryKeys.lessonSession, sessionId],

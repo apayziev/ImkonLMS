@@ -406,7 +406,6 @@ export interface SessionStudentRead {
   photo_url: string | null
   status: string // unmarked | present | late | absent
   marked_at: string | null
-  grade: number | null
 }
 
 export interface SessionDetailRead {
@@ -442,7 +441,6 @@ export interface LessonMaterialRead {
 export interface AttendanceUpdateRequest {
   student_id: number
   status: string
-  grade: number | null
 }
 
 // Admin attendance view
@@ -452,7 +450,6 @@ export interface AttendanceStudentRead {
   photo_url: string | null
   status: string // unmarked | present | late | absent
   marked_at: string | null
-  grade: number | null
 }
 
 export interface AttendanceSessionRead {

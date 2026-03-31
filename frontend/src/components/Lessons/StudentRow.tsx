@@ -40,11 +40,10 @@ export function StudentRow({
   }, [])
 
   const mutation = useMutation({
-    mutationFn: (data: { status: string; grade: number | null }) =>
+    mutationFn: (data: { status: string }) =>
       lessonsApi.updateAttendance(sessionId, {
         student_id: student.student_id,
         status: data.status,
-        grade: data.grade,
       }),
     onMutate: () => {
       clearTimeout(saveTimerRef.current)
@@ -79,7 +78,7 @@ export function StudentRow({
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
     const resolved = newStatus === student.status ? "unmarked" : newStatus
-    mutation.mutate({ status: resolved, grade: null })
+    mutation.mutate({ status: resolved })
   }
 
   return (
