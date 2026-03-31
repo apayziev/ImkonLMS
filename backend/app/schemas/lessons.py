@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from app.core.enums import AttendanceStatus, SessionStatus
 
@@ -52,7 +52,7 @@ class SessionStartRequest(BaseModel):
 
 
 class SessionStudentRead(BaseModel):
-    """One student's attendance + grade in a session."""
+    """One student's attendance in a session."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,7 +64,6 @@ class SessionStudentRead(BaseModel):
     photo_url: str | None = None
     status: AttendanceStatus
     marked_at: str | None = None
-    grade: int | None = None
 
 
 class LessonMaterialRead(BaseModel):
@@ -115,7 +114,6 @@ class SessionUpdateRequest(BaseModel):
 class AttendanceUpdateRequest(BaseModel):
     student_id: int
     status: AttendanceStatus
-    grade: int | None = Field(default=None, ge=1, le=5)
 
 
 # --- Admin Attendance View ---
@@ -127,7 +125,6 @@ class AttendanceStudentRead(BaseModel):
     photo_url: str | None = None
     status: AttendanceStatus
     marked_at: str | None = None
-    grade: int | None = None
 
 
 class AttendanceSessionRead(BaseModel):

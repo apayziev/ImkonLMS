@@ -66,7 +66,10 @@ export function SessionView({
       queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
       toast.success(action === "mark" ? "Barcha o'quvchilar belgilandi" : "Barcha belgilar olib tashlandi")
     },
-    onError: () => toast.error("Xatolik yuz berdi"),
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(msg ?? "Xatolik yuz berdi")
+    },
   })
 
   const startFromPlanMutation = useMutation({
@@ -188,7 +191,7 @@ export function SessionView({
       {!isPlanned && (
         <>
           <div className="space-y-2">
-            <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
+            <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
               <div className="flex gap-1.5 w-56 justify-center items-center">
@@ -196,7 +199,7 @@ export function SessionView({
                   type="button"
                   title={unmarkedCount > 0 ? "Hammasini keldi" : "Hammasini bekor qilish"}
                   onClick={() => markAllMutation.mutate(unmarkedCount > 0 ? "mark" : "unmark")}
-                  disabled={markAllMutation.isPending}
+                  disabled={isCompleted || markAllMutation.isPending}
                   className={cn(
                     "inline-flex items-center justify-center h-5 w-5 rounded-full transition-colors disabled:opacity-50",
                     unmarkedCount > 0
@@ -212,7 +215,6 @@ export function SessionView({
                 </button>
                 <span>Davomat</span>
               </div>
-              <span className="w-28 text-center">Baho</span>
             </div>
 
             {session.students.map((student, index) => (

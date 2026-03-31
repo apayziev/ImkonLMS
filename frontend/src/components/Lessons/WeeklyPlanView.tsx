@@ -165,7 +165,12 @@ function PlanEditor({
           </div>
         </div>
 
-        <TopicHomeworkSection session={session} sessionId={session.id} disabled={false} />
+        <TopicHomeworkSection
+          session={session}
+          sessionId={session.id}
+          disabled={session.status === "completed"}
+          homeworkEditable={session.status === "in_progress"}
+        />
       </div>
     )
   }

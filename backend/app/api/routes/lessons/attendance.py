@@ -58,11 +58,8 @@ async def update_attendance(
 
     attendance, student = row
 
-    # If unmarked or absent, clear grade
-    grade = body.grade if body.status == AttendanceStatus.PRESENT else None
-
     attendance.status = body.status
-    attendance.grade = grade
+    attendance.grade = None
     attendance.marked_at = None if body.status == AttendanceStatus.UNMARKED else datetime.now(UTC)
 
     await db.commit()
@@ -77,7 +74,6 @@ async def update_attendance(
         photo_url=student.photo_url,
         status=attendance.status,
         marked_at=attendance.marked_at.isoformat() if attendance.marked_at else None,
-        grade=attendance.grade,
     )
 
 

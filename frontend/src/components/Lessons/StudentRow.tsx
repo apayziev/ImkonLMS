@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { queryKeys } from "@/hooks/useQueryOptions"
-import { ATTENDANCE_OPTIONS, GRADED_STATUSES, GRADES } from "./constants"
+import { ATTENDANCE_OPTIONS, GRADED_STATUSES } from "./constants"
 
 const ATTENDANCE_ICONS = {
   present: <Check className="h-4 w-4" />,
@@ -79,21 +79,13 @@ export function StudentRow({
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
     const resolved = newStatus === student.status ? "unmarked" : newStatus
-    const canHaveGrade = GRADED_STATUSES.has(resolved as "present" | "late")
-    const grade = canHaveGrade ? student.grade : null
-    mutation.mutate({ status: resolved, grade })
-  }
-
-  const handleGradeChange = (newGrade: number) => {
-    if (disabled || isAbsent) return
-    const grade = student.grade === newGrade ? null : newGrade
-    mutation.mutate({ status: student.status, grade })
+    mutation.mutate({ status: resolved, grade: null })
   }
 
   return (
     <div
       className={cn(
-        "grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
+        "grid grid-cols-[2rem_1fr_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
         isLate
           ? "border-amber-400/50 bg-amber-50 dark:bg-amber-950/20"
           : isUnmarked
@@ -175,42 +167,24 @@ export function StudentRow({
         ))}
       </div>
 
-      {/* Grade Buttons */}
-      <div className="flex gap-1 w-28 justify-center">
-        {isAbsent ? (
-          <span className="text-xs text-muted-foreground/50 italic" title="Yo'q o'quvchiga baho qo'yilmaydi">
-            baho yo'q
-          </span>
-        ) : (
-          GRADES.map((g) => (
-            <button
-              key={g}
-              type="button"
-              disabled={disabled}
-              onClick={() => handleGradeChange(g)}
-              className={cn(
-                "h-9 w-9 rounded-md border text-base font-bold transition-all",
-                student.grade === g
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-foreground border-border hover:bg-accent",
-                disabled && "cursor-not-allowed opacity-60",
-              )}
-            >
-              {g}
-            </button>
-          ))
-        )}
-      </div>
-
       {/* Photo zoom dialog */}
       {student.photo_url && (
         <Dialog open={photoOpen} onOpenChange={setPhotoOpen}>
-          <DialogContent className="flex items-center justify-center bg-transparent border-none shadow-none p-0 max-w-sm">
-            <img
-              src={student.photo_url}
-              alt={student.full_name}
-              className="rounded-xl max-h-[80vh] max-w-full object-contain"
-            />
+          <DialogContent className="flex items-center justify-center bg-transparent border-none shadow-none p-0 max-w-sm [&>button]:hidden">
+            <div className="relative">
+              <img
+                src={student.photo_url}
+                alt={student.full_name}
+                className="rounded-xl max-h-[80vh] max-w-full object-contain"
+              />
+              <button
+                type="button"
+                onClick={() => setPhotoOpen(false)}
+                className="absolute -top-3 -right-3 h-7 w-7 rounded-full bg-white/90 dark:bg-black/70 flex items-center justify-center shadow hover:bg-white transition-colors"
+              >
+                <X className="h-4 w-4 text-foreground" />
+              </button>
+            </div>
           </DialogContent>
         </Dialog>
       )}

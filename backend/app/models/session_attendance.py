@@ -1,8 +1,8 @@
-"""Session attendance — per-student attendance and grade for a lesson session."""
+"""Session attendance — per-student attendance for a lesson session."""
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, SmallInteger, String
+from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import AttendanceStatus
@@ -21,7 +21,6 @@ class SessionAttendance(BaseModel):
             unique=True,
             postgresql_where="is_deleted = false",
         ),
-        CheckConstraint("grade IS NULL OR (grade >= 1 AND grade <= 5)", name="ck_grade_range"),
     )
 
     lesson_session_id: Mapped[int] = mapped_column(
@@ -35,9 +34,6 @@ class SessionAttendance(BaseModel):
     )
     marked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None, kw_only=True,
-    )
-    grade: Mapped[int | None] = mapped_column(
-        SmallInteger, nullable=True, default=None, kw_only=True,
     )
 
     # === Relationships ===

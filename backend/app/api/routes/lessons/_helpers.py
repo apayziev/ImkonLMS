@@ -116,7 +116,6 @@ def _build_session_detail(
                 photo_url=student.photo_url if student else None,
                 status=att.status,
                 marked_at=att.marked_at.isoformat() if att.marked_at else None,
-                grade=att.grade,
             )
         )
 
