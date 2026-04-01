@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getLessonSessionQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
+import { getLessonSessionQueryOptions, getYellowCardsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { StudentRow } from "./StudentRow"
 import { ATTENDANCE_OPTIONS } from "./constants"
@@ -47,6 +47,9 @@ export function SessionView({
   const queryClient = useQueryClient()
   const { data: session, isLoading } = useQuery(
     getLessonSessionQueryOptions(sessionId),
+  )
+  const { data: yellowCardData } = useQuery(
+    getYellowCardsQueryOptions(sessionId),
   )
 
   const endMutation = useMutation({
@@ -191,9 +194,10 @@ export function SessionView({
       {!isPlanned && (
         <>
           <div className="space-y-2">
-            <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
+            <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
+              <span className="text-center text-xs">Ogohlantirish</span>
               <div className="flex gap-1.5 w-56 justify-center items-center">
                 <button
                   type="button"
@@ -225,6 +229,8 @@ export function SessionView({
                 sessionId={sessionId}
                 disabled={isCompleted}
                 isLate={showLateWarning && student.status === "unmarked"}
+                yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
+                yellowCardLimit={yellowCardData?.limit ?? 2}
               />
             ))}
           </div>

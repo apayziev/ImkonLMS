@@ -11,6 +11,7 @@ class QuarterCreate(BaseModel):
     start_date: date
     end_date: date
     holidays: list[date] = Field(default_factory=list)
+    yellow_card_limit: int = Field(default=2, ge=1)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "QuarterCreate":
@@ -24,6 +25,7 @@ class QuarterUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     holidays: list[date] | None = None
+    yellow_card_limit: int | None = Field(default=None, ge=1)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "QuarterUpdate":
@@ -41,6 +43,7 @@ class QuarterRead(TimestampSchema):
     start_date: date
     end_date: date
     holidays: list[date]
+    yellow_card_limit: int
 
 
 QuarterList = PaginatedList[QuarterRead]

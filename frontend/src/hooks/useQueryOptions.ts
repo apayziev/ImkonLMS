@@ -1,4 +1,4 @@
-import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi, yellowCardsApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -18,6 +18,7 @@ export const queryKeys = {
   lessonSession: ["lesson-session"] as const,
   quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
   attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
+  yellowCards: (sessionId: number) => ["yellow-cards", sessionId] as const,
   sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
     ["session-statuses", entryIds.join(","), startDate, endDate] as const,
 } as const
@@ -180,5 +181,16 @@ export function getCurrentQuarterQueryOptions() {
       return data
     },
     staleTime: 5 * 60 * 1000,
+  }
+}
+
+export function getYellowCardsQueryOptions(sessionId: number) {
+  return {
+    queryKey: queryKeys.yellowCards(sessionId),
+    queryFn: async () => {
+      const { data } = await yellowCardsApi.getBySession(sessionId)
+      return data
+    },
+    enabled: sessionId > 0,
   }
 }

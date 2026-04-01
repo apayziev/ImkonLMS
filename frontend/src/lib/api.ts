@@ -534,6 +534,7 @@ export interface QuarterRead {
   start_date: string
   end_date: string
   holidays: string[]
+  yellow_card_limit: number
   created_at: string | null
   updated_at: string | null
 }
@@ -645,6 +646,30 @@ export interface StudentPointsDetailResponse {
   starting_points: number
   current_points: number
   transactions: PointTransactionRead[]
+}
+
+// ─── Yellow Cards (Sariq Kartochkalar) ─────────────────────────────────────
+
+export interface YellowCardRead {
+  id: number
+  student_id: number
+  reason: string | null
+  created_at: string
+  issued_by_name: string
+}
+
+export interface YellowCardSessionSummary {
+  limit: number
+  by_student: Record<number, YellowCardRead[]>
+}
+
+export const yellowCardsApi = {
+  getBySession: (sessionId: number) =>
+    api.get<YellowCardSessionSummary>(`/api/v1/yellow-cards/session/${sessionId}`),
+  issue: (data: { student_id: number; session_id: number; reason?: string | null }) =>
+    api.post<YellowCardRead>("/api/v1/yellow-cards/", data),
+  remove: (cardId: number) =>
+    api.delete(`/api/v1/yellow-cards/${cardId}`),
 }
 
 export const pointsApi = {

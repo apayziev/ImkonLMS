@@ -13,6 +13,7 @@ from .subject import Subject
 from .sync_log import SyncLog
 from .time_slot import TimeSlot
 from .user import User, UserRole
+from .yellow_card import YellowCard
 
 __all__ = [
     "AcademicYear",
@@ -27,4 +28,5 @@ __all__ = [
     "TimeSlot",
     "User",
     "UserRole",
+    "YellowCard",
 ]

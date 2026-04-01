@@ -1,13 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
+import { Check, Clock, Eye, Loader2, Trash2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { SessionDetailRead, SessionStudentRead } from "@/lib/api"
-import { lessonsApi } from "@/lib/api"
+import type { SessionDetailRead, SessionStudentRead, YellowCardRead } from "@/lib/api"
+import { lessonsApi, yellowCardsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS, GRADED_STATUSES } from "./constants"
 
@@ -23,12 +25,16 @@ export function StudentRow({
   sessionId,
   disabled,
   isLate = false,
+  yellowCards = [],
+  yellowCardLimit = 2,
 }: {
   student: SessionStudentRead
   index: number
   sessionId: number
   disabled: boolean
   isLate?: boolean
+  yellowCards?: YellowCardRead[]
+  yellowCardLimit?: number
 }) {
   const queryClient = useQueryClient()
 
@@ -74,6 +80,35 @@ export function StudentRow({
   const isAbsent = !GRADED_STATUSES.has(student.status as "present" | "late")
   const isUnmarked = student.status === "unmarked"
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [cardDialogOpen, setCardDialogOpen] = useState(false)
+  const [cardReason, setCardReason] = useState("")
+  const cardCount = yellowCards.length
+  const isOverLimit = cardCount >= yellowCardLimit
+
+  const issueMutation = useMutation({
+    mutationFn: () =>
+      yellowCardsApi.issue({
+        student_id: student.student_id,
+        session_id: sessionId,
+        reason: cardReason.trim() || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.yellowCards(sessionId) })
+      setCardReason("")
+      setCardDialogOpen(false)
+      toast.success("Sariq kartochka berildi")
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (cardId: number) => yellowCardsApi.remove(cardId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.yellowCards(sessionId) })
+      toast.success("Kartochka o'chirildi")
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  })
 
   const handleStatusChange = (newStatus: string) => {
     if (disabled) return
@@ -84,7 +119,7 @@ export function StudentRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[2rem_1fr_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
+        "grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
         isLate
           ? "border-amber-400/50 bg-amber-50 dark:bg-amber-950/20"
           : isUnmarked
@@ -144,6 +179,24 @@ export function StudentRow({
         </div>
       </div>
 
+      {/* Yellow Card Button */}
+      <button
+        type="button"
+        onClick={() => setCardDialogOpen(true)}
+        className={cn(
+          "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all",
+          cardCount === 0
+            ? "border-border text-muted-foreground hover:border-yellow-400 hover:text-yellow-600 hover:bg-yellow-50"
+            : isOverLimit
+              ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-950/30"
+              : "border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30",
+        )}
+        title="Sariq kartochkalar"
+      >
+        <span>🟡</span>
+        <span>{cardCount}/{yellowCardLimit}</span>
+      </button>
+
       {/* Attendance Buttons */}
       <div className="flex gap-3 w-56 justify-center">
         {ATTENDANCE_OPTIONS.map((opt) => (
@@ -165,6 +218,79 @@ export function StudentRow({
           </button>
         ))}
       </div>
+
+      {/* Yellow Card Dialog */}
+      <Dialog open={cardDialogOpen} onOpenChange={setCardDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={student.photo_url ?? undefined} />
+                <AvatarFallback className="text-xs">{student.first_name[0]}{student.last_name[0]}</AvatarFallback>
+              </Avatar>
+              {student.last_name} {student.first_name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {/* Existing cards */}
+            {yellowCards.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Bu chorakdagi sariq kartochkalar ({cardCount}/{yellowCardLimit}):
+                </p>
+                {yellowCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="flex items-start justify-between gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 dark:border-yellow-800 dark:bg-yellow-950/30"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(card.created_at).toLocaleDateString("uz-UZ")} · {card.issued_by_name}
+                      </p>
+                      {card.reason && (
+                        <p className="text-sm mt-0.5">{card.reason}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeMutation.mutate(card.id)}
+                      disabled={removeMutation.isPending}
+                      className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Issue new card */}
+            {!disabled && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Sabab (ixtiyoriy):</p>
+                <Textarea
+                  value={cardReason}
+                  onChange={(e) => setCardReason(e.target.value)}
+                  placeholder="Sariq kartochka berilish sababini yozing..."
+                  className="min-h-[80px] resize-none text-sm"
+                />
+                <Button
+                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-semibold"
+                  onClick={() => issueMutation.mutate()}
+                  disabled={issueMutation.isPending}
+                >
+                  {issueMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    "🟡 Kartochka berish"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Photo zoom dialog */}
       {student.photo_url && (
