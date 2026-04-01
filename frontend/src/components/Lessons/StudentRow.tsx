@@ -207,16 +207,14 @@ export function StudentRow({
         onClick={() => setCardDialogOpen(true)}
         title="Sariq kartochkalar"
         className={cn(
-          "relative flex flex-col items-center justify-center w-14 h-10 rounded-lg border-2 transition-all select-none",
-          cardCount === 0
-            ? "border-dashed border-muted-foreground/30 text-muted-foreground/50 hover:border-yellow-400 hover:text-yellow-500"
-            : isOverLimit
-              ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-950/30"
-              : "border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30",
+          "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all select-none",
+          isOverLimit
+            ? "bg-red-500 text-white"
+            : "bg-orange-400 hover:bg-orange-500 text-white",
         )}
       >
-        <span className="text-base leading-none">🟡</span>
-        <span className="text-[10px] font-bold leading-none mt-0.5">{cardCount}/{yellowCardLimit}</span>
+        <span className="h-4 w-4 rounded-sm bg-white/30 shrink-0" />
+        <span>Ogohlantirish {cardCount}/{yellowCardLimit}</span>
       </button>
 
       {/* Yellow Card Dialog */}
@@ -241,41 +239,43 @@ export function StudentRow({
           </div>
 
           <div className="px-5 pb-5 space-y-4">
-            {/* Existing cards as visual cards */}
-            {yellowCards.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">
-                  Hozirgi chorakdagi sariq kartochkalar:
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {yellowCards.map((card) => (
+            {/* Card slots: limit ta uyacha, to'lganları sariq */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">
+                Hozirgi chorakdagi sariq kartochkalar:
+              </p>
+              <div className="flex gap-2">
+                {Array.from({ length: yellowCardLimit }).map((_, i) => {
+                  const card = yellowCards[i]
+                  return card ? (
                     <div
                       key={card.id}
-                      className="relative flex flex-col justify-between w-24 h-28 rounded-xl bg-yellow-400 p-2.5 shadow-md"
-                      title={card.reason ?? undefined}
+                      className="relative flex flex-col justify-between w-[72px] h-[88px] rounded-lg bg-yellow-400 p-2 shadow-sm"
                     >
-                      <div className="w-5 h-5 rounded-full bg-yellow-200/60 self-end" />
-                      <div>
-                        <p className="text-[10px] font-semibold text-yellow-900 leading-tight line-clamp-2">
-                          {card.reason ?? "Sabab ko'rsatilmagan"}
-                        </p>
-                        <p className="text-[9px] text-yellow-800/70 mt-1 leading-tight">
-                          {new Date(card.created_at).toLocaleDateString("uz-UZ")}
-                        </p>
-                      </div>
+                      <p className="text-[9px] font-medium text-yellow-900 leading-tight line-clamp-3">
+                        {card.reason ?? "—"}
+                      </p>
+                      <p className="text-[8px] text-yellow-800/70 leading-tight">
+                        {new Date(card.created_at).toLocaleDateString("uz-UZ")}
+                      </p>
                       <button
                         type="button"
                         onClick={() => removeMutation.mutate(card.id)}
                         disabled={removeMutation.isPending}
-                        className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-yellow-900/10 hover:bg-yellow-900/25 flex items-center justify-center transition-colors"
+                        className="absolute top-1 right-1 h-4 w-4 rounded-full bg-yellow-900/15 hover:bg-yellow-900/30 flex items-center justify-center"
                       >
-                        <X className="h-3 w-3 text-yellow-900" />
+                        <X className="h-2.5 w-2.5 text-yellow-900" />
                       </button>
                     </div>
-                  ))}
-                </div>
+                  ) : (
+                    <div
+                      key={i}
+                      className="w-[72px] h-[88px] rounded-lg bg-muted/60 border border-dashed border-muted-foreground/20"
+                    />
+                  )
+                })}
               </div>
-            )}
+            </div>
 
             {/* Issue new card */}
             {!disabled && (
