@@ -290,7 +290,7 @@ export function StudentRow({
                 <Button
                   className="w-full bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white font-semibold"
                   onClick={() => issueMutation.mutate()}
-                  disabled={issueMutation.isPending}
+                  disabled={issueMutation.isPending || cardReason.trim().length === 0}
                 >
                   {issueMutation.isPending
                     ? <Loader2 className="h-4 w-4 animate-spin" />
