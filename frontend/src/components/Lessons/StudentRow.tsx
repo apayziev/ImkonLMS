@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Clock, Eye, Loader2, Trash2, TriangleAlert, X } from "lucide-react"
+import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -7,7 +7,7 @@ import type { SessionDetailRead, SessionStudentRead, YellowCardRead } from "@/li
 import { lessonsApi, yellowCardsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { queryKeys } from "@/hooks/useQueryOptions"
@@ -179,24 +179,6 @@ export function StudentRow({
         </div>
       </div>
 
-      {/* Yellow Card Button */}
-      <button
-        type="button"
-        onClick={() => setCardDialogOpen(true)}
-        className={cn(
-          "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all",
-          cardCount === 0
-            ? "border-border text-muted-foreground hover:border-yellow-400 hover:text-yellow-600 hover:bg-yellow-50"
-            : isOverLimit
-              ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-950/30"
-              : "border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30",
-        )}
-        title="Sariq kartochkalar"
-      >
-        <span>🟡</span>
-        <span>{cardCount}/{yellowCardLimit}</span>
-      </button>
-
       {/* Attendance Buttons */}
       <div className="flex gap-3 w-56 justify-center">
         {ATTENDANCE_OPTIONS.map((opt) => (
@@ -219,72 +201,100 @@ export function StudentRow({
         ))}
       </div>
 
+      {/* Yellow Card Button */}
+      <button
+        type="button"
+        onClick={() => setCardDialogOpen(true)}
+        title="Sariq kartochkalar"
+        className={cn(
+          "relative flex flex-col items-center justify-center w-14 h-10 rounded-lg border-2 transition-all select-none",
+          cardCount === 0
+            ? "border-dashed border-muted-foreground/30 text-muted-foreground/50 hover:border-yellow-400 hover:text-yellow-500"
+            : isOverLimit
+              ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-950/30"
+              : "border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30",
+        )}
+      >
+        <span className="text-base leading-none">🟡</span>
+        <span className="text-[10px] font-bold leading-none mt-0.5">{cardCount}/{yellowCardLimit}</span>
+      </button>
+
       {/* Yellow Card Dialog */}
       <Dialog open={cardDialogOpen} onOpenChange={setCardDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={student.photo_url ?? undefined} />
-                <AvatarFallback className="text-xs">{student.first_name[0]}{student.last_name[0]}</AvatarFallback>
-              </Avatar>
-              {student.last_name} {student.first_name}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+          {/* Header: big photo + name */}
+          <div className="flex items-center gap-4 px-5 pt-5 pb-4">
+            <Avatar className="h-14 w-14 shrink-0">
+              <AvatarImage src={student.photo_url ?? undefined} className="object-cover" />
+              <AvatarFallback className="text-lg font-bold">
+                {student.first_name[0]}{student.last_name[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <DialogTitle className="text-base font-bold leading-tight">
+                {student.last_name} {student.first_name}
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bu chorak: {cardCount}/{yellowCardLimit} ta sariq kartochka
+              </p>
+            </div>
+          </div>
 
-          <div className="space-y-3">
-            {/* Existing cards */}
+          <div className="px-5 pb-5 space-y-4">
+            {/* Existing cards as visual cards */}
             {yellowCards.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Bu chorakdagi sariq kartochkalar ({cardCount}/{yellowCardLimit}):
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  Hozirgi chorakdagi sariq kartochkalar:
                 </p>
-                {yellowCards.map((card) => (
-                  <div
-                    key={card.id}
-                    className="flex items-start justify-between gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 dark:border-yellow-800 dark:bg-yellow-950/30"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(card.created_at).toLocaleDateString("uz-UZ")} · {card.issued_by_name}
-                      </p>
-                      {card.reason && (
-                        <p className="text-sm mt-0.5">{card.reason}</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeMutation.mutate(card.id)}
-                      disabled={removeMutation.isPending}
-                      className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
+                <div className="flex gap-2 flex-wrap">
+                  {yellowCards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="relative flex flex-col justify-between w-24 h-28 rounded-xl bg-yellow-400 p-2.5 shadow-md"
+                      title={card.reason ?? undefined}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="w-5 h-5 rounded-full bg-yellow-200/60 self-end" />
+                      <div>
+                        <p className="text-[10px] font-semibold text-yellow-900 leading-tight line-clamp-2">
+                          {card.reason ?? "Sabab ko'rsatilmagan"}
+                        </p>
+                        <p className="text-[9px] text-yellow-800/70 mt-1 leading-tight">
+                          {new Date(card.created_at).toLocaleDateString("uz-UZ")}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeMutation.mutate(card.id)}
+                        disabled={removeMutation.isPending}
+                        className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-yellow-900/10 hover:bg-yellow-900/25 flex items-center justify-center transition-colors"
+                      >
+                        <X className="h-3 w-3 text-yellow-900" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Issue new card */}
             {!disabled && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Sabab (ixtiyoriy):</p>
+                <p className="text-xs font-medium text-muted-foreground">Izoh</p>
                 <Textarea
                   value={cardReason}
                   onChange={(e) => setCardReason(e.target.value)}
-                  placeholder="Sariq kartochka berilish sababini yozing..."
-                  className="min-h-[80px] resize-none text-sm"
+                  placeholder="Sariq kartochka berilish sababini tasvirlab bering"
+                  className="min-h-[90px] resize-none text-sm"
                 />
                 <Button
-                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-semibold"
+                  className="w-full bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white font-semibold"
                   onClick={() => issueMutation.mutate()}
                   disabled={issueMutation.isPending}
                 >
-                  {issueMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    "🟡 Kartochka berish"
-                  )}
+                  {issueMutation.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : "Kartochka berish"}
                 </Button>
               </div>
             )}

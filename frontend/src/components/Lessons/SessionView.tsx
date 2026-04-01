@@ -197,7 +197,6 @@ export function SessionView({
             <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
-              <span className="text-center text-xs">Ogohlantirish</span>
               <div className="flex gap-1.5 w-56 justify-center items-center">
                 <button
                   type="button"
@@ -219,6 +218,7 @@ export function SessionView({
                 </button>
                 <span>Davomat</span>
               </div>
+              <span className="text-center text-xs">Ogohlantirish</span>
             </div>
 
             {session.students.map((student, index) => (
