@@ -260,6 +260,7 @@ function EndSessionDialog({
   sessionId: number
   endMutation: { mutate: () => void; isPending: boolean }
 }) {
+  const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const unmarkedStudents = session.students.filter((s) => s.status === "unmarked")
   const hasUnmarked = unmarkedStudents.length > 0
@@ -285,7 +286,7 @@ function EndSessionDialog({
   })
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           variant="destructive"
@@ -371,7 +372,7 @@ function EndSessionDialog({
           <Button
             variant="destructive"
             disabled={hasUnmarked || endMutation.isPending}
-            onClick={() => endMutation.mutate()}
+            onClick={() => { setOpen(false); endMutation.mutate() }}
           >
             {endMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Darsni tugatish
