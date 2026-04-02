@@ -37,9 +37,10 @@ interface QuarterForm {
   start_date: string
   end_date: string
   holidays: string[]
+  yellow_card_limit: string
 }
 
-const EMPTY_FORM: QuarterForm = { number: "", start_date: "", end_date: "", holidays: [] }
+const EMPTY_FORM: QuarterForm = { number: "", start_date: "", end_date: "", holidays: [], yellow_card_limit: "2" }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ function SettingsPage() {
       start_date: q.start_date,
       end_date: q.end_date,
       holidays: q.holidays,
+      yellow_card_limit: String(q.yellow_card_limit ?? 2),
     })
     setHolidayPickerKey((k) => k + 1)
     setDialogOpen(true)
@@ -125,6 +127,7 @@ function SettingsPage() {
       start_date: form.start_date,
       end_date: form.end_date,
       holidays: form.holidays,
+      yellow_card_limit: Number(form.yellow_card_limit) || 2,
     }
 
     if (editing) {
@@ -256,6 +259,19 @@ function SettingsPage() {
                 placeholder="Sanani tanlang"
                 fromYear={2020}
                 toYear={2035}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="yellow_card_limit">Ogohlantirish limiti (chorakda)</Label>
+              <Input
+                id="yellow_card_limit"
+                type="number"
+                min={1}
+                max={10}
+                required
+                value={form.yellow_card_limit}
+                onChange={(e) => setForm((f) => ({ ...f, yellow_card_limit: e.target.value }))}
+                placeholder="2"
               />
             </div>
             <div className="space-y-1.5">

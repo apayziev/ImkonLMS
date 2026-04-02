@@ -209,8 +209,8 @@ export function StudentRow({
         className={cn(
           "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all select-none",
           isOverLimit
-            ? "bg-red-500 text-white"
-            : "bg-orange-400 hover:bg-orange-500 text-white",
+            ? "bg-[var(--imkon-red)] text-white"
+            : "bg-[var(--imkon-red)]/70 hover:bg-[var(--imkon-red)]/85 text-white",
         )}
       >
         <span className="h-4 w-4 rounded-sm bg-white/30 shrink-0" />
