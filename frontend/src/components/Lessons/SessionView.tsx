@@ -218,7 +218,7 @@ export function SessionView({
                 </button>
                 <span>Davomat</span>
               </div>
-              <span className="text-center text-xs">Ogohlantirish</span>
+              <span className="text-center text-xs w-full">Ogohlantirish</span>
             </div>
 
             {session.students.map((student, index) => (
