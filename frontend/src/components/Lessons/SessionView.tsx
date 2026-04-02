@@ -8,7 +8,6 @@ import {
   Play,
   Square,
   TriangleAlert,
-  UserCheck,
   UserX,
 } from "lucide-react"
 import { useState } from "react"
@@ -59,19 +58,9 @@ export function SessionView({
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
       onBack()
     },
-    onError: () => toast.error("Darsni tugatishda xatolik"),
-  })
-
-  const markAllMutation = useMutation({
-    mutationFn: (action: "mark" | "unmark") =>
-      action === "mark" ? lessonsApi.markAllPresent(sessionId) : lessonsApi.unmarkAll(sessionId),
-    onSuccess: (_, action) => {
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
-      toast.success(action === "mark" ? "Barcha o'quvchilar belgilandi" : "Barcha belgilar olib tashlandi")
-    },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(msg ?? "Xatolik yuz berdi")
+      toast.error(msg ?? "Darsni tugatishda xatolik")
     },
   })
 
@@ -107,7 +96,6 @@ export function SessionView({
   const isCompleted = session.status === "completed"
   const isPlanned = session.status === "planned"
   const isInProgress = session.status === "in_progress"
-  const unmarkedCount = session.students.filter((s) => s.status === "unmarked").length
 
   // Late warning: 5+ minutes since session started, student still unmarked
   const showLateWarning = isInProgress && (() => {
@@ -197,25 +185,7 @@ export function SessionView({
             <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
-              <div className="relative flex w-56 justify-center items-center">
-                <button
-                  type="button"
-                  title={unmarkedCount > 0 ? "Hammasini keldi" : "Hammasini bekor qilish"}
-                  onClick={() => markAllMutation.mutate(unmarkedCount > 0 ? "mark" : "unmark")}
-                  disabled={isCompleted || markAllMutation.isPending}
-                  className={cn(
-                    "absolute left-0 inline-flex items-center justify-center h-5 w-5 rounded-full transition-colors disabled:opacity-50",
-                    unmarkedCount > 0
-                      ? "bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white"
-                      : "bg-muted-foreground/20 hover:bg-muted-foreground/30 text-muted-foreground",
-                  )}
-                >
-                  {markAllMutation.isPending ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <UserCheck className="h-3 w-3" />
-                  )}
-                </button>
+              <div className="flex w-56 justify-center items-center">
                 <span>Davomat</span>
               </div>
               <span className="text-center text-xs w-full">Ogohlantirish</span>
@@ -372,7 +342,7 @@ function EndSessionDialog({
           <Button
             variant="destructive"
             disabled={hasUnmarked || endMutation.isPending}
-            onClick={() => { setOpen(false); endMutation.mutate() }}
+            onClick={() => endMutation.mutate()}
           >
             {endMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Darsni tugatish

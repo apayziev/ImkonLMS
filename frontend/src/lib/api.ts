@@ -504,10 +504,6 @@ export const lessonsApi = {
     api.get<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`),
   updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
     api.patch<SessionStudentRead>(`/api/v1/lessons/sessions/${sessionId}/attendance`, data),
-  markAllPresent: (sessionId: number) =>
-    api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/mark-all-present`),
-  unmarkAll: (sessionId: number) =>
-    api.post<{ updated: number }>(`/api/v1/lessons/sessions/${sessionId}/attendance/unmark-all`),
   updateSession: (sessionId: number, data: { topic?: string | null; homework?: string | null; homework_deadline?: string | null }) =>
     api.patch<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`, data),
   endSession: (sessionId: number) =>

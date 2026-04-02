@@ -1,9 +1,9 @@
-"""Attendance endpoints: update, mark-all, unmark-all, admin view."""
+"""Attendance endpoints: update single, admin view."""
 
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Query
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep, SuperUser
@@ -75,57 +75,6 @@ async def update_attendance(
         status=attendance.status,
         marked_at=attendance.marked_at.isoformat() if attendance.marked_at else None,
     )
-
-
-@router.post("/sessions/{session_id}/attendance/mark-all-present")
-async def mark_all_present(
-    session_id: int, db: SessionDep, current_user: CurrentUser,
-) -> dict:
-    """Mark all unmarked students as present in one batch."""
-    _require_teacher(current_user)
-
-    session = await _get_teacher_session(db, session_id, current_user.id)
-    _require_not_completed(session)
-
-    now = datetime.now(UTC)
-    stmt = (
-        update(SessionAttendance)
-        .where(
-            SessionAttendance.lesson_session_id == session_id,
-            SessionAttendance.status == AttendanceStatus.UNMARKED,
-            SessionAttendance.is_deleted == False,  # noqa: E712
-        )
-        .values(status=AttendanceStatus.PRESENT, marked_at=now)
-    )
-    result = await db.execute(stmt)
-    await db.commit()
-
-    return {"updated": result.rowcount}
-
-
-@router.post("/sessions/{session_id}/attendance/unmark-all")
-async def unmark_all(
-    session_id: int, db: SessionDep, current_user: CurrentUser,
-) -> dict:
-    """Reset all students back to unmarked in one batch."""
-    _require_teacher(current_user)
-
-    session = await _get_teacher_session(db, session_id, current_user.id)
-    _require_not_completed(session)
-
-    stmt = (
-        update(SessionAttendance)
-        .where(
-            SessionAttendance.lesson_session_id == session_id,
-            SessionAttendance.status != AttendanceStatus.UNMARKED,
-            SessionAttendance.is_deleted == False,  # noqa: E712
-        )
-        .values(status=AttendanceStatus.UNMARKED, marked_at=None, grade=None)
-    )
-    result = await db.execute(stmt)
-    await db.commit()
-
-    return {"updated": result.rowcount}
 
 
 @router.get("/attendance", response_model=AttendanceDayResponse)
