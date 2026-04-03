@@ -90,13 +90,13 @@ export function StudentRow({
   }
 
   return (
-    <div
+    <tr
       className={cn(
-        "grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 rounded-lg border px-4 py-3 transition-colors",
+        "transition-colors",
         isLate
-          ? "border-amber-400/50 bg-amber-50 dark:bg-amber-950/20"
+          ? "bg-amber-50 dark:bg-amber-950/20"
           : isUnmarked
-            ? "border-dashed border-muted-foreground/30 bg-muted/30"
+            ? "bg-muted/30"
             : isAbsent
               ? "bg-muted/50"
               : "bg-card",
@@ -104,111 +104,118 @@ export function StudentRow({
       )}
     >
       {/* Number + Save Status */}
-      <span className="text-lg font-medium text-muted-foreground relative">
-        {index}
-        {saveStatus === "saving" && (
-          <Loader2 className="absolute -right-3 -top-1 h-3 w-3 animate-spin text-muted-foreground" />
-        )}
-        {saveStatus === "saved" && (
-          <Check className="absolute -right-3 -top-1 h-3 w-3 text-[var(--imkon-teal)]" />
-        )}
-        {saveStatus === "error" && (
-          <TriangleAlert className="absolute -right-3 -top-1 h-3 w-3 text-red-500" />
-        )}
-      </span>
+      <td className="py-3 px-4 text-lg font-medium text-muted-foreground rounded-l-lg">
+        <span className="relative">
+          {index}
+          {saveStatus === "saving" && (
+            <Loader2 className="absolute -right-3 -top-1 h-3 w-3 animate-spin text-muted-foreground" />
+          )}
+          {saveStatus === "saved" && (
+            <Check className="absolute -right-3 -top-1 h-3 w-3 text-[var(--imkon-teal)]" />
+          )}
+          {saveStatus === "error" && (
+            <TriangleAlert className="absolute -right-3 -top-1 h-3 w-3 text-red-500" />
+          )}
+        </span>
+      </td>
 
       {/* Student Name + Photo */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="relative group shrink-0">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
-            <AvatarFallback className="text-xs">
-              {student.first_name[0]}{student.last_name[0]}
-            </AvatarFallback>
-          </Avatar>
-          {student.photo_url && (
-            <button
-              type="button"
-              onClick={() => setPhotoOpen(true)}
-              className="absolute inset-0 rounded-full flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Eye className="h-3.5 w-3.5 text-white" />
-            </button>
-          )}
-        </div>
-        <div className="min-w-0">
-          <span className="text-lg font-medium truncate block">
-            {student.last_name} {student.first_name}
-          </span>
-          {isLate && (
-            <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-              </span>
-              Kechikmoqda
+      <td className="py-3 px-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative group shrink-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+              <AvatarFallback className="text-xs">
+                {student.first_name[0]}{student.last_name[0]}
+              </AvatarFallback>
+            </Avatar>
+            {student.photo_url && (
+              <button
+                type="button"
+                onClick={() => setPhotoOpen(true)}
+                className="absolute inset-0 rounded-full flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Eye className="h-3.5 w-3.5 text-white" />
+              </button>
+            )}
+          </div>
+          <div className="min-w-0">
+            <span className="text-lg font-medium truncate block">
+              {student.last_name} {student.first_name}
             </span>
-          )}
+            {isLate && (
+              <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                </span>
+                Kechikmoqda
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      </td>
 
       {/* Attendance Buttons */}
-      <div className="flex gap-3 justify-center">
-        {ATTENDANCE_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            disabled={disabled}
-            title={opt.label}
-            onClick={() => handleStatusChange(opt.value)}
-            className={cn(
-              "h-9 w-9 rounded-full border flex items-center justify-center transition-all",
-              student.status === opt.value
-                ? opt.color
-                : "bg-background text-muted-foreground/40 border-border hover:text-muted-foreground hover:bg-accent",
-              disabled && "cursor-not-allowed opacity-60",
-            )}
-          >
-            {ATTENDANCE_ICONS[opt.value]}
-          </button>
-        ))}
-      </div>
+      <td className="py-3 px-3">
+        <div className="flex gap-3 justify-center">
+          {ATTENDANCE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              disabled={disabled}
+              title={opt.label}
+              onClick={() => handleStatusChange(opt.value)}
+              className={cn(
+                "h-9 w-9 rounded-full border flex items-center justify-center transition-all",
+                student.status === opt.value
+                  ? opt.color
+                  : "bg-background text-muted-foreground/40 border-border hover:text-muted-foreground hover:bg-accent",
+                disabled && "cursor-not-allowed opacity-60",
+              )}
+            >
+              {ATTENDANCE_ICONS[opt.value]}
+            </button>
+          ))}
+        </div>
+      </td>
 
       {/* Yellow Card Button */}
-      <button
-        type="button"
-        onClick={() => setCardDialogOpen(true)}
-        title="Sariq kartochkalar"
-        className={cn(
-          "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all select-none",
-          isOverLimit
-            ? "bg-red-500 text-white"
-            : "bg-amber-400 hover:bg-amber-500 text-white",
-        )}
-      >
-        <span className="h-4 w-4 rounded-sm bg-white/30 shrink-0" />
-        <span>Ogohlantirish {cardCount}/{yellowCardLimit}</span>
-      </button>
+      <td className="py-3 px-3 rounded-r-lg">
+        <button
+          type="button"
+          onClick={() => setCardDialogOpen(true)}
+          title="Sariq kartochkalar"
+          className={cn(
+            "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all select-none",
+            isOverLimit
+              ? "bg-red-500 text-white"
+              : "bg-amber-400 hover:bg-amber-500 text-white",
+          )}
+        >
+          <span className="h-4 w-4 rounded-sm bg-white/30 shrink-0" />
+          <span>Ogohlantirish {cardCount}/{yellowCardLimit}</span>
+        </button>
 
-      {/* Extracted Dialogs */}
-      <YellowCardDialog
-        student={student}
-        sessionId={sessionId}
-        disabled={disabled}
-        yellowCards={yellowCards}
-        yellowCardLimit={yellowCardLimit}
-        open={cardDialogOpen}
-        onOpenChange={setCardDialogOpen}
-      />
-
-      {student.photo_url && (
-        <PhotoZoomDialog
-          photoUrl={student.photo_url}
-          fullName={student.full_name}
-          open={photoOpen}
-          onOpenChange={setPhotoOpen}
+        {/* Dialogs (rendered via portal) */}
+        <YellowCardDialog
+          student={student}
+          sessionId={sessionId}
+          disabled={disabled}
+          yellowCards={yellowCards}
+          yellowCardLimit={yellowCardLimit}
+          open={cardDialogOpen}
+          onOpenChange={setCardDialogOpen}
         />
-      )}
-    </div>
+        {student.photo_url && (
+          <PhotoZoomDialog
+            photoUrl={student.photo_url}
+            fullName={student.full_name}
+            open={photoOpen}
+            onOpenChange={setPhotoOpen}
+          />
+        )}
+      </td>
+    </tr>
   )
 }

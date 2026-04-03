@@ -180,27 +180,30 @@ export function SessionView({
 
       {!isPlanned && (
         <>
-          <div className="space-y-2">
-            <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
-              <span>#</span>
-              <span>O'quvchi</span>
-              <span className="text-center w-[132px]">Davomat</span>
-              <span className="text-center text-xs min-w-[140px]">Ogohlantirish</span>
-            </div>
-
-            {session.students.map((student, index) => (
-              <StudentRow
-                key={student.student_id}
-                student={student}
-                index={index + 1}
-                sessionId={sessionId}
-                disabled={isCompleted}
-                isLate={showLateWarning && student.status === "unmarked"}
-                yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
-                yellowCardLimit={yellowCardData?.limit ?? 2}
-              />
-            ))}
-          </div>
+          <table className="w-full border-separate border-spacing-y-2">
+            <thead>
+              <tr className="text-sm font-medium text-muted-foreground">
+                <th className="w-8 py-2 px-4 text-left font-medium">#</th>
+                <th className="py-2 px-3 text-left font-medium">O'quvchi</th>
+                <th className="py-2 px-3 text-center font-medium">Davomat</th>
+                <th className="py-2 px-3 text-center font-medium text-xs">Ogohlantirish</th>
+              </tr>
+            </thead>
+            <tbody>
+              {session.students.map((student, index) => (
+                <StudentRow
+                  key={student.student_id}
+                  student={student}
+                  index={index + 1}
+                  sessionId={sessionId}
+                  disabled={isCompleted}
+                  isLate={showLateWarning && student.status === "unmarked"}
+                  yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
+                  yellowCardLimit={yellowCardData?.limit ?? 2}
+                />
+              ))}
+            </tbody>
+          </table>
 
           {session.students.length === 0 && (
             <div className="flex flex-col items-center py-12 text-muted-foreground">
