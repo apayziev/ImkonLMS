@@ -68,6 +68,10 @@ export const Route = createFileRoute("/_layout/lessons")({
   head: () => ({
     meta: [{ title: "Dars jadvali - IMKON LMS" }],
   }),
+  beforeLoad: async ({ context: { queryClient } }) => {
+    queryClient.ensureQueryData(getCurrentAcademicYearQueryOptions())
+    queryClient.ensureQueryData(getCurrentQuarterQueryOptions())
+  },
 })
 
 type View =

@@ -1,4 +1,5 @@
-import { createRootRoute, HeadContent, Outlet } from "@tanstack/react-router"
+import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router"
+import type { QueryClient } from "@tanstack/react-query"
 import { lazy } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 
@@ -46,7 +47,7 @@ function RootErrorFallback({
   )
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: () => (
     <ErrorBoundary FallbackComponent={RootErrorFallback}>
       <TooltipProvider>
