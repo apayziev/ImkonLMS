@@ -151,7 +151,7 @@ export function ViolationReportDialog({
                     <span className={cn("min-w-0", selectedType ? "text-foreground" : "text-muted-foreground")}>
                       <span className="block truncate">{selectedType?.name ?? "Qoidabuzarlik turini tanlang"}</span>
                       {selectedType?.description && (
-                        <span className="block text-xs text-muted-foreground truncate">{selectedType.description}</span>
+                        <span className="block text-xs text-muted-foreground line-clamp-2">{selectedType.description}</span>
                       )}
                     </span>
                     <svg className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", dropdownOpen && "rotate-180")} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
