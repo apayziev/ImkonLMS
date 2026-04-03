@@ -395,6 +395,7 @@ export interface TodayLessonRead {
   session_id: number | null
   session_status: SessionStatus | null // planned | in_progress | completed
   has_plan_content: boolean
+  plan_filled_count: number // 0-6
 }
 
 export interface TodayLessonsResponse {
@@ -513,10 +514,14 @@ export const lessonsApi = {
     api.patch<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`, data),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
-  uploadMaterial: (sessionId: number, file: File) => {
+  uploadMaterial: (sessionId: number, file: File, onProgress?: (percent: number) => void) => {
     const formData = new FormData()
     formData.append("file", file)
-    return api.post<LessonMaterialRead>(`/api/v1/lessons/sessions/${sessionId}/materials`, formData)
+    return api.post<LessonMaterialRead>(`/api/v1/lessons/sessions/${sessionId}/materials`, formData, {
+      onUploadProgress: onProgress
+        ? (e) => { if (e.total) onProgress(Math.round((e.loaded / e.total) * 100)) }
+        : undefined,
+    })
   },
   deleteMaterial: (sessionId: number, materialId: number) =>
     api.delete(`/api/v1/lessons/sessions/${sessionId}/materials/${materialId}`),

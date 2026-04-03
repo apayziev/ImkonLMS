@@ -26,6 +26,7 @@ class TodayLessonRead(BaseModel):
     session_id: int | None = None
     session_status: SessionStatus | None = None
     has_plan_content: bool = False
+    plan_filled_count: int = 0  # 0-6: topic, lesson_type, objectives, keywords, homework, materials
 
 
 class TodayLessonsResponse(BaseModel):

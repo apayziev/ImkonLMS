@@ -94,6 +94,7 @@ export function TopicHomeworkSection({
         (old: SessionDetailRead | undefined) =>
           old ? { ...old, ...response.data } : old,
       )
+      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
     },
     onError: () => {
       onError()
@@ -160,7 +161,7 @@ export function TopicHomeworkSection({
   }
 
   // File upload/delete handlers
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, onProgress?: (percent: number) => void) => {
     // Lazy session creation for file upload
     if (!sessionIdRef.current && createSession) {
       const created = await createSession()
@@ -171,12 +172,13 @@ export function TopicHomeworkSection({
       )
     }
     const sid = sessionIdRef.current
-    const response = await lessonsApi.uploadMaterial(sid, file)
+    const response = await lessonsApi.uploadMaterial(sid, file, onProgress)
     queryClient.setQueryData(
       queryKeys.lessonSession(sid),
       (old: SessionDetailRead | undefined) =>
         old ? { ...old, materials: [...(old.materials ?? []), response.data] } : old,
     )
+    queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
   }
 
   const handleDelete = async (materialId: number) => {
@@ -187,6 +189,7 @@ export function TopicHomeworkSection({
       (old: SessionDetailRead | undefined) =>
         old ? { ...old, materials: (old.materials ?? []).filter((m) => m.id !== materialId) } : old,
     )
+    queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
   }
 
   const materialsCount = (session.materials ?? []).length

@@ -155,14 +155,12 @@ function PlanEditor({
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {session.grade_display} — {session.subject_name}
-            </h1>
-            <p className="text-muted-foreground text-lg">
+          <h1 className="text-2xl font-bold">
+            {session.grade_display} — {session.subject_name}
+            <span className="text-base font-normal text-muted-foreground ml-2">
               {session.period_number}-soat · {session.start_time} – {session.end_time}
-            </p>
-          </div>
+            </span>
+          </h1>
         </div>
 
         <TopicHomeworkSection
@@ -206,14 +204,12 @@ function PlanEditor({
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold">
             {lesson.grade_display} — {lesson.subject_name}
+            <span className="text-base font-normal text-muted-foreground ml-2">
+              {lesson.period_number}-soat · {lesson.start_time} – {lesson.end_time}
+            </span>
           </h1>
-          <p className="text-muted-foreground text-lg">
-            {lesson.period_number}-soat · {lesson.start_time} – {lesson.end_time}
-          </p>
-        </div>
       </div>
 
       <TopicHomeworkSection
@@ -271,17 +267,19 @@ function DayLessons({
       ) : (
         <div className="space-y-1.5 mb-3">
           {lessons.map((lesson) => {
-            const { isInProgress, isCompleted, isPlanned, hasPlan } = lessonStatusFlags(lesson)
+            const { isInProgress, isCompleted, isPlanned } = lessonStatusFlags(lesson)
             const hasSession = !!lesson.session_id
+            const hasContent = lesson.plan_filled_count > 0
+            const hasPlan = hasContent || isInProgress
 
             return (
               <div
                 key={`${ds}-${lesson.schedule_entry_id}`}
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
-                  isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
+                  isCompleted && hasContent && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
                   isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
-                  isPlanned && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
+                  isPlanned && hasContent && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
                   !hasPlan && "border-border hover:bg-muted/20",
                 )}
                 onClick={() => {
@@ -296,17 +294,17 @@ function DayLessons({
                 <div
                   className={cn(
                     "flex items-center justify-center h-8 w-8 rounded-full shrink-0",
-                    isCompleted && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
+                    isCompleted && hasContent && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
                     isInProgress && "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)]",
-                    isPlanned && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
+                    (isPlanned || (isCompleted && !hasContent)) && hasContent && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
                     !hasPlan && "bg-muted text-muted-foreground",
                   )}
                 >
-                  {isCompleted ? (
+                  {isCompleted && hasContent ? (
                     <Check className="h-4 w-4" />
                   ) : isInProgress ? (
                     <Play className="h-4 w-4" />
-                  ) : isPlanned ? (
+                  ) : hasContent ? (
                     <FileText className="h-4 w-4" />
                   ) : (
                     <FileText className="h-4 w-4 opacity-40" />
@@ -327,9 +325,9 @@ function DayLessons({
                   </div>
                 </div>
 
-                {/* Status badge */}
-                <div className="shrink-0">
-                  {isCompleted ? (
+                {/* Status badge + progress */}
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  {isCompleted && hasContent ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)] font-medium">
                       Tugallangan
                     </span>
@@ -337,7 +335,7 @@ function DayLessons({
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)] font-medium">
                       Davom etmoqda
                     </span>
-                  ) : isPlanned ? (
+                  ) : isPlanned && hasContent ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]/70 font-medium">
                       Rejalashtirilgan
                     </span>
@@ -345,6 +343,24 @@ function DayLessons({
                     <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
                       Reja yo'q
                     </span>
+                  )}
+                  {hasSession && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            lesson.plan_filled_count >= 6
+                              ? "bg-[var(--imkon-teal)]"
+                              : lesson.plan_filled_count >= 3
+                                ? "bg-[var(--imkon-purple)]"
+                                : "bg-[var(--imkon-purple)]/50",
+                          )}
+                          style={{ width: `${Math.round((lesson.plan_filled_count / 6) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{lesson.plan_filled_count}/6</span>
+                    </div>
                   )}
                 </div>
               </div>

@@ -4,6 +4,7 @@ from datetime import date
 
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import today_local
@@ -79,7 +80,9 @@ async def get_today_lessons(
     entry_ids = [e.id for e in entries]
     sessions_map: dict[int, LessonSession] = {}
     if entry_ids:
-        sess_query = select(LessonSession).where(
+        sess_query = select(LessonSession).options(
+            selectinload(LessonSession.materials),
+        ).where(
             LessonSession.schedule_entry_id.in_(entry_ids),
             LessonSession.session_date == today,
             LessonSession.is_deleted == False,  # noqa: E712
@@ -110,6 +113,16 @@ async def get_today_lessons(
                         session.topic or session.lesson_type
                         or session.objectives or session.keywords
                     )
+                ),
+                plan_filled_count=(
+                    sum([
+                        bool(session.topic),
+                        bool(session.lesson_type),
+                        bool(session.objectives),
+                        bool(session.keywords),
+                        bool(session.homework),
+                        bool(session.materials),
+                    ]) if session else 0
                 ),
             )
         )

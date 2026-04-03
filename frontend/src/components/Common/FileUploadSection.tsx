@@ -1,7 +1,7 @@
 import axios from "axios"
 import { useMutation } from "@tanstack/react-query"
 import { Loader2, Paperclip, Trash2, Upload } from "lucide-react"
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -32,16 +32,27 @@ export function FileUploadSection({
 }: {
   files: FileItem[]
   disabled: boolean
-  onUpload: (file: File) => Promise<unknown>
+  onUpload: (file: File, onProgress?: (percent: number) => void) => Promise<unknown>
   onDelete: (fileId: number) => Promise<unknown>
   label?: string
   accept?: string
   multiple?: boolean
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [uploadingName, setUploadingName] = useState<string>("")
 
   const uploadMutation = useMutation({
-    mutationFn: onUpload,
+    mutationFn: async (file: File) => {
+      setUploadingName(file.name)
+      setUploadProgress(0)
+      try {
+        return await onUpload(file, (percent) => setUploadProgress(percent))
+      } finally {
+        setUploadProgress(null)
+        setUploadingName("")
+      }
+    },
     onSuccess: () => toast.success("Fayl yuklandi"),
     onError: (err) => {
       const message = axios.isAxiosError(err) && err.response?.data?.detail
@@ -103,6 +114,22 @@ export function FileUploadSection({
           </>
         )}
       </div>
+
+      {uploadMutation.isPending && (
+        <div className="flex items-center gap-3 rounded-lg border border-dashed px-3 py-2 text-sm animate-in fade-in">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+          <span className="flex-1 truncate text-muted-foreground">{uploadingName}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${uploadProgress ?? 0}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground w-8 text-right">{uploadProgress ?? 0}%</span>
+          </div>
+        </div>
+      )}
 
       {files.length > 0 && (
         <div className="space-y-1.5">
