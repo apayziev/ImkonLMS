@@ -121,10 +121,10 @@ export function SessionView({
           <div>
             <h1 className="text-2xl font-bold">
               {session.grade_display} — {session.subject_name}
+              <span className="text-base font-normal text-muted-foreground ml-2">
+                {session.period_number}-soat · {session.start_time} – {session.end_time}
+              </span>
             </h1>
-            <p className="text-muted-foreground text-lg">
-              {session.period_number}-soat · {session.start_time} – {session.end_time}
-            </p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -155,9 +155,9 @@ export function SessionView({
       </div>
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-[var(--imkon-teal)] bg-[var(--imkon-teal)]/10 rounded-lg px-4 py-3">
-          <CheckCircle2 className="h-5 w-5" />
-          <span className="text-lg font-medium">
+        <div className="flex items-center gap-1.5 text-[var(--imkon-teal)] bg-[var(--imkon-teal)]/10 rounded-md px-3 py-1.5 w-fit text-sm">
+          <CheckCircle2 className="h-4 w-4" />
+          <span className="font-medium">
             Dars tugatilgan · {session.ended_at ? new Date(session.ended_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }) : ""}
           </span>
         </div>
