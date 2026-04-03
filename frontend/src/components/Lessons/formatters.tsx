@@ -28,10 +28,11 @@ export function SaveStatusIndicator({ status, className }: { status: SaveStatus;
   )
 }
 
-export function lessonStatusFlags(lesson: { session_status?: string | null; has_plan_content?: boolean }) {
-  const isInProgress = lesson.session_status === "in_progress"
-  const isCompleted = lesson.session_status === "completed"
-  const isPlanned = lesson.session_status === "planned"
+export function lessonStatusFlags(lesson: { session_status?: string | null; status?: string | null }) {
+  const s = lesson.session_status ?? lesson.status ?? null
+  const isInProgress = s === "in_progress"
+  const isCompleted = s === "completed"
+  const isPlanned = s === "planned"
   const hasPlan = isPlanned || isInProgress || isCompleted
   return { isInProgress, isCompleted, isPlanned, hasPlan }
 }

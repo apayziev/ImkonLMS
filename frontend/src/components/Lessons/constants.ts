@@ -23,9 +23,14 @@ export const ATTENDANCE_OPTIONS = [
   { value: "absent", label: "Kelmadi", color: "bg-[var(--imkon-red)] text-white border-[var(--imkon-red)]", badgeClassName: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]", canHaveGrade: false },
 ] as const
 
-export const GRADED_STATUSES = new Set(
+export type AttendanceValue = typeof ATTENDANCE_OPTIONS[number]["value"]
+
+export const GRADED_STATUSES = new Set<AttendanceValue>(
   ATTENDANCE_OPTIONS.filter((o) => o.canHaveGrade).map((o) => o.value),
 )
+
+
+
 
 export const GRADES = [5, 4, 3, 2, 1] as const
 

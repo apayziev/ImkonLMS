@@ -1,6 +1,6 @@
 """Session lifecycle: plan, start, get, update, end."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter
 from sqlalchemy import select
@@ -126,7 +126,7 @@ async def start_session(
         att = SessionAttendance(
             lesson_session_id=session.id,
             student_id=student.id,
-            status="unmarked",
+            status=AttendanceStatus.UNMARKED,
             marked_at=None,
         )
         db.add(att)
@@ -172,8 +172,7 @@ async def update_session(
     if body.homework is not None:
         session.homework = body.homework
     if body.homework_deadline is not None:
-        from datetime import date as date_type
-        session.homework_deadline = date_type.fromisoformat(body.homework_deadline)
+        session.homework_deadline = date.fromisoformat(body.homework_deadline)
     if body.lesson_type is not None:
         session.lesson_type = body.lesson_type
     if body.objectives is not None:

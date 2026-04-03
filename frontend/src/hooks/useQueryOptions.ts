@@ -15,7 +15,7 @@ export const queryKeys = {
   schedule: ["schedule"] as const,
   todayLessons: ["today-lessons"] as const,
   lessonsForDate: (date: string) => ["lessons-for-date", date] as const,
-  lessonSession: ["lesson-session"] as const,
+  lessonSession: (id: number) => ["lesson-session", id] as const,
   quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
   attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
   yellowCards: (sessionId: number) => ["yellow-cards", sessionId] as const,
@@ -140,7 +140,7 @@ export function getSessionStatusesQueryOptions(
 
 export function getLessonSessionQueryOptions(sessionId: number) {
   return {
-    queryKey: [...queryKeys.lessonSession, sessionId] as const,
+    queryKey: queryKeys.lessonSession(sessionId),
     queryFn: async () => {
       const { data } = await lessonsApi.getSession(sessionId)
       return data

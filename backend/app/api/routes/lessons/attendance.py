@@ -113,11 +113,19 @@ async def get_attendance(
     )
     sessions = (await db.execute(query)).scalars().all()
 
+    def _period_sort_key(s: LessonSession) -> int:
+        entry = s.schedule_entry
+        return entry.time_slot.period_number if entry and entry.time_slot else 0
+
+    def _student_sort_key(a: SessionAttendance) -> tuple[str, str]:
+        s = a.student
+        return (s.last_name, s.first_name) if s else ("", "")
+
     result_sessions = []
-    for session in sorted(sessions, key=lambda s: s.schedule_entry.time_slot.period_number if s.schedule_entry and s.schedule_entry.time_slot else 0):
+    for session in sorted(sessions, key=_period_sort_key):
         entry = session.schedule_entry
         students = []
-        for att in sorted(session.attendances, key=lambda a: (a.student.last_name if a.student else "", a.student.first_name if a.student else "")):
+        for att in sorted(session.attendances, key=_student_sort_key):
             if att.is_deleted:
                 continue
             students.append(AttendanceStudentRead(
@@ -126,7 +134,6 @@ async def get_attendance(
                 photo_url=att.student.photo_url if att.student else None,
                 status=att.status,
                 marked_at=att.marked_at.isoformat() if att.marked_at else None,
-                grade=att.grade,
             ))
 
         result_sessions.append(AttendanceSessionRead(

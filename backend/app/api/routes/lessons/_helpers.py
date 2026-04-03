@@ -86,7 +86,7 @@ async def _load_attendances_with_students(
         students_map = {s.id: s for s in result.scalars().all()}
     return [
         (att, students_map.get(att.student_id))
-        for att in sorted(session.attendances, key=lambda a: a.student_id)
+        for att in session.attendances
     ]
 
 

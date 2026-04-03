@@ -33,6 +33,7 @@ import { getLessonSessionQueryOptions, getYellowCardsQueryOptions, queryKeys } f
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { StudentRow } from "./StudentRow"
 import { ATTENDANCE_OPTIONS } from "./constants"
+import { lessonStatusFlags } from "./formatters"
 
 export function SessionView({
   sessionId,
@@ -56,7 +57,6 @@ export function SessionView({
     onSuccess: () => {
       toast.success("Dars tugatildi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      onBack()
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -69,13 +69,13 @@ export function SessionView({
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
-      queryClient.setQueryData([...queryKeys.lessonSession, sessionId], response.data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
+      queryClient.setQueryData(queryKeys.lessonSession(sessionId), response.data)
     },
     onError: () => {
       toast.error("Darsni boshlashda xatolik")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.lessonSession, sessionId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
     },
   })
 
@@ -93,9 +93,7 @@ export function SessionView({
     )
   }
 
-  const isCompleted = session.status === "completed"
-  const isPlanned = session.status === "planned"
-  const isInProgress = session.status === "in_progress"
+  const { isCompleted, isPlanned, isInProgress } = lessonStatusFlags(session)
 
   // Late warning: 5+ minutes since session started, student still unmarked
   const showLateWarning = isInProgress && (() => {
@@ -143,6 +141,7 @@ export function SessionView({
               session={session}
               sessionId={sessionId}
               endMutation={endMutation}
+              onBack={onBack}
             />
           )}
         </div>
@@ -185,8 +184,8 @@ export function SessionView({
             <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
-              <span className="text-center">Davomat</span>
-              <span className="text-center text-xs w-full">Ogohlantirish</span>
+              <span className="text-center w-[132px]">Davomat</span>
+              <span className="text-center text-xs min-w-[140px]">Ogohlantirish</span>
             </div>
 
             {session.students.map((student, index) => (
@@ -223,10 +222,12 @@ function EndSessionDialog({
   session,
   sessionId,
   endMutation,
+  onBack,
 }: {
   session: { grade_display: string; subject_name: string; period_number: number; students: SessionStudentRead[] }
   sessionId: number
-  endMutation: { mutate: () => void; isPending: boolean }
+  endMutation: { mutate: (vars?: undefined, options?: { onSuccess?: () => void }) => void; isPending: boolean }
+  onBack: () => void
 }) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -234,11 +235,11 @@ function EndSessionDialog({
   const hasUnmarked = unmarkedStudents.length > 0
 
   const markMutation = useMutation({
-    mutationFn: (data: { student_id: number; status: string }) =>
+    mutationFn: (data: { student_id: number; status: import("@/lib/api").AttendanceStatus }) =>
       lessonsApi.updateAttendance(sessionId, data),
     onSuccess: (response) => {
       queryClient.setQueryData(
-        [...queryKeys.lessonSession, sessionId],
+        queryKeys.lessonSession(sessionId),
         (old: import("@/lib/api").SessionDetailRead | undefined) => {
           if (!old) return old
           return {
@@ -340,7 +341,12 @@ function EndSessionDialog({
           <Button
             variant="destructive"
             disabled={hasUnmarked || endMutation.isPending}
-            onClick={() => endMutation.mutate()}
+            onClick={() => endMutation.mutate(undefined, {
+              onSuccess: () => {
+                setOpen(false)
+                onBack()
+              },
+            })}
           >
             {endMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Darsni tugatish

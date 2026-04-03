@@ -33,7 +33,8 @@ import {
   getGradesQueryOptions,
   getSchoolSettingsQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { ATTENDANCE_OPTIONS } from "@/components/Lessons/constants"
+import { ATTENDANCE_OPTIONS, UZ_WEEKDAYS_SHORT, UZ_MONTHS } from "@/components/Lessons/constants"
+import { toDateString } from "@/components/Lessons/formatters"
 
 export const Route = createFileRoute("/_layout/attendance")({
   component: AttendancePage,
@@ -43,17 +44,6 @@ export const Route = createFileRoute("/_layout/attendance")({
 })
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-const UZ_WEEKDAYS_SHORT = ["Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha"]
-
-const UZ_MONTHS_TOP = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-]
-
-function formatDate(d: Date) {
-  return d.toISOString().split("T")[0]
-}
 
 function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
   const day = baseDate.getDay()
@@ -91,8 +81,8 @@ function AttendancePage() {
     (a, b) => (a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section)),
   )
 
-  const dateStr = formatDate(selectedDate)
-  const todayStr = formatDate(new Date())
+  const dateStr = toDateString(selectedDate)
+  const todayStr = toDateString(new Date())
   const weekDays = getWeekDays(selectedDate, workingDays)
 
   const numericGradeId = gradeId ? Number(gradeId) : 0
@@ -147,7 +137,7 @@ function AttendancePage() {
                 className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-1 rounded-md hover:bg-muted/50"
               >
                 <CalendarDays className="h-3.5 w-3.5" />
-                {UZ_MONTHS_TOP[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                {UZ_MONTHS[selectedDate.getMonth()]} {selectedDate.getFullYear()}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -167,7 +157,7 @@ function AttendancePage() {
           </Button>
           <div className="flex gap-1.5">
             {weekDays.map((d) => {
-              const ds = formatDate(d)
+              const ds = toDateString(d)
               const isSelected = ds === dateStr
               const isDayToday = ds === todayStr
               return (
@@ -236,8 +226,7 @@ function UnifiedAttendanceTable({
   gradeDisplay: string
   date: string
 }) {
-  // Filter started sessions (have students)
-  const startedSessions = sessions.filter((s) => s.status !== "not_started")
+  const startedSessions = sessions
 
   // Collect unique students across all sessions
   const studentMap = new Map<number, { student_id: number; full_name: string; photo_url: string | null }>()
@@ -265,9 +254,8 @@ function UnifiedAttendanceTable({
   const titleSubject = subjects.length === 1 ? subjects[0] : "Darslar"
   const titleTeacher = teachers.length === 1 ? teachers[0] : ""
 
-  const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
   const dateObj = new Date(date)
-  const formattedDate = `${dateObj.getDate()}-${UZ_MONTHS[dateObj.getMonth()]}`
+  const formattedDate = `${dateObj.getDate()}-${UZ_MONTHS[dateObj.getMonth()].toLowerCase()}`
 
   if (students.length === 0) {
     return (

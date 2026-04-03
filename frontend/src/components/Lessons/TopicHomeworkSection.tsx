@@ -80,7 +80,7 @@ export function TopicHomeworkSection({
         const created = await createSession()
         sessionIdRef.current = created.id
         queryClient.setQueryData(
-          [...queryKeys.lessonSession, created.id],
+          queryKeys.lessonSession(created.id),
           created,
         )
       }
@@ -90,7 +90,7 @@ export function TopicHomeworkSection({
     onSuccess: (response) => {
       onSuccess()
       queryClient.setQueryData(
-        [...queryKeys.lessonSession, sessionIdRef.current],
+        queryKeys.lessonSession(sessionIdRef.current),
         (old: SessionDetailRead | undefined) =>
           old ? { ...old, ...response.data } : old,
       )
@@ -101,22 +101,25 @@ export function TopicHomeworkSection({
     },
   })
 
+  const mutateRef = useRef(mutation.mutate)
+  mutateRef.current = mutation.mutate
+
   const saveImmediate = useCallback(
     (data: Record<string, unknown>) => {
       clearTimeout(debounceRef.current)
-      mutation.mutate(data)
+      mutateRef.current(data)
     },
-    [mutation],
+    [],
   )
 
   const saveDebounced = useCallback(
     (data: Record<string, unknown>) => {
       clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
-        mutation.mutate(data)
+        mutateRef.current(data)
       }, 1000)
     },
-    [mutation],
+    [],
   )
 
   // --- Objectives helpers ---
@@ -163,14 +166,14 @@ export function TopicHomeworkSection({
       const created = await createSession()
       sessionIdRef.current = created.id
       queryClient.setQueryData(
-        [...queryKeys.lessonSession, created.id],
+        queryKeys.lessonSession(created.id),
         created,
       )
     }
     const sid = sessionIdRef.current
     const response = await lessonsApi.uploadMaterial(sid, file)
     queryClient.setQueryData(
-      [...queryKeys.lessonSession, sid],
+      queryKeys.lessonSession(sid),
       (old: SessionDetailRead | undefined) =>
         old ? { ...old, materials: [...(old.materials ?? []), response.data] } : old,
     )
@@ -180,7 +183,7 @@ export function TopicHomeworkSection({
     const sid = sessionIdRef.current
     await lessonsApi.deleteMaterial(sid, materialId)
     queryClient.setQueryData(
-      [...queryKeys.lessonSession, sid],
+      queryKeys.lessonSession(sid),
       (old: SessionDetailRead | undefined) =>
         old ? { ...old, materials: (old.materials ?? []).filter((m) => m.id !== materialId) } : old,
     )

@@ -3,15 +3,14 @@ import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { SessionDetailRead, SessionStudentRead, YellowCardRead } from "@/lib/api"
-import { lessonsApi, yellowCardsApi } from "@/lib/api"
+import type { AttendanceStatus, SessionDetailRead, SessionStudentRead, YellowCardRead } from "@/lib/api"
+import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS, GRADED_STATUSES } from "./constants"
+import { YellowCardDialog } from "./YellowCardDialog"
+import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
 const ATTENDANCE_ICONS = {
   present: <Check className="h-4 w-4" />,
@@ -40,13 +39,15 @@ export function StudentRow({
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [photoOpen, setPhotoOpen] = useState(false)
+  const [cardDialogOpen, setCardDialogOpen] = useState(false)
 
   useEffect(() => {
     return () => clearTimeout(saveTimerRef.current)
   }, [])
 
   const mutation = useMutation({
-    mutationFn: (data: { status: string }) =>
+    mutationFn: (data: { status: AttendanceStatus }) =>
       lessonsApi.updateAttendance(sessionId, {
         student_id: student.student_id,
         status: data.status,
@@ -59,7 +60,7 @@ export function StudentRow({
       setSaveStatus("saved")
       saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000)
       queryClient.setQueryData(
-        [...queryKeys.lessonSession, sessionId],
+        queryKeys.lessonSession(sessionId),
         (old: SessionDetailRead | undefined) => {
           if (!old) return old
           return {
@@ -79,40 +80,12 @@ export function StudentRow({
 
   const isAbsent = !GRADED_STATUSES.has(student.status as "present" | "late")
   const isUnmarked = student.status === "unmarked"
-  const [photoOpen, setPhotoOpen] = useState(false)
-  const [cardDialogOpen, setCardDialogOpen] = useState(false)
-  const [cardReason, setCardReason] = useState("")
   const cardCount = yellowCards.length
   const isOverLimit = cardCount >= yellowCardLimit
 
-  const issueMutation = useMutation({
-    mutationFn: () =>
-      yellowCardsApi.issue({
-        student_id: student.student_id,
-        session_id: sessionId,
-        reason: cardReason.trim() || null,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.yellowCards(sessionId) })
-      setCardReason("")
-      setCardDialogOpen(false)
-      toast.success("Sariq kartochka berildi")
-    },
-    onError: () => toast.error("Xatolik yuz berdi"),
-  })
-
-  const removeMutation = useMutation({
-    mutationFn: (cardId: number) => yellowCardsApi.remove(cardId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.yellowCards(sessionId) })
-      toast.success("Kartochka o'chirildi")
-    },
-    onError: () => toast.error("Xatolik yuz berdi"),
-  })
-
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = (newStatus: AttendanceStatus) => {
     if (disabled) return
-    const resolved = newStatus === student.status ? "unmarked" : newStatus
+    const resolved = newStatus === student.status ? "unmarked" as const : newStatus
     mutation.mutate({ status: resolved })
   }
 
@@ -217,113 +190,25 @@ export function StudentRow({
         <span>Ogohlantirish {cardCount}/{yellowCardLimit}</span>
       </button>
 
-      {/* Yellow Card Dialog */}
-      <Dialog open={cardDialogOpen} onOpenChange={setCardDialogOpen}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
-          {/* Header: big photo + name */}
-          <div className="flex items-center gap-4 px-5 pt-5 pb-4">
-            <Avatar className="h-14 w-14 shrink-0">
-              <AvatarImage src={student.photo_url ?? undefined} className="object-cover" />
-              <AvatarFallback className="text-lg font-bold">
-                {student.first_name[0]}{student.last_name[0]}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <DialogTitle className="text-base font-bold leading-tight">
-                {student.last_name} {student.first_name}
-              </DialogTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Bu chorak: {cardCount}/{yellowCardLimit} ta sariq kartochka
-              </p>
-            </div>
-          </div>
+      {/* Extracted Dialogs */}
+      <YellowCardDialog
+        student={student}
+        sessionId={sessionId}
+        disabled={disabled}
+        yellowCards={yellowCards}
+        yellowCardLimit={yellowCardLimit}
+        open={cardDialogOpen}
+        onOpenChange={setCardDialogOpen}
+      />
 
-          <div className="px-5 pb-5 space-y-4">
-            {/* Card slots: limit ta uyacha, to'lganları sariq */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">
-                Hozirgi chorakdagi sariq kartochkalar:
-              </p>
-              <div className="flex gap-2">
-                {Array.from({ length: yellowCardLimit }).map((_, i) => {
-                  const card = yellowCards[i]
-                  return card ? (
-                    <div
-                      key={card.id}
-                      className="relative flex flex-col justify-between w-[72px] h-[88px] rounded-lg bg-yellow-400 p-2 shadow-sm"
-                    >
-                      <p className="text-[9px] font-medium text-yellow-900 leading-tight line-clamp-3">
-                        {card.reason ?? "—"}
-                      </p>
-                      <p className="text-[8px] text-yellow-800/70 leading-tight">
-                        {new Date(card.created_at).toLocaleDateString("uz-UZ")}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => removeMutation.mutate(card.id)}
-                        disabled={removeMutation.isPending}
-                        className="absolute top-1 right-1 h-4 w-4 rounded-full bg-yellow-900/15 hover:bg-yellow-900/30 flex items-center justify-center"
-                      >
-                        <X className="h-2.5 w-2.5 text-yellow-900" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      key={i}
-                      className="w-[72px] h-[88px] rounded-lg bg-muted/60 border border-dashed border-muted-foreground/20"
-                    />
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Issue new card */}
-            {!disabled && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Izoh</p>
-                <Textarea
-                  value={cardReason}
-                  onChange={(e) => setCardReason(e.target.value)}
-                  placeholder="Sariq kartochka berilish sababini tasvirlab bering"
-                  className="min-h-[90px] resize-none text-sm"
-                />
-                <Button
-                  className="w-full bg-[var(--imkon-teal)] hover:bg-[var(--imkon-teal-dark)] text-white font-semibold"
-                  onClick={() => issueMutation.mutate()}
-                  disabled={issueMutation.isPending || cardReason.trim().length === 0}
-                >
-                  {issueMutation.isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : "Kartochka berish"}
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Photo zoom dialog */}
       {student.photo_url && (
-        <Dialog open={photoOpen} onOpenChange={setPhotoOpen}>
-          <DialogContent className="flex items-center justify-center bg-transparent border-none shadow-none p-0 max-w-sm [&>button]:hidden">
-            <div className="relative">
-              <img
-                src={student.photo_url}
-                alt={student.full_name}
-                className="rounded-xl max-h-[80vh] max-w-full object-contain"
-              />
-              <button
-                type="button"
-                onClick={() => setPhotoOpen(false)}
-                className="absolute -top-3 -right-3 h-7 w-7 rounded-full bg-white/90 dark:bg-black/70 flex items-center justify-center shadow hover:bg-white transition-colors"
-              >
-                <X className="h-4 w-4 text-foreground" />
-              </button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <PhotoZoomDialog
+          photoUrl={student.photo_url}
+          fullName={student.full_name}
+          open={photoOpen}
+          onOpenChange={setPhotoOpen}
+        />
       )}
     </div>
   )
 }
-

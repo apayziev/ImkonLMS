@@ -76,6 +76,11 @@ api.interceptors.response.use(
 
 export default api
 
+// --- Shared Status Types ---
+
+export type SessionStatus = "planned" | "in_progress" | "completed"
+export type AttendanceStatus = "unmarked" | "present" | "late" | "absent"
+
 // --- API functions ---
 
 export interface UserRead {
@@ -388,7 +393,7 @@ export interface TodayLessonRead {
   end_time: string
   room: string | null
   session_id: number | null
-  session_status: string | null // planned | in_progress | completed
+  session_status: SessionStatus | null // planned | in_progress | completed
   has_plan_content: boolean
 }
 
@@ -404,7 +409,7 @@ export interface SessionStudentRead {
   last_name: string
   full_name: string
   photo_url: string | null
-  status: string // unmarked | present | late | absent
+  status: AttendanceStatus
   marked_at: string | null
 }
 
@@ -414,7 +419,7 @@ export interface SessionDetailRead {
   session_date: string
   started_at: string
   ended_at: string | null
-  status: string
+  status: SessionStatus
   grade_display: string
   subject_name: string
   period_number: number
@@ -440,7 +445,7 @@ export interface LessonMaterialRead {
 
 export interface AttendanceUpdateRequest {
   student_id: number
-  status: string
+  status: AttendanceStatus
 }
 
 // Admin attendance view
@@ -448,7 +453,7 @@ export interface AttendanceStudentRead {
   student_id: number
   full_name: string
   photo_url: string | null
-  status: string // unmarked | present | late | absent
+  status: AttendanceStatus
   marked_at: string | null
 }
 
@@ -461,7 +466,7 @@ export interface AttendanceSessionRead {
   started_at: string
   ended_at: string | null
   teacher_name: string
-  status: string // in_progress | completed
+  status: SessionStatus
   students: AttendanceStudentRead[]
 }
 
@@ -474,7 +479,7 @@ export interface AttendanceDayResponse {
 export interface SessionStatusItem {
   schedule_entry_id: number
   session_date: string
-  status: string // planned | in_progress | completed
+  status: SessionStatus
 }
 
 export interface SessionStatusesResponse {
