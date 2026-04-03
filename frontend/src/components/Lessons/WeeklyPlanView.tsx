@@ -122,71 +122,50 @@ function PlanEditor({
   onBack: () => void
 }) {
   const queryClient = useQueryClient()
+  const [createdSessionId, setCreatedSessionId] = useState<number | null>(null)
 
-  // For existing sessions, load from API
+  // Determine the active session ID
+  const activeSessionId = editing.type === "existing" ? editing.sessionId : createdSessionId
+
+  // For existing sessions or after lazy creation, load from API
   const { data: session, isLoading } = useQuery({
-    ...getLessonSessionQueryOptions(editing.type === "existing" ? editing.sessionId : 0),
-    enabled: editing.type === "existing",
+    ...getLessonSessionQueryOptions(activeSessionId ?? 0),
+    enabled: !!activeSessionId,
   })
 
   // For new plans: empty session object, lazy creation via callback
   const createSession = useCallback(async () => {
     if (editing.type !== "new") throw new Error("Invalid state")
     const res = await lessonsApi.planSession(editing.scheduleEntryId, editing.date)
-    // Invalidate lesson lists so DayLessons shows updated status when going back
+    setCreatedSessionId(res.data.id)
+    queryClient.setQueryData(queryKeys.lessonSession(res.data.id), res.data)
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
     queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(editing.date) })
     return res.data
   }, [editing, queryClient])
 
-  if (editing.type === "existing") {
-    if (isLoading || !session) {
-      return (
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
-      )
-    }
-
+  if (activeSessionId && (isLoading || !session)) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">
-            {session.grade_display} — {session.subject_name}
-            <span className="text-base font-normal text-muted-foreground ml-2">
-              {session.period_number}-soat · {session.start_time} – {session.end_time}
-            </span>
-          </h1>
-        </div>
-
-        <TopicHomeworkSection
-          session={session}
-          sessionId={session.id}
-          disabled={session.status === "completed"}
-          homeworkEditable={session.status === "in_progress"}
-        />
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     )
   }
 
-  // New plan mode — show empty form, session created lazily on first save
-  const { lesson } = editing
-  const emptySession: import("@/lib/api").SessionDetailRead = {
+  // Use query data if available, otherwise empty session for new plans
+  const displaySession: import("@/lib/api").SessionDetailRead = session ?? {
     id: 0,
-    schedule_entry_id: editing.scheduleEntryId,
-    session_date: editing.date,
+    schedule_entry_id: editing.type === "new" ? editing.scheduleEntryId : 0,
+    session_date: editing.type === "new" ? editing.date : "",
     started_at: "",
     ended_at: null,
     status: "planned",
-    grade_display: lesson.grade_display,
-    subject_name: lesson.subject_name,
-    period_number: lesson.period_number,
-    start_time: lesson.start_time,
-    end_time: lesson.end_time,
+    grade_display: editing.type === "new" ? editing.lesson.grade_display : "",
+    subject_name: editing.type === "new" ? editing.lesson.subject_name : "",
+    period_number: editing.type === "new" ? editing.lesson.period_number : 0,
+    start_time: editing.type === "new" ? editing.lesson.start_time : "",
+    end_time: editing.type === "new" ? editing.lesson.end_time : "",
     teacher_name: "",
     topic: null,
     homework: null,
@@ -205,18 +184,19 @@ function PlanEditor({
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-2xl font-bold">
-            {lesson.grade_display} — {lesson.subject_name}
-            <span className="text-base font-normal text-muted-foreground ml-2">
-              {lesson.period_number}-soat · {lesson.start_time} – {lesson.end_time}
-            </span>
-          </h1>
+          {displaySession.grade_display} — {displaySession.subject_name}
+          <span className="text-base font-normal text-muted-foreground ml-2">
+            {displaySession.period_number}-soat · {displaySession.start_time} – {displaySession.end_time}
+          </span>
+        </h1>
       </div>
 
       <TopicHomeworkSection
-        session={emptySession}
-        sessionId={0}
-        disabled={false}
-        createSession={createSession}
+        session={displaySession}
+        sessionId={activeSessionId ?? 0}
+        disabled={displaySession.status === "completed"}
+        homeworkEditable={displaySession.status === "in_progress"}
+        {...(!activeSessionId && { createSession })}
       />
     </div>
   )
