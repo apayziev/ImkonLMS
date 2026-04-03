@@ -76,8 +76,9 @@ export function SessionView({
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
       queryClient.setQueryData(queryKeys.lessonSession(sessionId), response.data)
     },
-    onError: () => {
-      toast.error("Darsni boshlashda xatolik")
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(msg ?? "Darsni boshlashda xatolik")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
     },

@@ -321,6 +321,7 @@ function QuarterDatesView({
             </button>
           </div>
           <DayAttendanceView
+            key={`${selectedCard.ds}-${selectedCard.entryId}`}
             dateStr={selectedCard.ds}
             entryId={selectedCard.entryId}
           />
@@ -352,7 +353,10 @@ function DayAttendanceView({
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
       setActiveSessionId(response.data.id)
     },
-    onError: () => toast.error("Darsni boshlashda xatolik"),
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(msg ?? "Darsni boshlashda xatolik")
+    },
   })
 
   if (lessonsLoading) {
