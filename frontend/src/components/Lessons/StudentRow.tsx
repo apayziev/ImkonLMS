@@ -76,9 +76,10 @@ export function StudentRow({
         },
       )
     },
-    onError: () => {
+    onError: (error: any) => {
       setSaveStatus("error")
-      toast.error("Saqlashda xatolik")
+      const msg = error?.response?.data?.detail ?? "Saqlashda xatolik"
+      toast.error(msg)
     },
   })
 
