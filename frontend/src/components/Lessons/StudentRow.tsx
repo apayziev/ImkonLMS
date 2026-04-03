@@ -8,14 +8,14 @@ import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { queryKeys } from "@/hooks/useQueryOptions"
-import { ATTENDANCE_OPTIONS, GRADED_STATUSES } from "./constants"
+import { ATTENDANCE_OPTIONS } from "./constants"
 import { YellowCardDialog } from "./YellowCardDialog"
 import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
 const ATTENDANCE_ICONS = {
-  present: <Check className="h-4 w-4" />,
-  late: <Clock className="h-4 w-4" />,
-  absent: <X className="h-4 w-4" />,
+  present: <Check className="h-3.5 w-3.5" />,
+  late: <Clock className="h-3.5 w-3.5" />,
+  absent: <X className="h-3.5 w-3.5" />,
 } as const
 
 export function StudentRow({
@@ -78,8 +78,6 @@ export function StudentRow({
     },
   })
 
-  const isAbsent = !GRADED_STATUSES.has(student.status as "present" | "late")
-  const isUnmarked = student.status === "unmarked"
   const cardCount = yellowCards.length
   const isOverLimit = cardCount >= yellowCardLimit
 
@@ -92,19 +90,13 @@ export function StudentRow({
   return (
     <tr
       className={cn(
-        "transition-colors",
-        isLate
-          ? "bg-amber-50 dark:bg-amber-950/20"
-          : isUnmarked
-            ? "bg-muted/30"
-            : isAbsent
-              ? "bg-muted/50"
-              : "bg-card",
+        "transition-colors hover:bg-muted/50",
+        isLate && "bg-amber-50/50 dark:bg-amber-950/10",
         mutation.isPending && "opacity-70",
       )}
     >
       {/* Number + Save Status */}
-      <td className="py-3 px-4 text-lg font-medium text-muted-foreground rounded-l-lg">
+      <td className="py-3 px-4 text-sm font-medium text-muted-foreground">
         <span className="relative">
           {index}
           {saveStatus === "saving" && (
@@ -140,7 +132,7 @@ export function StudentRow({
             )}
           </div>
           <div className="min-w-0">
-            <span className="text-lg font-medium truncate block">
+            <span className="text-sm font-medium truncate block text-[var(--imkon-teal-dark)]">
               {student.last_name} {student.first_name}
             </span>
             {isLate && (
@@ -167,7 +159,7 @@ export function StudentRow({
               title={opt.label}
               onClick={() => handleStatusChange(opt.value)}
               className={cn(
-                "h-9 w-9 rounded-full border flex items-center justify-center transition-all",
+                "h-7 w-7 rounded-full border flex items-center justify-center transition-all",
                 student.status === opt.value
                   ? opt.color
                   : "bg-background text-muted-foreground/40 border-border hover:text-muted-foreground hover:bg-accent",
@@ -180,20 +172,20 @@ export function StudentRow({
         </div>
       </td>
 
-      {/* Yellow Card Button */}
-      <td className="py-3 px-3 rounded-r-lg">
+      {/* Yellow Card Badge */}
+      <td className="py-3 px-3 text-center">
         <button
           type="button"
           onClick={() => setCardDialogOpen(true)}
           title="Sariq kartochkalar"
           className={cn(
-            "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all select-none",
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all select-none",
             isOverLimit
               ? "bg-red-500 text-white"
-              : "bg-amber-400 hover:bg-amber-500 text-white",
+              : "bg-amber-400 text-white hover:bg-amber-500",
           )}
         >
-          <span className="h-4 w-4 rounded-sm bg-white/30 shrink-0" />
+          <span className="h-3 w-2.5 rounded-[2px] shrink-0 bg-white/30" />
           <span>Ogohlantirish {cardCount}/{yellowCardLimit}</span>
         </button>
 

@@ -180,16 +180,16 @@ export function SessionView({
 
       {!isPlanned && (
         <>
-          <table className="w-full border-separate border-spacing-y-2">
+          <table className="w-full">
             <thead>
-              <tr className="text-sm font-medium text-muted-foreground">
-                <th className="w-8 py-2 px-4 text-left font-medium">#</th>
-                <th className="py-2 px-3 text-left font-medium">O'quvchi</th>
-                <th className="py-2 px-3 text-center font-medium">Davomat</th>
-                <th className="py-2 px-3 text-center font-medium text-xs">Ogohlantirish</th>
+              <tr className="border-b-2 border-[var(--imkon-teal)] text-sm font-medium text-muted-foreground">
+                <th className="w-10 py-3 px-4 text-left font-medium">#</th>
+                <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
+                <th className="py-3 px-3 text-center font-medium">Davomat</th>
+                <th className="py-3 px-3 text-center font-medium">Ogohlantirish</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {session.students.map((student, index) => (
                 <StudentRow
                   key={student.student_id}
