@@ -590,34 +590,6 @@ export const yellowCardsApi = {
     api.delete(`/api/v1/yellow-cards/${cardId}`),
 }
 
-export const pointsApi = {
-  // Categories
-  listCategories: (activeOnly = true) =>
-    api.get<PointCategoryList>("/api/v1/points/categories", { params: { active_only: activeOnly } }),
-  createCategory: (data: PointCategoryCreate) =>
-    api.post<PointCategoryRead>("/api/v1/points/categories", data),
-  updateCategory: (id: number, data: Partial<PointCategoryCreate & { is_active: boolean }>) =>
-    api.patch<PointCategoryRead>(`/api/v1/points/categories/${id}`, data),
-  deleteCategory: (id: number) =>
-    api.delete(`/api/v1/points/categories/${id}`),
-
-  // Give points
-  give: (data: PointGiveRequest) =>
-    api.post<PointTransactionRead>("/api/v1/points/give", data),
-  giveBulk: (data: { student_ids: number[]; category_id: number; points?: number; lesson_session_id?: number; note?: string }) =>
-    api.post("/api/v1/points/give/bulk", data),
-
-  // View
-  summary: (gradeId: number, quarterId?: number) =>
-    api.get<GradePointsSummaryResponse>("/api/v1/points/summary", {
-      params: { grade_id: gradeId, ...(quarterId ? { quarter_id: quarterId } : {}) },
-    }),
-  studentDetail: (studentId: number, quarterId?: number) =>
-    api.get<StudentPointsDetailResponse>(`/api/v1/points/student/${studentId}`, {
-      params: quarterId ? { quarter_id: quarterId } : {},
-    }),
-}
-
 // ─── Violations (Qoidabuzarlik) ─────────────────────────────────────────────
 
 export interface ViolationTypeRead {
