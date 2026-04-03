@@ -26,6 +26,7 @@ from ._helpers import (
     _get_teacher_session,
     _load_attendances_with_students,
     _load_session_with_relations,
+    _require_not_completed,
     _require_teacher,
 )
 
@@ -166,6 +167,7 @@ async def update_session(
     _require_teacher(current_user)
 
     session = await _get_teacher_session(db, session_id, current_user.id)
+    _require_not_completed(session)
 
     if body.topic is not None:
         session.topic = body.topic
@@ -196,7 +198,7 @@ async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser
 
     session = await _get_teacher_session(db, session_id, current_user.id)
     if session.status != SessionStatus.IN_PROGRESS:
-        raise BadRequestException("Sessiya allaqachon tugatilgan")
+        raise BadRequestException("Faqat boshlangan darsni tugatish mumkin")
 
     session.status = SessionStatus.COMPLETED
     session.ended_at = datetime.now(UTC)

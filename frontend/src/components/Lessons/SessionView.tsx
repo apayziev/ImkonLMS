@@ -61,6 +61,7 @@ export function SessionView({
       toast.success("Dars tugatildi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
+      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "lessons-for-date" || q.queryKey[0] === "session-statuses" })
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -74,6 +75,7 @@ export function SessionView({
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
+      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "lessons-for-date" || q.queryKey[0] === "session-statuses" })
       queryClient.setQueryData(queryKeys.lessonSession(sessionId), response.data)
     },
     onError: (error: unknown) => {
