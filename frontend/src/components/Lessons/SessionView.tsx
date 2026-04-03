@@ -57,6 +57,7 @@ export function SessionView({
     onSuccess: () => {
       toast.success("Dars tugatildi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail

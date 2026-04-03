@@ -136,10 +136,10 @@ export function StudentRow({
               {student.last_name} {student.first_name}
             </span>
             {isLate && (
-              <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              <span className="flex items-center gap-1.5 text-xs text-amber-500 dark:text-amber-400 mt-0.5">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
                 </span>
                 Kechikmoqda
               </span>
