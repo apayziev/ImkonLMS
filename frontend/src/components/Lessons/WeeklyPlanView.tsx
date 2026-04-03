@@ -29,19 +29,22 @@ import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { UZ_WEEKDAYS_FULL, UZ_MONTHS } from "./constants"
 import { toDateString, todayStr, lessonStatusFlags } from "./formatters"
 
-type EditingTarget =
+export type EditingTarget =
   | { type: "existing"; sessionId: number }
-  | { type: "new"; scheduleEntryId: number; date: string; lesson: TodayLessonRead }
+  | { type: "new"; scheduleEntryId: number; date: string }
 
 export function WeeklyPlanView({
   selectedDate,
   onDateChange,
+  editing,
+  onEditingChange,
 }: {
   selectedDate: Date
   onDateChange: (d: Date) => void
+  editing: EditingTarget | null
+  onEditingChange: (target: EditingTarget | null) => void
 }) {
   const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, onDateChange)
-  const [editing, setEditing] = useState<EditingTarget | null>(null)
 
   const today = todayStr()
 
@@ -49,7 +52,7 @@ export function WeeklyPlanView({
     return (
       <PlanEditor
         editing={editing}
-        onBack={() => setEditing(null)}
+        onBack={() => onEditingChange(null)}
       />
     )
   }
@@ -105,8 +108,8 @@ export function WeeklyPlanView({
           key={toDateString(day)}
           day={day}
           today={today}
-          onSessionOpen={(sessionId) => setEditing({ type: "existing", sessionId })}
-          onNewPlan={(lesson, date) => setEditing({ type: "new", scheduleEntryId: lesson.schedule_entry_id, date, lesson })}
+          onSessionOpen={(sessionId) => onEditingChange({ type: "existing", sessionId })}
+          onNewPlan={(lesson, date) => onEditingChange({ type: "new", scheduleEntryId: lesson.schedule_entry_id, date })}
         />
       ))}
     </div>
@@ -124,16 +127,28 @@ function PlanEditor({
   const queryClient = useQueryClient()
   const [createdSessionId, setCreatedSessionId] = useState<number | null>(null)
 
-  // Determine the active session ID
-  const activeSessionId = editing.type === "existing" ? editing.sessionId : createdSessionId
+  // For new plans, look up lesson info from todayLessons cache
+  const { data: lessonsData, isLoading: lessonsLoading } = useQuery({
+    ...getTodayLessonsQueryOptions(editing.type === "new" ? editing.date : ""),
+    enabled: editing.type === "new",
+    staleTime: 5 * 60 * 1000,
+  })
+  const newLesson = editing.type === "new"
+    ? lessonsData?.data?.find(l => l.schedule_entry_id === editing.scheduleEntryId)
+    : undefined
 
-  // For existing sessions or after lazy creation, load from API
+  // Auto-resolve: if session already exists for this entry (e.g. after refresh), use it
+  const resolvedSessionId = editing.type === "existing"
+    ? editing.sessionId
+    : (createdSessionId ?? newLesson?.session_id ?? null)
+
+  // Load session from API when we have a session ID
   const { data: session, isLoading } = useQuery({
-    ...getLessonSessionQueryOptions(activeSessionId ?? 0),
-    enabled: !!activeSessionId,
+    ...getLessonSessionQueryOptions(resolvedSessionId ?? 0),
+    enabled: !!resolvedSessionId,
   })
 
-  // For new plans: empty session object, lazy creation via callback
+  // Lazy session creation for new plans
   const createSession = useCallback(async () => {
     if (editing.type !== "new") throw new Error("Invalid state")
     const res = await lessonsApi.planSession(editing.scheduleEntryId, editing.date)
@@ -144,7 +159,10 @@ function PlanEditor({
     return res.data
   }, [editing, queryClient])
 
-  if (activeSessionId && (isLoading || !session)) {
+  if (
+    (editing.type === "new" && !resolvedSessionId && lessonsLoading) ||
+    (resolvedSessionId && (isLoading || !session))
+  ) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -161,11 +179,11 @@ function PlanEditor({
     started_at: "",
     ended_at: null,
     status: "planned",
-    grade_display: editing.type === "new" ? editing.lesson.grade_display : "",
-    subject_name: editing.type === "new" ? editing.lesson.subject_name : "",
-    period_number: editing.type === "new" ? editing.lesson.period_number : 0,
-    start_time: editing.type === "new" ? editing.lesson.start_time : "",
-    end_time: editing.type === "new" ? editing.lesson.end_time : "",
+    grade_display: newLesson?.grade_display ?? "",
+    subject_name: newLesson?.subject_name ?? "",
+    period_number: newLesson?.period_number ?? 0,
+    start_time: newLesson?.start_time ?? "",
+    end_time: newLesson?.end_time ?? "",
     teacher_name: "",
     topic: null,
     homework: null,
@@ -193,10 +211,10 @@ function PlanEditor({
 
       <TopicHomeworkSection
         session={displaySession}
-        sessionId={activeSessionId ?? 0}
+        sessionId={resolvedSessionId ?? 0}
         disabled={displaySession.status === "completed"}
         homeworkEditable={displaySession.status === "in_progress"}
-        {...(!activeSessionId && { createSession })}
+        {...(!resolvedSessionId && { createSession })}
       />
     </div>
   )

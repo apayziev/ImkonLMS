@@ -15,9 +15,9 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutTimetableRouteImport } from './routes/_layout/timetable'
 import { Route as LayoutTeachersRouteImport } from './routes/_layout/teachers'
 import { Route as LayoutStudentsRouteImport } from './routes/_layout/students'
+import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutLessonsRouteImport } from './routes/_layout/lessons'
 import { Route as LayoutLessonPlanRouteImport } from './routes/_layout/lesson-plan'
-import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutAttendanceRouteImport } from './routes/_layout/attendance'
 
 const LoginRoute = LoginRouteImport.update({
@@ -49,6 +49,11 @@ const LayoutStudentsRoute = LayoutStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutLessonsRoute = LayoutLessonsRouteImport.update({
   id: '/lessons',
   path: '/lessons',
@@ -57,11 +62,6 @@ const LayoutLessonsRoute = LayoutLessonsRouteImport.update({
 const LayoutLessonPlanRoute = LayoutLessonPlanRouteImport.update({
   id: '/lesson-plan',
   path: '/lesson-plan',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAttendanceRoute = LayoutAttendanceRouteImport.update({
@@ -191,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutStudentsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/settings': {
+      id: '/_layout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/lessons': {
       id: '/_layout/lessons'
       path: '/lessons'
@@ -203,13 +210,6 @@ declare module '@tanstack/react-router' {
       path: '/lesson-plan'
       fullPath: '/lesson-plan'
       preLoaderRoute: typeof LayoutLessonPlanRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/settings': {
-      id: '/_layout/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/attendance': {
