@@ -41,6 +41,7 @@ def upgrade() -> None:
         sa.Column("reported_by_id", sa.Integer(), nullable=False, comment="Xabar bergan o'qituvchi"),
         sa.Column("note", sa.Text(), nullable=True, comment="Izoh"),
         sa.Column("location", sa.String(300), nullable=True, comment="Qoidabuzarlik yuz bergan joy"),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), comment="Yuz bergan vaqt"),
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
