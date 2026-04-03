@@ -221,7 +221,7 @@ export function StudentRow({
           title="Qoidabuzarlik haqida xabar berish"
           className="relative inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
         >
-          <Flag className="h-4 w-4 text-red-500" />
+          <Flag className="h-4 w-4 text-red-500 fill-red-500" />
           {violations.length > 0 && (
             <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
               {violations.length}
