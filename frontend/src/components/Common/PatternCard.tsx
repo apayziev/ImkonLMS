@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 export type PatternType = "green" | "purple" | "maroon"
@@ -62,14 +62,4 @@ export function PatternCardTitle({
 	className?: string
 }) {
 	return <CardTitle className={cn(className)}>{children}</CardTitle>
-}
-
-export function PatternCardDescription({
-	children,
-	className,
-}: {
-	children: ReactNode
-	className?: string
-}) {
-	return <CardDescription className={cn(className)}>{children}</CardDescription>
 }

@@ -63,23 +63,3 @@ class StudentRead(BaseModel):
 
 
 StudentList = PaginatedList[StudentRead]
-
-
-class StudentFreezeRequest(BaseModel):
-    departure_date: date | None = None
-    reason: str | None = None
-
-
-class StudentUnfreezeRequest(BaseModel):
-    return_date: date
-
-
-class StudentFreezeResponse(BaseModel):
-    id: int
-    full_name: str
-    is_frozen: bool
-    frozen_at: date | None = None
-    frozen_reason: str | None = None
-    departure_date: date | None = None
-    return_date: date | None = None
-    message: str

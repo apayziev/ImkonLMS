@@ -87,7 +87,6 @@ async def _auto_end_sessions_loop() -> None:
                 now_utc = datetime.now(UTC)
                 now_local = now_utc.astimezone(LOCAL_TZ)
                 today = now_local.date()
-                now_time = now_local.time()
 
                 result = await db.execute(
                     select(LessonSession)

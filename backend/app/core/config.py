@@ -98,8 +98,3 @@ LOCAL_TZ = ZoneInfo(settings.TIMEZONE)
 def today_local() -> date:
     """Return today's date in the school's local timezone (e.g. Asia/Tashkent)."""
     return datetime.now(LOCAL_TZ).date()
-
-
-def now_local() -> datetime:
-    """Return current datetime in the school's local timezone."""
-    return datetime.now(LOCAL_TZ)

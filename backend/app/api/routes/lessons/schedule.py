@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import today_local
 from app.core.formatting import format_time
-from app.crud.lessons import crud_lesson_sessions
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.schemas.lessons import SessionStatusItem, SessionStatusesResponse, TodayLessonRead, TodayLessonsResponse

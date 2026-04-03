@@ -6,7 +6,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
-from app.core.exceptions import NotFoundException
 from app.models.base import BaseModel
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -37,18 +36,6 @@ class BaseCRUD(Generic[ModelType]):
         query = self._build_query(options=options, **kwargs)
         result = await db.execute(query)
         return result.scalar_one_or_none()
-
-    async def get_or_404(
-        self,
-        db: AsyncSession,
-        error_message: str | None = None,
-        options: Sequence[Any] | None = None,
-        **kwargs: Any,
-    ) -> ModelType:
-        record = await self.get(db, options=options, **kwargs)
-        if record is None:
-            raise NotFoundException(error_message or "Resurs topilmadi")
-        return record
 
     async def update(
         self,
@@ -100,15 +87,4 @@ class BaseCRUD(Generic[ModelType]):
         await db.refresh(record)
         return True
 
-    async def db_delete(
-        self,
-        db: AsyncSession,
-        **kwargs: Any,
-    ) -> bool:
-        record = await self.get(db, **kwargs)
-        if record is None:
-            return False
 
-        await db.delete(record)
-        await db.commit()
-        return True

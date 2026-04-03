@@ -1,8 +1,7 @@
-import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi, violationsApi, yellowCardsApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, lessonsApi, quartersApi, subjectsApi, teachersApi, timetableApi, violationsApi, yellowCardsApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
-const MAX_STUDENTS = 200
 
 export const queryKeys = {
   grades: ["grades"] as const,
@@ -50,16 +49,6 @@ export function getTeachersQueryOptions(params?: { search?: string }) {
     queryKey: [...queryKeys.teachers, params ?? {}] as const,
     queryFn: async () => {
       const { data } = await teachersApi.list({ limit: 200, ...params })
-      return data
-    },
-  }
-}
-
-export function getStudentsQueryOptions(params?: { grade_id?: number; search?: string }) {
-  return {
-    queryKey: [...queryKeys.students, params ?? {}] as const,
-    queryFn: async () => {
-      const { data } = await studentsApi.list({ limit: MAX_STUDENTS, ...params })
       return data
     },
   }

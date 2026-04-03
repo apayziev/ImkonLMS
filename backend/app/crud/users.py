@@ -1,14 +1,11 @@
 """CRUD operations for User model."""
 
-from typing import Any
-
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.security import get_password_hash, verify_password
 from app.models.user import User, UserRole
-from app.schemas.users import UserCreate, UserUpdate
 
 from .base import BaseCRUD
 
@@ -39,38 +36,6 @@ class CRUDUser(BaseCRUD[User]):
             select(User).where(User.document_id == normalized, User.is_deleted == False)  # noqa: E712
         )
         return result.scalar_one_or_none()
-
-    async def create(self, db: AsyncSession, user_create: UserCreate) -> User:
-        hashed_password = get_password_hash(user_create.password) if user_create.password else None
-        user_data = user_create.model_dump(exclude={"password"})
-        db_user = User(**user_data, hashed_password=hashed_password)
-        db.add(db_user)
-        await db.commit()
-        await db.refresh(db_user)
-        return db_user
-
-    async def update(
-        self,
-        db: AsyncSession,
-        db_user: User,
-        user_update: UserUpdate | dict[str, Any],
-    ) -> User:
-        if isinstance(user_update, dict):
-            update_data = user_update
-        else:
-            update_data = user_update.model_dump(exclude_unset=True)
-
-        if "password" in update_data:
-            password = update_data.pop("password")
-            update_data["hashed_password"] = get_password_hash(password)
-
-        for field, value in update_data.items():
-            setattr(db_user, field, value)
-
-        db.add(db_user)
-        await db.commit()
-        await db.refresh(db_user)
-        return db_user
 
     async def authenticate(
         self,
@@ -184,20 +149,6 @@ class CRUDUser(BaseCRUD[User]):
         rows = (await db.execute(data_q)).scalars().all()
 
         return list(rows), total
-
-    async def restore(self, db: AsyncSession, *, id: int) -> User | None:
-        user = await self.get(
-            db, id=id, is_deleted=True, role=UserRole.STUDENT.value,
-            options=[selectinload(User.grade)],
-        )
-        if user is None:
-            return None
-        user.is_deleted = False
-        user.deleted_at = None
-        user.is_active = True
-        await db.commit()
-        await db.refresh(user, attribute_names=["grade"])
-        return user
 
     async def hard_delete(self, db: AsyncSession, *, id: int) -> bool:
         user = await self.get(db, id=id, is_deleted=True)
