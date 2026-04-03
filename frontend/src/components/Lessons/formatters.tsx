@@ -4,7 +4,10 @@ import type { SaveStatus } from "@/hooks/useSaveStatus"
 import { cn } from "@/lib/utils"
 
 export function toDateString(d: Date) {
-  return d.toISOString().split("T")[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
 }
 
 export const todayStr = () => toDateString(new Date())
