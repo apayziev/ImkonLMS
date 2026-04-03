@@ -72,7 +72,7 @@ export function ViolationReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 overflow-hidden gap-0">
+      <DialogContent aria-describedby={undefined} className="max-w-md p-0 overflow-hidden gap-0">
         {/* Header */}
         <div className="px-5 pt-5 pb-4 text-center">
           <div className="flex justify-center mb-3">
@@ -154,7 +154,7 @@ export function ViolationReportDialog({
                         <span className="block text-xs text-muted-foreground truncate">{selectedType.description}</span>
                       )}
                     </span>
-                    <svg className={cn("h-4 w-4 text-muted-foreground transition-transform", dropdownOpen && "rotate-180")} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", dropdownOpen && "rotate-180")} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </button>
 
                   {dropdownOpen && (

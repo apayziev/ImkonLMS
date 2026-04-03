@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 
 export function PhotoZoomDialog({
   photoUrl,
@@ -15,7 +16,8 @@ export function PhotoZoomDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex items-center justify-center bg-transparent border-none shadow-none p-0 max-w-sm [&>button]:hidden">
+      <DialogContent aria-describedby={undefined} className="flex items-center justify-center bg-transparent border-none shadow-none p-0 max-w-sm [&>button]:hidden">
+        <VisuallyHidden><DialogTitle>{fullName}</DialogTitle></VisuallyHidden>
         <div className="relative">
           <img
             src={photoUrl}

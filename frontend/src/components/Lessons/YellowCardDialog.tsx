@@ -59,7 +59,7 @@ export function YellowCardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+      <DialogContent aria-describedby={undefined} className="max-w-sm p-0 overflow-hidden gap-0">
         {/* Header: big photo + name */}
         <div className="flex items-center gap-4 px-5 pt-5 pb-4">
           <Avatar className="h-14 w-14 shrink-0">

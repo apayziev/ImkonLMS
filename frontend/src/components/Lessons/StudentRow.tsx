@@ -223,7 +223,7 @@ export function StudentRow({
         >
           <Flag className="h-4 w-4 text-red-500 fill-red-500" />
           {violations.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold rounded-full h-3.5 min-w-3.5 px-0.5 flex items-center justify-center">
               {violations.length}
             </span>
           )}
