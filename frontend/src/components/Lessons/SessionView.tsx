@@ -185,9 +185,7 @@ export function SessionView({
             <div className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-4 px-4 py-2 text-sm font-medium text-muted-foreground">
               <span>#</span>
               <span>O'quvchi</span>
-              <div className="flex w-56 justify-center items-center">
-                <span>Davomat</span>
-              </div>
+              <span className="text-center">Davomat</span>
               <span className="text-center text-xs w-full">Ogohlantirish</span>
             </div>
 

@@ -180,7 +180,7 @@ export function StudentRow({
       </div>
 
       {/* Attendance Buttons */}
-      <div className="flex gap-3 w-56 justify-center">
+      <div className="flex gap-3 justify-center">
         {ATTENDANCE_OPTIONS.map((opt) => (
           <button
             key={opt.value}
