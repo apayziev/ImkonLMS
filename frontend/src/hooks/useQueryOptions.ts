@@ -96,6 +96,7 @@ export function getTimeSlotsQueryOptions(academicYearId: number) {
       return data
     },
     enabled: academicYearId > 0,
+    staleTime: 5 * 60 * 1000,
   }
 }
 
@@ -111,6 +112,7 @@ export function getScheduleQueryOptions(params: {
       return data
     },
     enabled: params.academic_year_id > 0,
+    staleTime: 5 * 60 * 1000,
   }
 }
 
