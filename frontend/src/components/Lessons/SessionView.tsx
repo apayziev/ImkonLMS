@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getLessonSessionQueryOptions, getYellowCardsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
+import { getLessonSessionQueryOptions, getViolationReportsQueryOptions, getYellowCardsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { StudentRow } from "./StudentRow"
 import { ATTENDANCE_OPTIONS } from "./constants"
@@ -50,6 +50,9 @@ export function SessionView({
   )
   const { data: yellowCardData } = useQuery(
     getYellowCardsQueryOptions(sessionId),
+  )
+  const { data: violationData } = useQuery(
+    getViolationReportsQueryOptions(sessionId),
   )
 
   const endMutation = useMutation({
@@ -188,6 +191,7 @@ export function SessionView({
                 <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
                 <th className="py-3 px-3 text-center font-medium">Davomat</th>
                 <th className="py-3 px-3 text-center font-medium">Ogohlantirish</th>
+                <th className="py-3 px-3 text-center font-medium">Qoidabuzarlik haqida xabar berish</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -201,6 +205,7 @@ export function SessionView({
                   isLate={showLateWarning && student.status === "unmarked"}
                   yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
                   yellowCardLimit={yellowCardData?.limit ?? 2}
+                  violations={violationData?.by_student[student.student_id] ?? []}
                 />
               ))}
             </tbody>

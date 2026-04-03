@@ -13,6 +13,8 @@ from .subject import Subject
 from .sync_log import SyncLog
 from .time_slot import TimeSlot
 from .user import User, UserRole
+from .violation_report import ViolationReport
+from .violation_type import ViolationType
 from .yellow_card import YellowCard
 
 __all__ = [
@@ -28,5 +30,8 @@ __all__ = [
     "TimeSlot",
     "User",
     "UserRole",
+    "ViolationReport",
+    "ViolationType",
     "YellowCard",
 ]
+

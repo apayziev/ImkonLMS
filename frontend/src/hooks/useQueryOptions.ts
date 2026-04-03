@@ -1,4 +1,4 @@
-import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi, yellowCardsApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi, violationsApi, yellowCardsApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -19,6 +19,8 @@ export const queryKeys = {
   quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
   attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
   yellowCards: (sessionId: number) => ["yellow-cards", sessionId] as const,
+  violationTypes: ["violation-types"] as const,
+  violationReports: (sessionId: number) => ["violation-reports", sessionId] as const,
   sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
     ["session-statuses", entryIds.join(","), startDate, endDate] as const,
 } as const
@@ -189,6 +191,28 @@ export function getYellowCardsQueryOptions(sessionId: number) {
     queryKey: queryKeys.yellowCards(sessionId),
     queryFn: async () => {
       const { data } = await yellowCardsApi.getBySession(sessionId)
+      return data
+    },
+    enabled: sessionId > 0,
+  }
+}
+
+export function getViolationTypesQueryOptions() {
+  return {
+    queryKey: queryKeys.violationTypes,
+    queryFn: async () => {
+      const { data } = await violationsApi.getTypes()
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  }
+}
+
+export function getViolationReportsQueryOptions(sessionId: number) {
+  return {
+    queryKey: queryKeys.violationReports(sessionId),
+    queryFn: async () => {
+      const { data } = await violationsApi.getBySession(sessionId)
       return data
     },
     enabled: sessionId > 0,

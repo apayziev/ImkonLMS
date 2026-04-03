@@ -19,6 +19,7 @@ import {
   getCurrentAcademicYearQueryOptions,
   getCurrentQuarterQueryOptions,
   getScheduleQueryOptions,
+  getSessionStatusesQueryOptions,
   getTimeSlotsQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
@@ -75,6 +76,17 @@ export function TeacherWeeklyTimetable({
   const timeSlots = timeSlotsData?.data ?? []
   const entries = scheduleData?.data ?? []
   const { sorted, cellMap } = buildGrid(timeSlots, entries, workingDays)
+
+  // Fetch session statuses for the visible week
+  const weekStart = weekDays.length > 0 ? toDateString(weekDays[0]) : ""
+  const weekEnd = weekDays.length > 0 ? toDateString(weekDays[weekDays.length - 1]) : ""
+  const allEntryIds = entries.map((e) => e.id)
+  const { data: statusesData } = useQuery(
+    getSessionStatusesQueryOptions(allEntryIds, weekStart, weekEnd),
+  )
+  const sessionStatusMap = new Map<string, string>(
+    statusesData?.data.map((s) => [`${s.schedule_entry_id}-${s.session_date}`, s.status]) ?? [],
+  )
 
   // Only show columns that have at least one lesson entry for this teacher
   const activeDays = workingDays.filter((day) =>
@@ -190,6 +202,10 @@ export function TeacherWeeklyTimetable({
                       const isClickable = isCurrentWeek
                       const isThisLoading = entry !== undefined && loadingCell === entry.id
 
+                      const sessionStatus = entry ? sessionStatusMap.get(`${entry.id}-${dateStr}`) : undefined
+                      const isCompleted = sessionStatus === "completed"
+                      const isInProgress = sessionStatus === "in_progress"
+
                       return (
                         <td
                           key={day}
@@ -201,13 +217,17 @@ export function TeacherWeeklyTimetable({
                               onClick={() => isClickable && !isThisLoading && handleCellClick(entry.id, day)}
                               disabled={!isClickable || isThisLoading}
                               className={`w-full min-h-[96px] rounded-lg px-2.5 py-3 text-left flex flex-col justify-center relative overflow-hidden transition-all
-                                bg-primary/10 border border-primary/20
-                                ${isClickable ? "hover:shadow-md hover:-translate-y-px hover:bg-primary/15 active:translate-y-0 cursor-pointer" : "cursor-default opacity-50"}
-                                ${isClickable && isPast ? "opacity-50" : ""}
+                                ${isCompleted
+                                  ? "bg-[#00A27D]/10 border border-[#00A27D]/30"
+                                  : isInProgress
+                                    ? "bg-amber-50 border border-amber-300 dark:bg-amber-950/20 dark:border-amber-700"
+                                    : "bg-primary/10 border border-primary/20"}
+                                ${isClickable ? "hover:shadow-md hover:-translate-y-px active:translate-y-0 cursor-pointer" : "cursor-default opacity-50"}
+                                ${isClickable && isPast && !isCompleted && !isInProgress ? "opacity-50" : ""}
                                 ${isThisLoading ? "opacity-60 cursor-wait" : ""}
                               `}
                             >
-                              <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" />
+                              <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg ${isCompleted ? "bg-[#00A27D]" : isInProgress ? "bg-amber-400" : "bg-primary"}`} />
                               {isThisLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />
                               ) : (

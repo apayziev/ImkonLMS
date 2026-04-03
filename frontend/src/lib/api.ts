@@ -701,3 +701,47 @@ export const pointsApi = {
     }),
 }
 
+// ─── Violations (Qoidabuzarlik) ─────────────────────────────────────────────
+
+export interface ViolationTypeRead {
+  id: number
+  name: string
+  description: string | null
+  points: number
+  is_active: boolean
+}
+
+export interface ViolationReportRead {
+  id: number
+  student_id: number
+  violation_type: ViolationTypeRead
+  note: string | null
+  location: string | null
+  occurred_at: string
+  reported_by_name: string
+  created_at: string
+}
+
+export interface ViolationSessionSummary {
+  by_student: Record<number, ViolationReportRead[]>
+}
+
+export const violationsApi = {
+  // Types (admin CRUD)
+  getTypes: (activeOnly = true) =>
+    api.get<ViolationTypeRead[]>("/api/v1/violations/types", { params: { active_only: activeOnly } }),
+  createType: (data: { name: string; description?: string | null; points?: number }) =>
+    api.post<ViolationTypeRead>("/api/v1/violations/types", data),
+  updateType: (id: number, data: { name?: string; description?: string | null; points?: number; is_active?: boolean }) =>
+    api.put<ViolationTypeRead>(`/api/v1/violations/types/${id}`, data),
+  deleteType: (id: number) =>
+    api.delete(`/api/v1/violations/types/${id}`),
+
+  // Reports (teacher)
+  report: (data: { student_id: number; violation_type_id: number; session_id?: number | null; note?: string | null; location?: string | null; occurred_at: string }) =>
+    api.post<ViolationReportRead>("/api/v1/violations/reports", data),
+  getBySession: (sessionId: number) =>
+    api.get<ViolationSessionSummary>(`/api/v1/violations/reports/session/${sessionId}`),
+  remove: (reportId: number) =>
+    api.delete(`/api/v1/violations/reports/${reportId}`),
+}
