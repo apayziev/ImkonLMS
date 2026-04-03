@@ -267,7 +267,7 @@ function UnifiedAttendanceTable({
   }
 
   return (
-    <Card className="rounded-xl overflow-hidden">
+    <Card className="rounded-xl overflow-hidden p-0 gap-0">
       {/* Card header */}
       <div className="flex items-start justify-between p-5 pb-3 border-b">
         <div>
