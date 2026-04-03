@@ -344,24 +344,22 @@ function DayLessons({
                       Reja yo'q
                     </span>
                   )}
-                  {hasSession && (
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all",
-                            lesson.plan_filled_count >= 6
-                              ? "bg-[var(--imkon-teal)]"
-                              : lesson.plan_filled_count >= 3
-                                ? "bg-[var(--imkon-purple)]"
-                                : "bg-[var(--imkon-purple)]/50",
-                          )}
-                          style={{ width: `${Math.round((lesson.plan_filled_count / 6) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">{lesson.plan_filled_count}/6</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          lesson.plan_filled_count >= 6
+                            ? "bg-[var(--imkon-teal)]"
+                            : lesson.plan_filled_count >= 3
+                              ? "bg-[var(--imkon-purple)]"
+                              : "bg-[var(--imkon-purple)]/50",
+                        )}
+                        style={{ width: `${Math.round((lesson.plan_filled_count / 6) * 100)}%` }}
+                      />
                     </div>
-                  )}
+                    <span className="text-[10px] text-muted-foreground">{lesson.plan_filled_count}/6</span>
+                  </div>
                 </div>
               </div>
             )
