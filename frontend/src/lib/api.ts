@@ -553,6 +553,27 @@ export const lessonsApi = {
         return parts.join("&")
       },
     }),
+  teacherStats: (startDate: string, endDate: string) =>
+    api.get<TeacherStatsResponse>("/api/v1/lessons/teacher-stats", {
+      params: { start_date: startDate, end_date: endDate },
+    }),
+}
+
+// Teacher stats types
+export interface TeacherStatRead {
+  teacher_id: number
+  teacher_name: string
+  photo_url: string | null
+  total_expected: number
+  total_conducted: number
+  total_completed: number
+  total_planned: number
+  on_time_starts: number
+  avg_duration_minutes: number | null
+}
+
+export interface TeacherStatsResponse {
+  teachers: TeacherStatRead[]
 }
 
 // ─── Quarters ───────────────────────────────────────────────────────────────

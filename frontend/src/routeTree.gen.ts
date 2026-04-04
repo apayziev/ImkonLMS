@@ -16,6 +16,7 @@ import { Route as LayoutTimetableRouteImport } from './routes/_layout/timetable'
 import { Route as LayoutTeachersRouteImport } from './routes/_layout/teachers'
 import { Route as LayoutStudentsRouteImport } from './routes/_layout/students'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutMonitoringRouteImport } from './routes/_layout/monitoring'
 import { Route as LayoutLessonsRouteImport } from './routes/_layout/lessons'
 import { Route as LayoutLessonPlanRouteImport } from './routes/_layout/lesson-plan'
 import { Route as LayoutAttendanceRouteImport } from './routes/_layout/attendance'
@@ -54,6 +55,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMonitoringRoute = LayoutMonitoringRouteImport.update({
+  id: '/monitoring',
+  path: '/monitoring',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutLessonsRoute = LayoutLessonsRouteImport.update({
   id: '/lessons',
   path: '/lessons',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/attendance': typeof LayoutAttendanceRoute
   '/lesson-plan': typeof LayoutLessonPlanRoute
   '/lessons': typeof LayoutLessonsRoute
+  '/monitoring': typeof LayoutMonitoringRoute
   '/settings': typeof LayoutSettingsRoute
   '/students': typeof LayoutStudentsRoute
   '/teachers': typeof LayoutTeachersRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/attendance': typeof LayoutAttendanceRoute
   '/lesson-plan': typeof LayoutLessonPlanRoute
   '/lessons': typeof LayoutLessonsRoute
+  '/monitoring': typeof LayoutMonitoringRoute
   '/settings': typeof LayoutSettingsRoute
   '/students': typeof LayoutStudentsRoute
   '/teachers': typeof LayoutTeachersRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/_layout/attendance': typeof LayoutAttendanceRoute
   '/_layout/lesson-plan': typeof LayoutLessonPlanRoute
   '/_layout/lessons': typeof LayoutLessonsRoute
+  '/_layout/monitoring': typeof LayoutMonitoringRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/students': typeof LayoutStudentsRoute
   '/_layout/teachers': typeof LayoutTeachersRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/lesson-plan'
     | '/lessons'
+    | '/monitoring'
     | '/settings'
     | '/students'
     | '/teachers'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/lesson-plan'
     | '/lessons'
+    | '/monitoring'
     | '/settings'
     | '/students'
     | '/teachers'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/_layout/attendance'
     | '/_layout/lesson-plan'
     | '/_layout/lessons'
+    | '/_layout/monitoring'
     | '/_layout/settings'
     | '/_layout/students'
     | '/_layout/teachers'
@@ -198,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/monitoring': {
+      id: '/_layout/monitoring'
+      path: '/monitoring'
+      fullPath: '/monitoring'
+      preLoaderRoute: typeof LayoutMonitoringRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/lessons': {
       id: '/_layout/lessons'
       path: '/lessons'
@@ -226,6 +245,7 @@ interface LayoutRouteChildren {
   LayoutAttendanceRoute: typeof LayoutAttendanceRoute
   LayoutLessonPlanRoute: typeof LayoutLessonPlanRoute
   LayoutLessonsRoute: typeof LayoutLessonsRoute
+  LayoutMonitoringRoute: typeof LayoutMonitoringRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStudentsRoute: typeof LayoutStudentsRoute
   LayoutTeachersRoute: typeof LayoutTeachersRoute
@@ -237,6 +257,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAttendanceRoute: LayoutAttendanceRoute,
   LayoutLessonPlanRoute: LayoutLessonPlanRoute,
   LayoutLessonsRoute: LayoutLessonsRoute,
+  LayoutMonitoringRoute: LayoutMonitoringRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStudentsRoute: LayoutStudentsRoute,
   LayoutTeachersRoute: LayoutTeachersRoute,

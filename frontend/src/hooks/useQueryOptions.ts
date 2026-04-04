@@ -24,6 +24,8 @@ export const queryKeys = {
     ["session-statuses", entryIds.join(","), startDate, endDate] as const,
   attendanceHistory: (entryIds: number[], startDate: string, endDate: string) =>
     ["attendance-history", entryIds.join(","), startDate, endDate] as const,
+  teacherStats: (startDate: string, endDate: string) =>
+    ["teacher-stats", startDate, endDate] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -225,5 +227,17 @@ export function getViolationReportsQueryOptions(sessionId: number) {
       return data
     },
     enabled: sessionId > 0,
+  }
+}
+
+export function getTeacherStatsQueryOptions(startDate: string, endDate: string) {
+  return {
+    queryKey: queryKeys.teacherStats(startDate, endDate),
+    queryFn: async () => {
+      const { data } = await lessonsApi.teacherStats(startDate, endDate)
+      return data
+    },
+    enabled: !!startDate && !!endDate,
+    staleTime: 2 * 60 * 1000,
   }
 }
