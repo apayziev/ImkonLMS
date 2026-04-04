@@ -269,13 +269,13 @@ function TeacherRow({ teacher: t, index, onClick }: { teacher: TeacherStatRead; 
         <div className="space-y-1">
           <p className="text-sm font-bold">
             {t.total_planned}
-            <span className="font-normal text-muted-foreground">/{t.total_expected}</span>
+            <span className="font-normal text-muted-foreground">/{t.total_expected_full}</span>
           </p>
           <PctBar
             value={t.total_planned}
-            total={t.total_expected}
+            total={t.total_expected_full}
             color={
-              t.total_expected > 0 && t.total_planned / t.total_expected >= 0.8
+              t.total_expected_full > 0 && t.total_planned / t.total_expected_full >= 0.8
                 ? "bg-[var(--imkon-teal)]"
                 : "bg-amber-500"
             }
