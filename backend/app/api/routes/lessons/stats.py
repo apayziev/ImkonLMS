@@ -60,7 +60,6 @@ class TeacherSessionDetail(PydanticBase):
     homework: str | None
     materials: list[TeacherSessionMaterial]
     plan_filled_count: int  # 0-6
-    plan_score: int          # 0-100 weighted
 
 
 class TeacherDetailResponse(PydanticBase):
@@ -364,7 +363,6 @@ async def get_teacher_detail(
                 for m in s.materials
             ],
             plan_filled_count=_plan_filled_count(s),
-            plan_score=_plan_score(s),
         ))
 
     return TeacherDetailResponse(
