@@ -248,7 +248,10 @@ function QuarterDatesView({
             <button
               key={`${ds}-${entryId}`}
               type="button"
-              onClick={() => setSelectedCard({ ds, lessonNumber, entryId })}
+              onClick={() => {
+                setSelectedCard({ ds, lessonNumber, entryId })
+                setExpanded(false)
+              }}
               className={cn(
                 "flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors",
                 expanded ? "w-full" : "shrink-0 w-28",
@@ -351,6 +354,7 @@ function QuarterDatesView({
               entryIds={entryIds}
               startDate={currentQuarter?.start_date ?? ""}
               endDate={currentQuarter?.end_date ?? ""}
+              dateLessonMap={Object.fromEntries(allIndexed.map(({ ds, lessonNumber }) => [ds, lessonNumber]))}
             />
           )}
         </div>

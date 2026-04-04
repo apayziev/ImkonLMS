@@ -36,10 +36,12 @@ export function AttendanceHistoryView({
   entryIds,
   startDate,
   endDate,
+  dateLessonMap,
 }: {
   entryIds: number[]
   startDate: string
   endDate: string
+  dateLessonMap: Record<string, number>
 }) {
   const { data, isLoading } = useQuery(
     getAttendanceHistoryQueryOptions(entryIds, startDate, endDate),
@@ -71,9 +73,9 @@ export function AttendanceHistoryView({
             <th className="text-left py-2 px-3 font-medium text-muted-foreground sticky left-0 bg-background z-10">
               F.I.O
             </th>
-            {dates.map((ds, i) => (
+            {dates.map((ds) => (
               <th key={ds} className="text-center py-2 px-2 font-medium text-muted-foreground whitespace-nowrap min-w-[52px]">
-                <div className="text-xs font-bold text-foreground">{i + 1}-dars</div>
+                <div className="text-xs font-bold text-foreground">{dateLessonMap[ds] ?? "?"}-dars</div>
                 <div className="text-[10px]">{formatShortDate(ds)}</div>
               </th>
             ))}
