@@ -22,6 +22,8 @@ export const queryKeys = {
   violationReports: (sessionId: number) => ["violation-reports", sessionId] as const,
   sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
     ["session-statuses", entryIds.join(","), startDate, endDate] as const,
+  attendanceHistory: (entryIds: number[], startDate: string, endDate: string) =>
+    ["attendance-history", entryIds.join(","), startDate, endDate] as const,
 } as const
 
 export function getGradesQueryOptions() {
@@ -128,6 +130,22 @@ export function getSessionStatusesQueryOptions(
     },
     enabled: entryIds.length > 0 && !!startDate && !!endDate,
     staleTime: 60 * 1000,
+  }
+}
+
+export function getAttendanceHistoryQueryOptions(
+  entryIds: number[],
+  startDate: string,
+  endDate: string,
+) {
+  return {
+    queryKey: queryKeys.attendanceHistory(entryIds, startDate, endDate),
+    queryFn: async () => {
+      const { data } = await lessonsApi.attendanceHistory(entryIds, startDate, endDate)
+      return data
+    },
+    enabled: entryIds.length > 0 && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000,
   }
 }
 

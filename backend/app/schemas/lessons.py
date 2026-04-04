@@ -145,3 +145,23 @@ class AttendanceDayResponse(BaseModel):
     date: str
     grade_display: str
     sessions: list[AttendanceSessionRead]
+
+
+# --- Attendance History (teacher: student × date matrix) ---
+
+
+class AttendanceHistoryRecord(BaseModel):
+    date: str
+    status: AttendanceStatus
+
+
+class AttendanceHistoryStudent(BaseModel):
+    student_id: int
+    full_name: str
+    photo_url: str | None = None
+    records: dict[str, AttendanceStatus]  # date → status
+
+
+class AttendanceHistoryResponse(BaseModel):
+    dates: list[str]
+    students: list[AttendanceHistoryStudent]

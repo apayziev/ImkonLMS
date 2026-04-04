@@ -487,6 +487,18 @@ export interface SessionStatusesResponse {
   data: SessionStatusItem[]
 }
 
+export interface AttendanceHistoryStudent {
+  student_id: number
+  full_name: string
+  photo_url: string | null
+  records: Record<string, AttendanceStatus>
+}
+
+export interface AttendanceHistoryResponse {
+  dates: string[]
+  students: AttendanceHistoryStudent[]
+}
+
 export const lessonsApi = {
   today: (date?: string) =>
     api.get<TodayLessonsResponse>("/api/v1/lessons/today", { params: date ? { date } : undefined }),
@@ -528,6 +540,18 @@ export const lessonsApi = {
   getAttendance: (gradeId: number, date?: string) =>
     api.get<AttendanceDayResponse>("/api/v1/lessons/attendance", {
       params: { grade_id: gradeId, ...(date ? { date } : {}) },
+    }),
+  attendanceHistory: (entryIds: number[], startDate: string, endDate: string) =>
+    api.get<AttendanceHistoryResponse>("/api/v1/lessons/attendance/history", {
+      params: { entry_id: entryIds, start_date: startDate, end_date: endDate },
+      paramsSerializer: (params) => {
+        const parts: string[] = []
+        for (const [k, v] of Object.entries(params)) {
+          if (Array.isArray(v)) v.forEach((item) => parts.push(`${k}=${item}`))
+          else parts.push(`${k}=${v}`)
+        }
+        return parts.join("&")
+      },
     }),
 }
 

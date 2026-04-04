@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { SessionView } from "@/components/Lessons"
+import { AttendanceHistoryView } from "@/components/Lessons/AttendanceHistoryView"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -158,6 +159,7 @@ function QuarterDatesView({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; entryId: number } | null>(null)
+  const [activeTab, setActiveTab] = useState<"session" | "attendance">("session")
   const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -315,16 +317,42 @@ function QuarterDatesView({
           <div className="flex border-b overflow-x-auto mb-4">
             <button
               type="button"
-              className="px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 border-primary text-primary"
+              onClick={() => setActiveTab("session")}
+              className={cn(
+                "px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors",
+                activeTab === "session"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
             >
               Darsdagi faollik
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("attendance")}
+              className={cn(
+                "px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors",
+                activeTab === "attendance"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Davomat
+            </button>
           </div>
-          <DayAttendanceView
-            key={`${selectedCard.ds}-${selectedCard.entryId}`}
-            dateStr={selectedCard.ds}
-            entryId={selectedCard.entryId}
-          />
+          {activeTab === "session" ? (
+            <DayAttendanceView
+              key={`${selectedCard.ds}-${selectedCard.entryId}`}
+              dateStr={selectedCard.ds}
+              entryId={selectedCard.entryId}
+            />
+          ) : (
+            <AttendanceHistoryView
+              entryIds={entryIds}
+              startDate={currentQuarter?.start_date ?? ""}
+              endDate={currentQuarter?.end_date ?? ""}
+            />
+          )}
         </div>
       )}
     </div>

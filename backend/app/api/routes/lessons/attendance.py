@@ -18,6 +18,8 @@ from app.models.session_attendance import SessionAttendance
 from app.models.user import User
 from app.schemas.lessons import (
     AttendanceDayResponse,
+    AttendanceHistoryResponse,
+    AttendanceHistoryStudent,
     AttendanceSessionRead,
     AttendanceStudentRead,
     AttendanceUpdateRequest,
@@ -153,4 +155,61 @@ async def get_attendance(
         date=day.isoformat(),
         grade_display=grade.display_name,
         sessions=result_sessions,
+    )
+
+
+@router.get("/attendance/history", response_model=AttendanceHistoryResponse)
+async def get_attendance_history(
+    db: SessionDep,
+    current_user: CurrentUser,
+    entry_id: list[int] = Query(..., alias="entry_id"),
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+) -> AttendanceHistoryResponse:
+    """Teacher: attendance history for schedule entries across a date range."""
+    _require_teacher(current_user)
+
+    # Fetch all sessions with attendance for these entries in date range
+    query = (
+        select(LessonSession)
+        .options(
+            selectinload(LessonSession.attendances).selectinload(SessionAttendance.student),
+        )
+        .where(
+            LessonSession.schedule_entry_id.in_(entry_id),
+            LessonSession.session_date >= start_date,
+            LessonSession.session_date <= end_date,
+            LessonSession.is_deleted == False,  # noqa: E712
+        )
+        .order_by(LessonSession.session_date)
+    )
+    sessions = (await db.execute(query)).scalars().all()
+
+    # Collect unique dates and build student → {date → status}
+    dates_set: set[str] = set()
+    student_map: dict[int, AttendanceHistoryStudent] = {}
+
+    for session in sessions:
+        ds = session.session_date.isoformat()
+        dates_set.add(ds)
+        for att in session.attendances:
+            if att.is_deleted:
+                continue
+            if att.student_id not in student_map:
+                student = att.student
+                student_map[att.student_id] = AttendanceHistoryStudent(
+                    student_id=att.student_id,
+                    full_name=student.full_name if student else "",
+                    photo_url=student.photo_url if student else None,
+                    records={},
+                )
+            student_map[att.student_id].records[ds] = att.status
+
+    # Sort dates and students
+    sorted_dates = sorted(dates_set)
+    sorted_students = sorted(student_map.values(), key=lambda s: s.full_name)
+
+    return AttendanceHistoryResponse(
+        dates=sorted_dates,
+        students=sorted_students,
     )
