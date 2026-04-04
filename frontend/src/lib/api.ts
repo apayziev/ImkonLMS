@@ -574,6 +574,7 @@ export interface TeacherStatRead {
   total_planned: number
   on_time_starts: number
   avg_duration_minutes: number | null
+  avg_plan_score: number | null
 }
 
 export interface TeacherStatsResponse {
@@ -604,6 +605,7 @@ export interface TeacherSessionDetail {
   homework: string | null
   materials: TeacherSessionMaterial[]
   plan_filled_count: number
+  plan_score: number
 }
 
 export interface TeacherDetailResponse {

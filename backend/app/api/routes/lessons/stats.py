@@ -29,6 +29,7 @@ class TeacherStatRead(PydanticBase):
     total_planned: int       # topic filled
     on_time_starts: int
     avg_duration_minutes: float | None
+    avg_plan_score: float | None  # 0-100 weighted
 
 
 class TeacherStatsResponse(PydanticBase):
@@ -59,6 +60,7 @@ class TeacherSessionDetail(PydanticBase):
     homework: str | None
     materials: list[TeacherSessionMaterial]
     plan_filled_count: int  # 0-6
+    plan_score: int          # 0-100 weighted
 
 
 class TeacherDetailResponse(PydanticBase):
@@ -189,6 +191,10 @@ async def get_teacher_stats(
         completed = [s for s in sessions if s.status == SessionStatus.COMPLETED]
         planned = [s for s in sessions if s.topic and s.topic.strip()]
 
+        # Plan quality
+        plan_scores = [_plan_score(s) for s in sessions if s.topic and s.topic.strip()]
+        avg_plan = round(sum(plan_scores) / len(plan_scores), 1) if plan_scores else None
+
         # On-time analysis
         on_time = 0
         durations: list[float] = []
@@ -223,6 +229,7 @@ async def get_teacher_stats(
             total_planned=len(planned),
             on_time_starts=on_time,
             avg_duration_minutes=avg_dur,
+            avg_plan_score=avg_plan,
         ))
 
     # Sort by name
@@ -232,6 +239,35 @@ async def get_teacher_stats(
 
 
 # ─── Detail endpoint ────────────────────────────────────────────────────────
+
+# Weighted plan scoring (industry best practice)
+_PLAN_WEIGHTS = {
+    "topic": 30,       # eng asosiy — nimani o'rganyapti
+    "objectives": 25,  # dars sifatini belgilaydi
+    "homework": 15,    # mustahkamlash uchun zarur
+    "materials": 15,   # vizual/resurs tayyorlagan
+    "lesson_type": 10, # kategoriya — tanlash oson
+    "keywords": 5,     # yordamchi
+}  # jami = 100
+
+
+def _plan_score(session: LessonSession) -> int:
+    """Weighted plan quality score 0-100."""
+    score = 0
+    if session.topic and session.topic.strip():
+        score += _PLAN_WEIGHTS["topic"]
+    if session.objectives:
+        score += _PLAN_WEIGHTS["objectives"]
+    if session.homework and session.homework.strip():
+        score += _PLAN_WEIGHTS["homework"]
+    if session.materials:
+        score += _PLAN_WEIGHTS["materials"]
+    if session.lesson_type:
+        score += _PLAN_WEIGHTS["lesson_type"]
+    if session.keywords:
+        score += _PLAN_WEIGHTS["keywords"]
+    return score
+
 
 def _plan_filled_count(session: LessonSession) -> int:
     count = 0
@@ -328,6 +364,7 @@ async def get_teacher_detail(
                 for m in s.materials
             ],
             plan_filled_count=_plan_filled_count(s),
+            plan_score=_plan_score(s),
         ))
 
     return TeacherDetailResponse(

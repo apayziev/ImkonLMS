@@ -187,7 +187,7 @@ export function TeacherStatsTab() {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Dars mavzusi yozilgan sessionlar / o'tkazilgan darslar</p>
+                        <p>Mavzu yozilgan darslar soni. Sifat: mavzu 30%, maqsadlar 25%, uy vazifasi 15%, materiallar 15%, dars turi 10%, kalit so'zlar 5%</p>
                       </TooltipContent>
                     </Tooltip>
                   </th>
@@ -280,6 +280,9 @@ function TeacherRow({ teacher: t, index, onClick }: { teacher: TeacherStatRead; 
                 : "bg-amber-500"
             }
           />
+          {t.avg_plan_score != null && (
+            <p className="text-[10px] text-muted-foreground">sifat: {t.avg_plan_score}%</p>
+          )}
         </div>
       </td>
       <td className="py-3 px-3 text-center">
@@ -302,12 +305,12 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 }
 
 const PLAN_FIELDS = [
-  { key: "topic", label: "Mavzu" },
-  { key: "lesson_type", label: "Dars turi" },
-  { key: "objectives", label: "Maqsadlar" },
-  { key: "keywords", label: "Kalit so'zlar" },
-  { key: "homework", label: "Uy vazifasi" },
-  { key: "materials", label: "Materiallar" },
+  { key: "topic", label: "Mavzu (30%)", weight: 30 },
+  { key: "objectives", label: "Maqsadlar (25%)", weight: 25 },
+  { key: "homework", label: "Uy vazifasi (15%)", weight: 15 },
+  { key: "materials", label: "Materiallar (15%)", weight: 15 },
+  { key: "lesson_type", label: "Dars turi (10%)", weight: 10 },
+  { key: "keywords", label: "Kalit so'zlar (5%)", weight: 5 },
 ] as const
 
 function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: number; startDate: string; endDate: string }) {
@@ -418,7 +421,8 @@ function SessionRow({ session: s }: { session: TeacherSessionDetail }) {
                 <div
                   key={f.key}
                   className={cn(
-                    "h-2 w-2 rounded-full",
+                    "rounded-full",
+                    f.weight >= 25 ? "h-2.5 w-2.5" : f.weight >= 15 ? "h-2 w-2" : "h-1.5 w-1.5",
                     filled ? "bg-[var(--imkon-teal)]" : "bg-muted",
                   )}
                   title={f.label}
@@ -426,7 +430,12 @@ function SessionRow({ session: s }: { session: TeacherSessionDetail }) {
               )
             })}
           </div>
-          <span className="text-xs text-muted-foreground">{s.plan_filled_count}/6</span>
+          <span className={cn(
+            "text-xs font-medium",
+            s.plan_score >= 80 ? "text-[var(--imkon-teal)]" : s.plan_score >= 50 ? "text-amber-500" : "text-muted-foreground",
+          )}>
+            {s.plan_score}%
+          </span>
           <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", statusCfg.className)}>
             {statusCfg.label}
           </Badge>
