@@ -41,10 +41,18 @@ def _count_expected_lessons(
     schedule_entries: list[ScheduleEntry],
     start_date: date,
     end_date: date,
-    holidays: list[str],
+    holidays: list | None,
 ) -> int:
     """Count how many lessons teacher should have had in date range."""
-    holiday_set = {date.fromisoformat(h) for h in holidays}
+    holiday_set: set[date] = set()
+    for h in (holidays or []):
+        if isinstance(h, date):
+            holiday_set.add(h)
+        elif isinstance(h, str) and h:
+            try:
+                holiday_set.add(date.fromisoformat(h))
+            except ValueError:
+                pass
     total = 0
     for entry in schedule_entries:
         js_dow = entry.day_of_week
