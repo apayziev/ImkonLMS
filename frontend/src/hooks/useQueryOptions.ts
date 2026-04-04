@@ -241,3 +241,15 @@ export function getTeacherStatsQueryOptions(startDate: string, endDate: string) 
     staleTime: 2 * 60 * 1000,
   }
 }
+
+export function getTeacherDetailQueryOptions(teacherId: number, startDate: string, endDate: string) {
+  return {
+    queryKey: [...queryKeys.teacherStats(startDate, endDate), "detail", teacherId],
+    queryFn: async () => {
+      const { data } = await lessonsApi.teacherDetail(teacherId, startDate, endDate)
+      return data
+    },
+    enabled: !!teacherId && !!startDate && !!endDate,
+    staleTime: 2 * 60 * 1000,
+  }
+}

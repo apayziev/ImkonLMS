@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.enums import SessionStatus
-from app.core.exceptions import ForbiddenException
+from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.models.time_slot import TimeSlot
@@ -33,6 +33,39 @@ class TeacherStatRead(PydanticBase):
 
 class TeacherStatsResponse(PydanticBase):
     teachers: list[TeacherStatRead]
+
+
+class TeacherSessionMaterial(PydanticBase):
+    id: int
+    file_url: str
+    original_name: str
+
+
+class TeacherSessionDetail(PydanticBase):
+    session_id: int
+    session_date: date
+    status: str
+    subject_name: str
+    grade_display: str
+    period_number: int
+    start_time: str
+    end_time: str
+    started_at: datetime | None
+    ended_at: datetime | None
+    topic: str | None
+    lesson_type: str | None
+    objectives: list | None
+    keywords: list | None
+    homework: str | None
+    materials: list[TeacherSessionMaterial]
+    plan_filled_count: int  # 0-6
+
+
+class TeacherDetailResponse(PydanticBase):
+    teacher_id: int
+    teacher_name: str
+    photo_url: str | None
+    sessions: list[TeacherSessionDetail]
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
@@ -150,7 +183,7 @@ async def get_teacher_stats(
         entries = teacher_entries[tid]
         sessions = teacher_sessions.get(tid, [])
 
-        total_expected = _count_expected_lessons(entries, sd, ed, holidays)
+        total_expected = _count_expected_lessons(entries, sd, min(ed, date.today()), holidays)
 
         conducted = [s for s in sessions if s.status in (SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED)]
         completed = [s for s in sessions if s.status == SessionStatus.COMPLETED]
@@ -196,3 +229,110 @@ async def get_teacher_stats(
     result.sort(key=lambda t: t.teacher_name)
 
     return TeacherStatsResponse(teachers=result)
+
+
+# ─── Detail endpoint ────────────────────────────────────────────────────────
+
+def _plan_filled_count(session: LessonSession) -> int:
+    count = 0
+    if session.topic and session.topic.strip():
+        count += 1
+    if session.lesson_type:
+        count += 1
+    if session.objectives:
+        count += 1
+    if session.keywords:
+        count += 1
+    if session.homework and session.homework.strip():
+        count += 1
+    if session.materials:
+        count += 1
+    return count
+
+
+@router.get("/teacher-stats/{teacher_id}", response_model=TeacherDetailResponse)
+async def get_teacher_detail(
+    teacher_id: int,
+    db: SessionDep,
+    current_user: CurrentUser,
+    start_date: str,
+    end_date: str,
+) -> TeacherDetailResponse:
+    """O'qituvchining tanlangan davrdagi barcha darslari batafsil."""
+    if current_user.role != UserRole.ADMIN.value and not current_user.is_superuser:
+        raise ForbiddenException("Faqat admin uchun")
+
+    sd = date.fromisoformat(start_date)
+    ed = date.fromisoformat(end_date)
+
+    # Get teacher
+    teacher = await db.get(User, teacher_id)
+    if not teacher:
+        raise NotFoundException("O'qituvchi topilmadi")
+
+    # Get schedule entries for this teacher
+    entries_q = await db.execute(
+        select(ScheduleEntry)
+        .options(
+            selectinload(ScheduleEntry.time_slot),
+            selectinload(ScheduleEntry.subject),
+            selectinload(ScheduleEntry.grade),
+        )
+        .where(
+            ScheduleEntry.teacher_id == teacher_id,
+            ScheduleEntry.is_deleted == False,  # noqa: E712
+        )
+    )
+    entries = entries_q.scalars().all()
+    entry_ids = {e.id for e in entries}
+    entry_map = {e.id: e for e in entries}
+
+    # Get sessions
+    sessions_q = await db.execute(
+        select(LessonSession)
+        .options(selectinload(LessonSession.materials))
+        .where(
+            LessonSession.session_date >= sd,
+            LessonSession.session_date <= ed,
+            LessonSession.schedule_entry_id.in_(entry_ids) if entry_ids else LessonSession.id < 0,
+            LessonSession.is_deleted == False,  # noqa: E712
+        )
+        .order_by(LessonSession.session_date.desc())
+    )
+    sessions = sessions_q.scalars().all()
+
+    result_sessions: list[TeacherSessionDetail] = []
+    for s in sessions:
+        entry = entry_map.get(s.schedule_entry_id) if s.schedule_entry_id else None
+        if not entry:
+            continue
+        ts = entry.time_slot
+        result_sessions.append(TeacherSessionDetail(
+            session_id=s.id,
+            session_date=s.session_date,
+            status=s.status,
+            subject_name=entry.subject.name if entry.subject else "—",
+            grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
+            period_number=ts.period_number if ts else 0,
+            start_time=str(ts.start_time)[:5] if ts else "",
+            end_time=str(ts.end_time)[:5] if ts else "",
+            started_at=s.started_at,
+            ended_at=s.ended_at,
+            topic=s.topic,
+            lesson_type=s.lesson_type,
+            objectives=s.objectives,
+            keywords=s.keywords,
+            homework=s.homework,
+            materials=[
+                TeacherSessionMaterial(id=m.id, file_url=m.file_url, original_name=m.original_name)
+                for m in s.materials
+            ],
+            plan_filled_count=_plan_filled_count(s),
+        ))
+
+    return TeacherDetailResponse(
+        teacher_id=teacher_id,
+        teacher_name=teacher.full_name or f"{teacher.last_name} {teacher.first_name}",
+        photo_url=teacher.photo_url,
+        sessions=result_sessions,
+    )

@@ -557,6 +557,10 @@ export const lessonsApi = {
     api.get<TeacherStatsResponse>("/api/v1/lessons/teacher-stats", {
       params: { start_date: startDate, end_date: endDate },
     }),
+  teacherDetail: (teacherId: number, startDate: string, endDate: string) =>
+    api.get<TeacherDetailResponse>(`/api/v1/lessons/teacher-stats/${teacherId}`, {
+      params: { start_date: startDate, end_date: endDate },
+    }),
 }
 
 // Teacher stats types
@@ -574,6 +578,39 @@ export interface TeacherStatRead {
 
 export interface TeacherStatsResponse {
   teachers: TeacherStatRead[]
+}
+
+export interface TeacherSessionMaterial {
+  id: number
+  file_url: string
+  original_name: string
+}
+
+export interface TeacherSessionDetail {
+  session_id: number
+  session_date: string
+  status: string
+  subject_name: string
+  grade_display: string
+  period_number: number
+  start_time: string
+  end_time: string
+  started_at: string | null
+  ended_at: string | null
+  topic: string | null
+  lesson_type: string | null
+  objectives: string[] | null
+  keywords: string[] | null
+  homework: string | null
+  materials: TeacherSessionMaterial[]
+  plan_filled_count: number
+}
+
+export interface TeacherDetailResponse {
+  teacher_id: number
+  teacher_name: string
+  photo_url: string | null
+  sessions: TeacherSessionDetail[]
 }
 
 // ─── Quarters ───────────────────────────────────────────────────────────────
