@@ -23,11 +23,10 @@ class TeacherStatRead(PydanticBase):
     teacher_id: int
     teacher_name: str
     photo_url: str | None
-    total_expected: int          # bugungi kungacha kutilgan
-    total_expected_full: int     # butun chorak bo'yicha kutilgan
+    total_expected: int
     total_conducted: int
     total_completed: int
-    total_planned: int           # topic filled
+    total_planned: int       # topic filled
     on_time_starts: int
     avg_duration_minutes: float | None
 
@@ -184,8 +183,7 @@ async def get_teacher_stats(
         entries = teacher_entries[tid]
         sessions = teacher_sessions.get(tid, [])
 
-        total_expected = _count_expected_lessons(entries, sd, min(ed, date.today()), holidays)
-        total_expected_full = _count_expected_lessons(entries, sd, ed, holidays)
+        total_expected = _count_expected_lessons(entries, sd, ed, holidays)
 
         conducted = [s for s in sessions if s.status in (SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED)]
         completed = [s for s in sessions if s.status == SessionStatus.COMPLETED]
@@ -220,7 +218,6 @@ async def get_teacher_stats(
             teacher_name=teacher.full_name or f"{teacher.last_name} {teacher.first_name}",
             photo_url=teacher.photo_url,
             total_expected=total_expected,
-            total_expected_full=total_expected_full,
             total_conducted=len(conducted),
             total_completed=len(completed),
             total_planned=len(planned),

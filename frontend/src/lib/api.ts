@@ -569,7 +569,6 @@ export interface TeacherStatRead {
   teacher_name: string
   photo_url: string | null
   total_expected: number
-  total_expected_full: number
   total_conducted: number
   total_completed: number
   total_planned: number
