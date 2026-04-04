@@ -1,15 +1,28 @@
 import { useQuery } from "@tanstack/react-query"
-import { Loader2 } from "lucide-react"
+import { Check, Clock, Loader2, Minus, X } from "lucide-react"
+import type { ReactNode } from "react"
 
 import type { AttendanceStatus } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { getAttendanceHistoryQueryOptions } from "@/hooks/useQueryOptions"
 
-const STATUS_ICON: Record<AttendanceStatus, { label: string; className: string }> = {
-  present: { label: "✓", className: "text-[var(--imkon-teal)] font-bold" },
-  late: { label: "K", className: "text-amber-500 font-bold" },
-  absent: { label: "✗", className: "text-[var(--imkon-red)] font-bold" },
-  unmarked: { label: "—", className: "text-muted-foreground" },
+const STATUS_CELL: Record<AttendanceStatus, { icon: ReactNode; bg: string }> = {
+  present: {
+    icon: <Check className="h-3.5 w-3.5 text-white" />,
+    bg: "bg-[var(--imkon-teal)]",
+  },
+  late: {
+    icon: <Clock className="h-3.5 w-3.5 text-white" />,
+    bg: "bg-amber-400",
+  },
+  absent: {
+    icon: <X className="h-3.5 w-3.5 text-white" />,
+    bg: "bg-[var(--imkon-red)]",
+  },
+  unmarked: {
+    icon: <Minus className="h-3 w-3 text-muted-foreground" />,
+    bg: "bg-muted",
+  },
 }
 
 function formatShortDate(ds: string): string {
@@ -58,9 +71,10 @@ export function AttendanceHistoryView({
             <th className="text-left py-2 px-3 font-medium text-muted-foreground sticky left-0 bg-background z-10">
               F.I.O
             </th>
-            {dates.map((ds) => (
+            {dates.map((ds, i) => (
               <th key={ds} className="text-center py-2 px-2 font-medium text-muted-foreground whitespace-nowrap min-w-[52px]">
-                {formatShortDate(ds)}
+                <div className="text-xs font-bold text-foreground">{i + 1}-dars</div>
+                <div className="text-[10px]">{formatShortDate(ds)}</div>
               </th>
             ))}
           </tr>
@@ -76,10 +90,12 @@ export function AttendanceHistoryView({
                 </td>
                 {dates.map((ds) => {
                   const status = student.records[ds] ?? "unmarked"
-                  const icon = STATUS_ICON[status]
+                  const cell = STATUS_CELL[status]
                   return (
                     <td key={ds} className="text-center py-2.5 px-2">
-                      <span className={cn("text-sm", icon.className)}>{icon.label}</span>
+                      <div className={cn("inline-flex items-center justify-center h-6 w-6 rounded-full", cell.bg)}>
+                        {cell.icon}
+                      </div>
                     </td>
                   )
                 })}
