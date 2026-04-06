@@ -413,12 +413,13 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
               const isToday = dateStr === todayStr
               const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
               const sorted = sessions.sort((a, b) => a.period_number - b.period_number)
+              const midIdx = Math.floor((sorted.length - 1) / 2)
 
               return sorted.map((s, idx) => (
                 <SessionTableRow
                   key={`${dateStr}-${s.period_number}-${s.grade_display}`}
                   session={s}
-                  dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
+                  dateLabel={idx === midIdx ? `${dayName}, ${d.getDate()}` : ""}
                   isToday={isToday}
                 />
               ))
