@@ -421,6 +421,7 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
                   session={s}
                   dateLabel={idx === midIdx ? `${dayName}, ${d.getDate()}` : ""}
                   isToday={isToday}
+                  isLastInGroup={idx === sorted.length - 1}
                 />
               ))
             })}
@@ -433,10 +434,11 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   )
 }
 
-function SessionTableRow({ session: s, dateLabel, isToday }: {
+function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
   session: TeacherSessionDetail
   dateLabel: string
   isToday: boolean
+  isLastInGroup: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.planned
@@ -447,12 +449,17 @@ function SessionTableRow({ session: s, dateLabel, isToday }: {
     <>
       <tr
         className={cn(
-          "border-b last:border-b-0 hover:bg-muted/10 transition-colors cursor-pointer",
+          "hover:bg-muted/10 transition-colors cursor-pointer",
+          isLastInGroup && "border-b",
           isToday && "bg-primary/5",
         )}
         onClick={() => setExpanded(!expanded)}
       >
-        <td className={cn("py-2.5 px-3 text-sm border-r", isToday && "text-primary")}>
+        <td className={cn(
+          "py-2.5 px-3 text-sm border-r",
+          isLastInGroup ? "" : "border-b-0",
+          isToday && "text-primary",
+        )}>
           {dateLabel && <span className="font-semibold">{dateLabel}</span>}
         </td>
         <td className="py-2.5 px-3">
