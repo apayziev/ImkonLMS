@@ -54,8 +54,8 @@ class LessonPlan(BaseModel):
     resources: Mapped[str | None] = mapped_column(
         Text, nullable=True, default=None, kw_only=True,
     )
-    assessment_method: Mapped[str | None] = mapped_column(
-        String(30), nullable=True, default=None, kw_only=True,
+    assessment_methods: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True, default=None, kw_only=True,
     )
 
     # === Relationships ===

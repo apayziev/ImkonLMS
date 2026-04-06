@@ -9,7 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { LessonPlanRead } from "@/lib/api"
+import type { LessonPlanRead, LessonPlanObjectiveRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +28,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
-import { ASSESSMENT_METHODS, LESSON_TYPES, SUGGESTED_KEYWORDS } from "./constants"
+import { ASSESSMENT_METHODS, BLOOM_LEVELS, LESSON_TYPES, SUGGESTED_KEYWORDS } from "./constants"
 import { SaveStatusIndicator } from "./formatters"
 
 export function TopicHomeworkSection({
@@ -53,11 +53,13 @@ export function TopicHomeworkSection({
   const [topic, setTopic] = useState(plan?.topic ?? "")
   const [homework, setHomework] = useState(plan?.homework ?? "")
   const [deadline, setDeadline] = useState(plan?.homework_deadline ?? "")
-  const [objectives, setObjectives] = useState<string[]>(plan?.objectives ?? [""])
+  const [objectives, setObjectives] = useState<LessonPlanObjectiveRead[]>(
+    plan?.objectives?.length ? plan.objectives : [{ text: "", bloom_level: null }],
+  )
   const [keywords, setKeywords] = useState<string[]>(plan?.keywords ?? [])
   const [keywordInput, setKeywordInput] = useState("")
   const [resources, setResources] = useState(plan?.resources ?? "")
-  const [assessmentMethod, setAssessmentMethod] = useState(plan?.assessment_method ?? "")
+  const [assessmentMethods, setAssessmentMethods] = useState<string[]>(plan?.assessment_methods ?? [])
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -65,11 +67,11 @@ export function TopicHomeworkSection({
     setTopic(plan?.topic ?? "")
     setHomework(plan?.homework ?? "")
     setDeadline(plan?.homework_deadline ?? "")
-    setObjectives(plan?.objectives ?? [""])
+    setObjectives(plan?.objectives?.length ? plan.objectives : [{ text: "", bloom_level: null }])
     setKeywords(plan?.keywords ?? [])
     setResources(plan?.resources ?? "")
-    setAssessmentMethod(plan?.assessment_method ?? "")
-  }, [plan?.lesson_type, plan?.topic, plan?.homework, plan?.homework_deadline, plan?.objectives, plan?.keywords, plan?.resources, plan?.assessment_method])
+    setAssessmentMethods(plan?.assessment_methods ?? [])
+  }, [plan?.lesson_type, plan?.topic, plan?.homework, plan?.homework_deadline, plan?.objectives, plan?.keywords, plan?.resources, plan?.assessment_methods])
 
   useEffect(() => {
     return () => clearTimeout(debounceRef.current)
@@ -121,23 +123,31 @@ export function TopicHomeworkSection({
   )
 
   // --- Objectives helpers ---
-  const updateObjective = (index: number, value: string) => {
+  const updateObjectiveText = (index: number, value: string) => {
     const next = [...objectives]
-    next[index] = value
+    next[index] = { ...next[index], text: value }
     setObjectives(next)
-    const filtered = next.filter((o) => o.trim() !== "")
+    const filtered = next.filter((o) => o.text.trim() !== "")
     saveDebounced({ objectives: filtered.length > 0 ? filtered : null })
   }
 
+  const updateObjectiveBloom = (index: number, level: string) => {
+    const next = [...objectives]
+    next[index] = { ...next[index], bloom_level: next[index].bloom_level === level ? null : level }
+    setObjectives(next)
+    const filtered = next.filter((o) => o.text.trim() !== "")
+    if (filtered.length > 0) saveImmediate({ objectives: filtered })
+  }
+
   const addObjective = () => {
-    if (objectives.length < 3) setObjectives([...objectives, ""])
+    if (objectives.length < 3) setObjectives([...objectives, { text: "", bloom_level: null }])
   }
 
   const removeObjective = (index: number) => {
     const next = objectives.filter((_, i) => i !== index)
-    if (next.length === 0) next.push("")
+    if (next.length === 0) next.push({ text: "", bloom_level: null })
     setObjectives(next)
-    const filtered = next.filter((o) => o.trim() !== "")
+    const filtered = next.filter((o) => o.text.trim() !== "")
     saveImmediate({ objectives: filtered.length > 0 ? filtered : null })
   }
 
@@ -179,12 +189,12 @@ export function TopicHomeworkSection({
   const fields = [
     { label: "Dars turi", filled: !!lessonType },
     { label: "Mavzu", filled: !!topic.trim() },
-    { label: "Maqsadlar", filled: objectives.some((o) => o.trim()) },
+    { label: "Maqsadlar", filled: objectives.some((o) => o.text.trim()) },
     { label: "Kalit so'zlar", filled: keywords.length > 0 },
     { label: "Uyga vazifa", filled: !!homework.trim() },
     { label: "Materiallar", filled: materialsCount > 0 },
     { label: "Resurslar", filled: !!resources.trim() },
-    { label: "Baholash usuli", filled: !!assessmentMethod },
+    { label: "Baholash usullari", filled: assessmentMethods.length > 0 },
   ]
   const filledCount = fields.filter((f) => f.filled).length
   const totalCount = fields.length
@@ -281,24 +291,46 @@ export function TopicHomeworkSection({
         </div>
         <div className="space-y-2">
           {objectives.map((obj, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
-              <Input
-                placeholder={`${i + 1}-maqsadni kiriting...`}
-                value={obj}
-                onChange={(e) => updateObjective(i, e.target.value)}
-                disabled={disabled}
-                className="flex-1"
-              />
-              {objectives.length > 1 && !disabled && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => removeObjective(i)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+            <div key={i} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
+                <Input
+                  placeholder={`${i + 1}-maqsadni kiriting...`}
+                  value={obj.text}
+                  onChange={(e) => updateObjectiveText(i, e.target.value)}
+                  disabled={disabled}
+                  className="flex-1"
+                />
+                {objectives.length > 1 && !disabled && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => removeObjective(i)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {obj.text.trim() && !disabled && (
+                <div className="flex items-center gap-1.5 ml-7">
+                  {BLOOM_LEVELS.map((bl) => (
+                    <button
+                      key={bl.value}
+                      type="button"
+                      onClick={() => updateObjectiveBloom(i, bl.value)}
+                      className={cn(
+                        "text-[11px] px-2 py-0.5 rounded-full border transition-colors",
+                        obj.bloom_level === bl.value
+                          ? "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)] border-[var(--imkon-purple)]/30 font-medium"
+                          : "text-muted-foreground border-border hover:bg-accent",
+                      )}
+                      title={bl.description}
+                    >
+                      {bl.label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           ))}
@@ -409,8 +441,8 @@ export function TopicHomeworkSection({
         </div>
       </div>
 
-      {/* Row 5: Resources + Assessment Method */}
-      <div className="grid gap-4 md:grid-cols-[1fr_200px] border-t pt-4">
+      {/* Row 5: Resources + Assessment Methods */}
+      <div className="grid gap-4 md:grid-cols-[1fr_1fr] border-t pt-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Resurslar</label>
           <Textarea
@@ -426,26 +458,35 @@ export function TopicHomeworkSection({
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Baholash usuli</label>
-          <Select
-            value={assessmentMethod}
-            onValueChange={(v) => {
-              setAssessmentMethod(v)
-              saveImmediate({ assessment_method: v })
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Tanlang..." />
-            </SelectTrigger>
-            <SelectContent>
-              {ASSESSMENT_METHODS.map((m) => (
-                <SelectItem key={m.value} value={m.value}>
+          <label className="text-sm font-medium text-muted-foreground">Baholash usullari</label>
+          <div className="flex flex-wrap gap-1.5">
+            {ASSESSMENT_METHODS.map((m) => {
+              const selected = assessmentMethods.includes(m.value)
+              return (
+                <button
+                  key={m.value}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    const next = selected
+                      ? assessmentMethods.filter((v) => v !== m.value)
+                      : [...assessmentMethods, m.value]
+                    setAssessmentMethods(next)
+                    saveImmediate({ assessment_methods: next.length > 0 ? next : null })
+                  }}
+                  className={cn(
+                    "text-xs px-2.5 py-1.5 rounded-md border transition-colors",
+                    selected
+                      ? "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)] border-[var(--imkon-purple)]/30 font-medium"
+                      : "text-muted-foreground border-border hover:bg-accent",
+                    disabled && "opacity-60 cursor-not-allowed",
+                  )}
+                >
                   {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

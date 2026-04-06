@@ -49,6 +49,11 @@ class SessionStatusesResponse(BaseModel):
 # --- Lesson Plan ---
 
 
+class LessonPlanObjectiveRead(BaseModel):
+    text: str
+    bloom_level: str | None = None  # biladi | tushunadi | tahlil
+
+
 class LessonPlanStageRead(BaseModel):
     title: str
     duration_min: int
@@ -61,13 +66,13 @@ class LessonPlanRead(BaseModel):
     plan_date: str
     topic: str | None = None
     lesson_type: str | None = None
-    objectives: list[str] | None = None
+    objectives: list[LessonPlanObjectiveRead] | None = None
     keywords: list[str] | None = None
     homework: str | None = None
     homework_deadline: str | None = None
     stages: list[LessonPlanStageRead] | None = None
     resources: str | None = None
-    assessment_method: str | None = None
+    assessment_methods: list[str] | None = None
     materials: list["LessonMaterialRead"] = []
     plan_filled_count: int = 0
 
@@ -82,11 +87,11 @@ class LessonPlanUpdateRequest(BaseModel):
     homework: str | None = None
     homework_deadline: str | None = None
     lesson_type: str | None = None
-    objectives: list[str] | None = None
+    objectives: list[LessonPlanObjectiveRead] | None = None
     keywords: list[str] | None = None
     stages: list[LessonPlanStageRead] | None = None
     resources: str | None = None
-    assessment_method: str | None = None
+    assessment_methods: list[str] | None = None
 
 
 # --- Session ---

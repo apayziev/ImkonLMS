@@ -497,7 +497,7 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
               <div
                 className={cn(
                   "h-full rounded-full",
-                  s.plan_filled_count >= 7
+                  s.plan_filled_count >= 6
                     ? "bg-[var(--imkon-teal)]"
                     : s.plan_filled_count >= 4
                       ? "bg-[var(--imkon-purple)]"

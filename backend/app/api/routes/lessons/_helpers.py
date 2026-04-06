@@ -111,7 +111,7 @@ async def _load_attendances_with_students(
 
 
 def _plan_filled_count(plan: LessonPlan) -> int:
-    """Count how many plan fields are filled (0-9)."""
+    """Count how many plan fields are filled (0-8)."""
     count = 0
     if plan.topic and plan.topic.strip():
         count += 1
@@ -125,16 +125,14 @@ def _plan_filled_count(plan: LessonPlan) -> int:
         count += 1
     if plan.materials:
         count += 1
-    if plan.stages:
-        count += 1
     if plan.resources and plan.resources.strip():
         count += 1
-    if plan.assessment_method:
+    if plan.assessment_methods:
         count += 1
     return count
 
 
-PLAN_TOTAL_FIELDS = 9
+PLAN_TOTAL_FIELDS = 8
 
 
 def _build_plan_read(plan: LessonPlan) -> LessonPlanRead:
@@ -151,7 +149,7 @@ def _build_plan_read(plan: LessonPlan) -> LessonPlanRead:
         homework_deadline=plan.homework_deadline.isoformat() if plan.homework_deadline else None,
         stages=plan.stages,
         resources=plan.resources,
-        assessment_method=plan.assessment_method,
+        assessment_methods=plan.assessment_methods,
         materials=[
             LessonMaterialRead(
                 id=m.id, file_url=m.file_url, original_name=m.original_name, file_size=m.file_size,

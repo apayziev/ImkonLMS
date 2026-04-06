@@ -105,15 +105,15 @@ async def update_plan(
     if body.lesson_type is not None:
         plan.lesson_type = body.lesson_type
     if body.objectives is not None:
-        plan.objectives = body.objectives
+        plan.objectives = [o.model_dump() for o in body.objectives] if body.objectives else None
     if body.keywords is not None:
         plan.keywords = body.keywords
     if body.stages is not None:
         plan.stages = [s.model_dump() for s in body.stages]
     if body.resources is not None:
         plan.resources = body.resources
-    if body.assessment_method is not None:
-        plan.assessment_method = body.assessment_method
+    if body.assessment_methods is not None:
+        plan.assessment_methods = body.assessment_methods
 
     await db.commit()
     await db.refresh(plan)

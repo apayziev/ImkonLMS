@@ -32,7 +32,7 @@ def upgrade() -> None:
         sa.Column("homework_deadline", sa.Date(), nullable=True),
         sa.Column("stages", postgresql.JSONB(), nullable=True),
         sa.Column("resources", sa.Text(), nullable=True),
-        sa.Column("assessment_method", sa.String(30), nullable=True),
+        sa.Column("assessment_methods", postgresql.JSONB(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),

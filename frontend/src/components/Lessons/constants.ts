@@ -23,7 +23,7 @@ export const ATTENDANCE_OPTIONS = [
   { value: "absent", label: "Kelmadi", color: "bg-[var(--imkon-red)] text-white border-[var(--imkon-red)]", badgeClassName: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]", canHaveGrade: false },
 ] as const
 
-export const PLAN_TOTAL_FIELDS = 9
+export const PLAN_TOTAL_FIELDS = 8
 
 export const ASSESSMENT_METHODS = [
   { value: "oral", label: "Og'zaki so'rov" },
@@ -32,6 +32,12 @@ export const ASSESSMENT_METHODS = [
   { value: "project", label: "Loyiha" },
   { value: "observation", label: "Kuzatish" },
   { value: "self_assessment", label: "O'z-o'zini baholash" },
+] as const
+
+export const BLOOM_LEVELS = [
+  { value: "biladi", label: "Biladi", description: "Eslab qoladi, takrorlaydi" },
+  { value: "tushunadi", label: "Tushunadi va qo'llaydi", description: "Amalda ishlatadi" },
+  { value: "tahlil", label: "Tahlil qiladi", description: "Solishtiradi, baholaydi" },
 ] as const
 
 

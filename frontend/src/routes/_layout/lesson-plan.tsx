@@ -38,7 +38,7 @@ function LessonPlanPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Dars rejasi</h1>
+      {!editing && <h1 className="text-2xl font-bold tracking-tight">Dars rejasi</h1>}
       <WeeklyPlanView
         selectedDate={planDate}
         onDateChange={(d) => navigate({ to: "/lesson-plan", search: { date: toDateString(d) } })}

@@ -400,6 +400,11 @@ export interface TodayLessonRead {
 
 // --- Lesson Plan ---
 
+export interface LessonPlanObjectiveRead {
+  text: string
+  bloom_level: string | null
+}
+
 export interface LessonPlanStageRead {
   title: string
   duration_min: number
@@ -412,13 +417,13 @@ export interface LessonPlanRead {
   plan_date: string
   topic: string | null
   lesson_type: string | null
-  objectives: string[] | null
+  objectives: LessonPlanObjectiveRead[] | null
   keywords: string[] | null
   homework: string | null
   homework_deadline: string | null
   stages: LessonPlanStageRead[] | null
   resources: string | null
-  assessment_method: string | null
+  assessment_methods: string[] | null
   materials: LessonMaterialRead[]
   plan_filled_count: number
 }
@@ -540,8 +545,8 @@ export const lessonsApi = {
     api.get<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`),
   updatePlan: (planId: number, data: Partial<{
     topic: string | null; homework: string | null; homework_deadline: string | null;
-    lesson_type: string | null; objectives: string[] | null; keywords: string[] | null;
-    stages: LessonPlanStageRead[] | null; resources: string | null; assessment_method: string | null;
+    lesson_type: string | null; objectives: LessonPlanObjectiveRead[] | null; keywords: string[] | null;
+    stages: LessonPlanStageRead[] | null; resources: string | null; assessment_methods: string[] | null;
   }>) =>
     api.patch<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`, data),
   // Sessions
