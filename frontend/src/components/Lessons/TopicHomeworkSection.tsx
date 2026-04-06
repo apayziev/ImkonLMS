@@ -171,6 +171,7 @@ export function TopicHomeworkSection({
   const handleUpload = async (file: File, onProgress?: (percent: number) => void) => {
     const pid = await ensurePlanId()
     const response = await lessonsApi.uploadMaterial(pid, file, onProgress)
+    queryClient.invalidateQueries({ queryKey: queryKeys.lessonPlan(pid) })
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
     return response
   }
@@ -179,6 +180,7 @@ export function TopicHomeworkSection({
     const pid = planIdRef.current
     if (!pid) return
     await lessonsApi.deleteMaterial(pid, materialId)
+    queryClient.invalidateQueries({ queryKey: queryKeys.lessonPlan(pid) })
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
   }
 
@@ -246,29 +248,44 @@ export function TopicHomeworkSection({
       {/* Row 1: Lesson Type + Topic */}
       <div className="grid gap-4 md:grid-cols-[180px_1fr] border-t pt-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Dars turi <span className="text-destructive">*</span></label>
-          <Select
-            value={lessonType}
-            onValueChange={(v) => {
-              setLessonType(v)
-              saveImmediate({ lesson_type: v })
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Tanlang..." />
-            </SelectTrigger>
-            <SelectContent>
-              {LESSON_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
+          <label className="text-sm font-medium text-muted-foreground">Dars turi</label>
+          <div className="flex items-center gap-2">
+            <Select
+              value={lessonType}
+              onValueChange={(v) => {
+                setLessonType(v)
+                saveImmediate({ lesson_type: v })
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Tanlang..." />
+              </SelectTrigger>
+              <SelectContent>
+                {LESSON_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
               ))}
             </SelectContent>
           </Select>
+            {lessonType && !disabled && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => {
+                  setLessonType("")
+                  saveImmediate({ lesson_type: null })
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Mavzu <span className="text-destructive">*</span></label>
+          <label className="text-sm font-medium text-muted-foreground">Mavzu</label>
           <Input
             placeholder="Dars mavzusini kiriting..."
             value={topic}
