@@ -75,7 +75,7 @@ async def create_plan(
     plan = LessonPlan(schedule_entry_id=entry.id, plan_date=target)
     db.add(plan)
     await db.commit()
-    await db.refresh(plan)
+    await db.refresh(plan, ["materials"])
 
     return _build_plan_read(plan)
 
@@ -116,7 +116,7 @@ async def update_plan(
         plan.assessment_methods = body.assessment_methods
 
     await db.commit()
-    await db.refresh(plan)
+    await db.refresh(plan, ["materials"])
     return _build_plan_read(plan)
 
 
