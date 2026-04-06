@@ -25,6 +25,17 @@ export const ATTENDANCE_OPTIONS = [
 
 export const PLAN_TOTAL_FIELDS = 8
 
+export const RESOURCE_TYPES = [
+  { value: "textbook", label: "Darslik" },
+  { value: "handout", label: "Tarqatma material" },
+  { value: "projector", label: "Proyektor" },
+  { value: "whiteboard", label: "Doska" },
+  { value: "video_audio", label: "Video/Audio" },
+  { value: "internet", label: "Internet" },
+  { value: "lab", label: "Laboratoriya" },
+  { value: "posters", label: "Plakatlar" },
+] as const
+
 export const ASSESSMENT_METHODS = [
   { value: "oral", label: "Og'zaki so'rov" },
   { value: "written", label: "Yozma ish" },

@@ -422,7 +422,7 @@ export interface LessonPlanRead {
   homework: string | null
   homework_deadline: string | null
   stages: LessonPlanStageRead[] | null
-  resources: string | null
+  resources: string[] | null
   assessment_methods: string[] | null
   materials: LessonMaterialRead[]
   plan_filled_count: number
@@ -546,7 +546,7 @@ export const lessonsApi = {
   updatePlan: (planId: number, data: Partial<{
     topic: string | null; homework: string | null; homework_deadline: string | null;
     lesson_type: string | null; objectives: LessonPlanObjectiveRead[] | null; keywords: string[] | null;
-    stages: LessonPlanStageRead[] | null; resources: string | null; assessment_methods: string[] | null;
+    stages: LessonPlanStageRead[] | null; resources: string[] | null; assessment_methods: string[] | null;
   }>) =>
     api.patch<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`, data),
   // Sessions

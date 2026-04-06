@@ -125,7 +125,7 @@ def _plan_filled_count(plan: LessonPlan) -> int:
         count += 1
     if plan.materials:
         count += 1
-    if plan.resources and plan.resources.strip():
+    if plan.resources:
         count += 1
     if plan.assessment_methods:
         count += 1

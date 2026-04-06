@@ -28,7 +28,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
-import { ASSESSMENT_METHODS, BLOOM_LEVELS, LESSON_TYPES, SUGGESTED_KEYWORDS } from "./constants"
+import { ASSESSMENT_METHODS, BLOOM_LEVELS, LESSON_TYPES, RESOURCE_TYPES, SUGGESTED_KEYWORDS } from "./constants"
 import { SaveStatusIndicator } from "./formatters"
 
 export function TopicHomeworkSection({
@@ -58,7 +58,7 @@ export function TopicHomeworkSection({
   )
   const [keywords, setKeywords] = useState<string[]>(plan?.keywords ?? [])
   const [keywordInput, setKeywordInput] = useState("")
-  const [resources, setResources] = useState(plan?.resources ?? "")
+  const [resources, setResources] = useState<string[]>(plan?.resources ?? [])
   const [assessmentMethods, setAssessmentMethods] = useState<string[]>(plan?.assessment_methods ?? [])
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -69,7 +69,7 @@ export function TopicHomeworkSection({
     setDeadline(plan?.homework_deadline ?? "")
     setObjectives(plan?.objectives?.length ? plan.objectives : [{ text: "", bloom_level: null }])
     setKeywords(plan?.keywords ?? [])
-    setResources(plan?.resources ?? "")
+    setResources(plan?.resources ?? [])
     setAssessmentMethods(plan?.assessment_methods ?? [])
   }, [plan?.lesson_type, plan?.topic, plan?.homework, plan?.homework_deadline, plan?.objectives, plan?.keywords, plan?.resources, plan?.assessment_methods])
 
@@ -193,7 +193,7 @@ export function TopicHomeworkSection({
     { label: "Kalit so'zlar", filled: keywords.length > 0 },
     { label: "Uyga vazifa", filled: !!homework.trim() },
     { label: "Materiallar", filled: materialsCount > 0 },
-    { label: "Resurslar", filled: !!resources.trim() },
+    { label: "Resurslar", filled: resources.length > 0 },
     { label: "Baholash usullari", filled: assessmentMethods.length > 0 },
   ]
   const filledCount = fields.filter((f) => f.filled).length
@@ -445,17 +445,34 @@ export function TopicHomeworkSection({
       <div className="grid gap-4 md:grid-cols-[1fr_1fr] border-t pt-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Resurslar</label>
-          <Textarea
-            placeholder="Darsda ishlatiladigan resurslar..."
-            value={resources}
-            onChange={(e) => {
-              setResources(e.target.value)
-              saveDebounced({ resources: e.target.value || null })
-            }}
-            disabled={disabled}
-            rows={2}
-            className="resize-none"
-          />
+          <div className="flex flex-wrap gap-1.5">
+            {RESOURCE_TYPES.map((r) => {
+              const selected = resources.includes(r.value)
+              return (
+                <button
+                  key={r.value}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    const next = selected
+                      ? resources.filter((v) => v !== r.value)
+                      : [...resources, r.value]
+                    setResources(next)
+                    saveImmediate({ resources: next.length > 0 ? next : null })
+                  }}
+                  className={cn(
+                    "text-xs px-2.5 py-1.5 rounded-md border transition-colors",
+                    selected
+                      ? "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)] border-[var(--imkon-teal)]/30 font-medium"
+                      : "text-muted-foreground border-border hover:bg-accent",
+                    disabled && "opacity-60 cursor-not-allowed",
+                  )}
+                >
+                  {r.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Baholash usullari</label>

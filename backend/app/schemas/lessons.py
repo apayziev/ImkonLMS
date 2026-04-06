@@ -71,7 +71,7 @@ class LessonPlanRead(BaseModel):
     homework: str | None = None
     homework_deadline: str | None = None
     stages: list[LessonPlanStageRead] | None = None
-    resources: str | None = None
+    resources: list[str] | None = None
     assessment_methods: list[str] | None = None
     materials: list["LessonMaterialRead"] = []
     plan_filled_count: int = 0
@@ -90,7 +90,7 @@ class LessonPlanUpdateRequest(BaseModel):
     objectives: list[LessonPlanObjectiveRead] | None = None
     keywords: list[str] | None = None
     stages: list[LessonPlanStageRead] | None = None
-    resources: str | None = None
+    resources: list[str] | None = None
     assessment_methods: list[str] | None = None
 
 

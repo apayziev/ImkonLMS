@@ -51,8 +51,8 @@ class LessonPlan(BaseModel):
     stages: Mapped[list | None] = mapped_column(
         JSONB, nullable=True, default=None, kw_only=True,
     )
-    resources: Mapped[str | None] = mapped_column(
-        Text, nullable=True, default=None, kw_only=True,
+    resources: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True, default=None, kw_only=True,
     )
     assessment_methods: Mapped[list | None] = mapped_column(
         JSONB, nullable=True, default=None, kw_only=True,
