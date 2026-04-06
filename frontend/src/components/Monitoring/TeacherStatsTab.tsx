@@ -400,11 +400,11 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
               <th className="py-2.5 px-3 text-left text-xs font-medium text-muted-foreground">Sinf</th>
               <th className="py-2.5 px-3 text-left text-xs font-medium text-muted-foreground">Fan</th>
               <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Soat</th>
-              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Jadval</th>
-              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Haqiqiy</th>
-              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Davomiylik</th>
-              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Reja</th>
-              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Holat</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Jadval vaqti</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Haqiqiy vaqt</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Dars davomiyligi</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Dars rejasi</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Dars holati</th>
             </tr>
           </thead>
           <tbody>
@@ -441,7 +441,8 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
   isLastInGroup: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
-  const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.planned
+  const effectiveStatus = s.status === "planned" && s.plan_filled_count === 0 ? "not_created" : s.status
+  const statusCfg = STATUS_LABELS[effectiveStatus] ?? STATUS_LABELS.planned
   const hasContent = s.plan_filled_count > 0
   const dur = s.started_at && s.ended_at ? durationMin(s.started_at, s.ended_at) : null
 
