@@ -323,28 +323,34 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   const { weekSessions, weekLabel, canPrev, canNext } = useMemo(() => {
     if (!detail?.sessions.length) return { weekSessions: [], weekLabel: "", canPrev: false, canNext: false }
 
+    // Derive last work day from actual data (e.g. Fri=5, Sat=6)
+    let maxWeekday = 5 // default Fri
+    for (const s of detail.sessions) {
+      const d = new Date(s.session_date).getDay() // 0=Sun
+      if (d > 0 && d > maxWeekday) maxWeekday = d
+    }
+    const weekDays = maxWeekday - 1 // Mon=0 offset
+
     // Find current week's Monday
     const now = new Date()
     const todayDay = now.getDay() // 0=Sun
     const mondayOffset = todayDay === 0 ? -6 : 1 - todayDay
-    const currentMonday = new Date(now)
-    currentMonday.setDate(now.getDate() + mondayOffset + weekOffset * 7)
-    currentMonday.setHours(0, 0, 0, 0)
+    const currentMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset + weekOffset * 7)
 
-    const sunday = new Date(currentMonday)
-    sunday.setDate(currentMonday.getDate() + 6)
+    const lastDay = new Date(currentMonday)
+    lastDay.setDate(currentMonday.getDate() + weekDays)
 
     const pad = (n: number) => String(n).padStart(2, "0")
     const monStr = `${currentMonday.getFullYear()}-${pad(currentMonday.getMonth() + 1)}-${pad(currentMonday.getDate())}`
-    const sunStr = `${sunday.getFullYear()}-${pad(sunday.getMonth() + 1)}-${pad(sunday.getDate())}`
+    const lastStr = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`
 
-    const filtered = detail.sessions.filter((s) => s.session_date >= monStr && s.session_date <= sunStr)
+    const filtered = detail.sessions.filter((s) => s.session_date >= monStr && s.session_date <= lastStr)
     const hasPrev = detail.sessions.some((s) => s.session_date < monStr)
-    const hasNext = detail.sessions.some((s) => s.session_date > sunStr)
+    const hasNext = detail.sessions.some((s) => s.session_date > lastStr)
 
-    const label = currentMonday.getMonth() === sunday.getMonth()
-      ? `${currentMonday.getDate()} – ${sunday.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]}`
-      : `${currentMonday.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]} – ${sunday.getDate()} ${UZ_MONTHS[sunday.getMonth()]}`
+    const label = currentMonday.getMonth() === lastDay.getMonth()
+      ? `${currentMonday.getDate()} – ${lastDay.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]}`
+      : `${currentMonday.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]} – ${lastDay.getDate()} ${UZ_MONTHS[lastDay.getMonth()]}`
 
     return { weekSessions: filtered, weekLabel: label, canPrev: hasPrev, canNext: hasNext }
   }, [detail, weekOffset])
