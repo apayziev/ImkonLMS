@@ -175,7 +175,7 @@ export function TopicHomeworkSection({
   const removeKeyword = (index: number) => {
     const next = keywords.filter((_, i) => i !== index)
     setKeywords(next)
-    saveImmediate({ keywords: next.length > 0 ? next : null })
+    saveImmediate({ keywords: next })
   }
 
   // File upload/delete handlers
@@ -329,7 +329,7 @@ export function TopicHomeworkSection({
                   disabled={disabled}
                   className="flex-1"
                 />
-                {objectives.length > 1 && !disabled && (
+                {!disabled && (objectives.length > 1 || obj.text.trim()) && (
                   <Button
                     variant="ghost"
                     size="icon"

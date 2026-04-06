@@ -96,24 +96,26 @@ async def update_plan(
     _require_teacher(current_user)
     plan = await _get_teacher_plan(db, plan_id, current_user.id)
 
-    if body.topic is not None:
-        plan.topic = body.topic
-    if body.homework is not None:
-        plan.homework = body.homework
-    if body.homework_deadline is not None:
-        plan.homework_deadline = date.fromisoformat(body.homework_deadline)
-    if body.lesson_type is not None:
-        plan.lesson_type = body.lesson_type
-    if body.objectives is not None:
-        plan.objectives = [o.model_dump() for o in body.objectives] if body.objectives else None
-    if body.keywords is not None:
-        plan.keywords = body.keywords
-    if body.stages is not None:
-        plan.stages = [s.model_dump() for s in body.stages]
-    if body.resources is not None:
-        plan.resources = body.resources
-    if body.assessment_methods is not None:
-        plan.assessment_methods = body.assessment_methods
+    data = body.model_dump(exclude_unset=True)
+
+    if "topic" in data:
+        plan.topic = data["topic"] or None
+    if "homework" in data:
+        plan.homework = data["homework"] or None
+    if "homework_deadline" in data:
+        plan.homework_deadline = date.fromisoformat(data["homework_deadline"]) if data["homework_deadline"] else None
+    if "lesson_type" in data:
+        plan.lesson_type = data["lesson_type"] or None
+    if "objectives" in data:
+        plan.objectives = data["objectives"] or None
+    if "keywords" in data:
+        plan.keywords = data["keywords"] or None
+    if "stages" in data:
+        plan.stages = data["stages"] or None
+    if "resources" in data:
+        plan.resources = data["resources"] or None
+    if "assessment_methods" in data:
+        plan.assessment_methods = data["assessment_methods"] or None
 
     await db.commit()
     await db.refresh(plan, ["materials"])
