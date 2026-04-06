@@ -30,7 +30,7 @@ import {
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { toDateString } from "@/components/Lessons/formatters"
 import { useMemo, useState } from "react"
-import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES, PLAN_TOTAL_FIELDS } from "@/components/Lessons/constants"
+import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES, PLAN_TOTAL_FIELDS, RESOURCE_TYPES, ASSESSMENT_METHODS, BLOOM_LEVELS } from "@/components/Lessons/constants"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -536,6 +536,47 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Dars turi</p>
                     <p className="text-sm">{LESSON_TYPES.find((t) => t.value === s.lesson_type)?.label ?? s.lesson_type}</p>
+                  </div>
+                )}
+                {s.objectives && s.objectives.length > 0 && (
+                  <div className="col-span-2">
+                    <p className="text-xs font-medium text-muted-foreground">Maqsadlar</p>
+                    <ul className="text-sm space-y-0.5 mt-0.5">
+                      {s.objectives.map((o, i) => (
+                        <li key={i} className="flex items-center gap-1.5">
+                          <span>• {o.text}</span>
+                          {o.bloom_level && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)] font-medium">
+                              {BLOOM_LEVELS.find(b => b.value === o.bloom_level)?.label ?? o.bloom_level}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {s.keywords && s.keywords.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Kalit so'zlar</p>
+                    <p className="text-sm">{s.keywords.join(", ")}</p>
+                  </div>
+                )}
+                {s.homework && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Uy vazifasi</p>
+                    <p className="text-sm">{s.homework}</p>
+                  </div>
+                )}
+                {s.resources && s.resources.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Resurslar</p>
+                    <p className="text-sm">{s.resources.map(r => RESOURCE_TYPES.find(rt => rt.value === r)?.label ?? r).join(", ")}</p>
+                  </div>
+                )}
+                {s.assessment_methods && s.assessment_methods.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Baholash</p>
+                    <p className="text-sm">{s.assessment_methods.map(a => ASSESSMENT_METHODS.find(am => am.value === a)?.label ?? a).join(", ")}</p>
                   </div>
                 )}
               </div>

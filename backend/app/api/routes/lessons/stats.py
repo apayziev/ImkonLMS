@@ -59,6 +59,11 @@ class TeacherSessionDetail(PydanticBase):
     plan_id: int | None = None
     topic: str | None = None
     lesson_type: str | None = None
+    objectives: list | None = None
+    keywords: list[str] | None = None
+    homework: str | None = None
+    resources: list[str] | None = None
+    assessment_methods: list[str] | None = None
     plan_filled_count: int = 0
     lesson_number: int = 0  # chorakdagi dars raqami
 
@@ -386,6 +391,11 @@ async def get_teacher_detail(
                     plan_id=p.id if p else None,
                     topic=p.topic if p else None,
                     lesson_type=p.lesson_type if p else None,
+                    objectives=p.objectives if p else None,
+                    keywords=p.keywords if p else None,
+                    homework=p.homework if p else None,
+                    resources=p.resources if p else None,
+                    assessment_methods=p.assessment_methods if p else None,
                     plan_filled_count=_plan_filled_count(p) if p else 0,
                 ))
             cur = _next_day(cur)

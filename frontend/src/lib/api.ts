@@ -635,6 +635,11 @@ export interface TeacherSessionDetail {
   plan_id: number | null
   topic: string | null
   lesson_type: string | null
+  objectives: { text: string; bloom_level: string | null }[] | null
+  keywords: string[] | null
+  homework: string | null
+  resources: string[] | null
+  assessment_methods: string[] | null
   plan_filled_count: number
   lesson_number: number
 }
