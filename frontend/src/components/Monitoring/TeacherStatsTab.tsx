@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, BarChart3, BookOpen, Check, Clock, Download, FileText, Info, Play, Users, X } from "lucide-react"
+import { ArrowLeft, BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, Download, FileText, Info, Users, X } from "lucide-react"
 
 import type { TeacherStatRead, TeacherSessionDetail } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -28,8 +28,8 @@ import {
   getTeacherStatsQueryOptions,
   getTeacherDetailQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { useState } from "react"
-import { UZ_WEEKDAYS_FULL, LESSON_TYPES } from "@/components/Lessons/constants"
+import { useMemo, useState } from "react"
+import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES } from "@/components/Lessons/constants"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -297,16 +297,62 @@ function TeacherRow({ teacher: t, index, onClick }: { teacher: TeacherStatRead; 
 
 // ─── Detail View ────────────────────────────────────────────────────────────
 
+const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  completed: { label: "Tugallangan", className: "bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)]" },
+  in_progress: { label: "Davom etmoqda", className: "bg-amber-500/10 text-amber-600" },
+  planned: { label: "Rejalashtirilgan", className: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]" },
+}
+
+function formatTime(dt: string) {
+  return new Date(dt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+}
+
+function durationMin(start: string, end: string) {
+  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+}
+
 function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: number; startDate: string; endDate: string }) {
   const { data: detail, isLoading } = useQuery(
     getTeacherDetailQueryOptions(teacherId, startDate, endDate),
   )
 
+  // Week navigation state — default to current week
+  const [weekOffset, setWeekOffset] = useState(0)
+
+  const { weekSessions, weekLabel, canPrev, canNext } = useMemo(() => {
+    if (!detail?.sessions.length) return { weekSessions: [], weekLabel: "", canPrev: false, canNext: false }
+
+    // Find current week's Monday
+    const now = new Date()
+    const todayDay = now.getDay() // 0=Sun
+    const mondayOffset = todayDay === 0 ? -6 : 1 - todayDay
+    const currentMonday = new Date(now)
+    currentMonday.setDate(now.getDate() + mondayOffset + weekOffset * 7)
+    currentMonday.setHours(0, 0, 0, 0)
+
+    const sunday = new Date(currentMonday)
+    sunday.setDate(currentMonday.getDate() + 6)
+
+    const pad = (n: number) => String(n).padStart(2, "0")
+    const monStr = `${currentMonday.getFullYear()}-${pad(currentMonday.getMonth() + 1)}-${pad(currentMonday.getDate())}`
+    const sunStr = `${sunday.getFullYear()}-${pad(sunday.getMonth() + 1)}-${pad(sunday.getDate())}`
+
+    const filtered = detail.sessions.filter((s) => s.session_date >= monStr && s.session_date <= sunStr)
+    const hasPrev = detail.sessions.some((s) => s.session_date < monStr)
+    const hasNext = detail.sessions.some((s) => s.session_date > sunStr)
+
+    const label = currentMonday.getMonth() === sunday.getMonth()
+      ? `${currentMonday.getDate()} – ${sunday.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]}`
+      : `${currentMonday.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]} – ${sunday.getDate()} ${UZ_MONTHS[sunday.getMonth()]}`
+
+    return { weekSessions: filtered, weekLabel: label, canPrev: hasPrev, canNext: hasNext }
+  }, [detail, weekOffset])
+
   if (isLoading) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          <Skeleton key={i} className="h-12 w-full rounded-xl" />
         ))}
       </div>
     )
@@ -321,9 +367,9 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
     )
   }
 
-  // Group sessions by date
+  // Group filtered sessions by date
   const grouped = new Map<string, TeacherSessionDetail[]>()
-  for (const s of detail.sessions) {
+  for (const s of weekSessions) {
     const arr = grouped.get(s.session_date) ?? []
     arr.push(s)
     grouped.set(s.session_date, arr)
@@ -333,142 +379,132 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
 
   return (
-    <div className="space-y-4">
-      {[...grouped.entries()].map(([dateStr, sessions]) => {
-        const d = new Date(dateStr)
-        const isToday = dateStr === todayStr
-        const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
+    <div className="space-y-3">
+      {/* Week navigation */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" onClick={() => setWeekOffset((o) => o - 1)} disabled={!canPrev}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
+          {weekOffset !== 0 && (
+            <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setWeekOffset(0)}>
+              Joriy hafta
+            </Button>
+          )}
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => setWeekOffset((o) => o + 1)} disabled={!canNext}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
 
-        return (
-          <div key={dateStr}>
-            <div
-              className={cn(
-                "flex items-center gap-2 py-2 px-3 rounded-lg mb-2",
-                isToday ? "bg-primary/10" : "bg-muted/30",
-              )}
-            >
-              <span className={cn(
-                "text-sm font-bold",
-                isToday ? "text-primary" : "text-muted-foreground",
-              )}>
-                {dayName}, {d.getDate()}{isToday && " (bugun)"}
-              </span>
-              <span className="text-xs text-muted-foreground">{sessions.length} dars</span>
-            </div>
-            <div className="space-y-1.5 mb-3">
-              {sessions
-                .sort((a, b) => a.period_number - b.period_number)
-                .map((s) => (
-                  <SessionRow key={s.session_id} session={s} />
-                ))}
-            </div>
-          </div>
-        )
-      })}
+      {weekSessions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <p className="text-sm">Bu haftada darslar topilmadi</p>
+        </div>
+      ) : (
+      <Card className="rounded-xl overflow-hidden p-0">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/30">
+              <th className="py-2.5 px-3 text-left text-xs font-medium text-muted-foreground">Sana</th>
+              <th className="py-2.5 px-3 text-left text-xs font-medium text-muted-foreground">Sinf</th>
+              <th className="py-2.5 px-3 text-left text-xs font-medium text-muted-foreground">Fan</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Soat</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Jadval</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Haqiqiy</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Davomiylik</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Reja</th>
+              <th className="py-2.5 px-3 text-center text-xs font-medium text-muted-foreground">Holat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...grouped.entries()].map(([dateStr, sessions]) => {
+              const d = new Date(dateStr)
+              const isToday = dateStr === todayStr
+              const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
+              const sorted = sessions.sort((a, b) => a.period_number - b.period_number)
+
+              return sorted.map((s, idx) => (
+                <SessionTableRow
+                  key={s.session_id}
+                  session={s}
+                  dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
+                  isToday={isToday && idx === 0}
+                  rowSpan={idx === 0 ? sorted.length : 0}
+                />
+              ))
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+      )}
     </div>
   )
 }
 
-function SessionRow({ session: s }: { session: TeacherSessionDetail }) {
+function SessionTableRow({ session: s, dateLabel, isToday, rowSpan }: {
+  session: TeacherSessionDetail
+  dateLabel: string
+  isToday: boolean
+  rowSpan: number
+}) {
   const [expanded, setExpanded] = useState(false)
-
-  const isCompleted = s.status === "completed"
-  const isInProgress = s.status === "in_progress"
-  const isPlanned = s.status === "planned"
+  const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.planned
   const hasContent = s.plan_filled_count > 0
-  const hasPlan = hasContent || isInProgress
+  const dur = s.started_at && s.ended_at ? durationMin(s.started_at, s.ended_at) : null
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border transition-all",
-        isCompleted && hasContent && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
-        isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
-        isPlanned && hasContent && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
-        !hasPlan && "border-border",
-      )}
-    >
-      <button
-        type="button"
+    <>
+      <tr
+        className={cn(
+          "border-b last:border-b-0 hover:bg-muted/10 transition-colors cursor-pointer",
+          isToday && "bg-primary/5",
+        )}
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-3 py-3 text-left cursor-pointer hover:bg-muted/10 transition-colors rounded-lg"
       >
-        {/* Status indicator */}
-        <div
-          className={cn(
-            "flex items-center justify-center h-8 w-8 rounded-full shrink-0",
-            isCompleted && hasContent && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
-            isInProgress && "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)]",
-            (isPlanned || (isCompleted && !hasContent)) && hasContent && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
-            !hasPlan && "bg-muted text-muted-foreground",
-          )}
-        >
-          {isCompleted && hasContent ? (
-            <Check className="h-4 w-4" />
-          ) : isInProgress ? (
-            <Play className="h-4 w-4" />
-          ) : hasContent ? (
-            <FileText className="h-4 w-4" />
-          ) : (
-            <FileText className="h-4 w-4 opacity-40" />
-          )}
-        </div>
-
-        {/* Lesson info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{s.grade_display}</span>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-muted-foreground">{s.subject_name}</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-            <Clock className="h-3 w-3" />
-            <span>{s.start_time} – {s.end_time}</span>
-            <span>({s.period_number}-soat)</span>
-            {s.started_at && (
-              <>
-                <span>·</span>
-                boshlangan: {new Date(s.started_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
-              </>
-            )}
-            {s.ended_at && (
-              <>
-                <span>–</span>
-                {new Date(s.ended_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
-                {s.started_at && (
-                  <span className="text-muted-foreground/70">
-                    ({Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000)} min)
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Status badge + progress */}
-        <div className="shrink-0 flex flex-col items-end gap-1">
-          {isCompleted && hasContent ? (
-            <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)] font-medium">
-              Tugallangan
-            </span>
-          ) : isInProgress ? (
-            <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)] font-medium">
-              Davom etmoqda
-            </span>
-          ) : isPlanned && hasContent ? (
-            <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]/70 font-medium">
-              Rejalashtirilgan
+        {rowSpan > 0 && (
+          <td
+            className={cn("py-2.5 px-3 text-sm font-semibold align-top border-r", isToday && "text-primary")}
+            rowSpan={rowSpan}
+          >
+            {dateLabel}
+          </td>
+        )}
+        <td className="py-2.5 px-3 font-bold">{s.grade_display}</td>
+        <td className="py-2.5 px-3 text-muted-foreground">{s.subject_name}</td>
+        <td className="py-2.5 px-3 text-center text-muted-foreground">{s.period_number}</td>
+        <td className="py-2.5 px-3 text-center text-xs text-muted-foreground">{s.start_time}–{s.end_time}</td>
+        <td className="py-2.5 px-3 text-center text-xs">
+          {s.started_at ? (
+            <span>
+              {formatTime(s.started_at)}
+              {s.ended_at && <>–{formatTime(s.ended_at)}</>}
             </span>
           ) : (
-            <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-              Reja yo'q
-            </span>
+            <span className="text-muted-foreground">—</span>
           )}
-          <div className="flex items-center gap-1.5">
-            <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+        </td>
+        <td className="py-2.5 px-3 text-center">
+          {dur != null ? (
+            <span className={cn(
+              "text-xs font-medium",
+              dur < 30 ? "text-[var(--imkon-red)]" : dur >= 40 ? "text-[var(--imkon-teal)]" : "text-amber-500",
+            )}>
+              {dur} min
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </td>
+        <td className="py-2.5 px-3 text-center">
+          <div className="flex items-center justify-center gap-1.5">
+            <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
                 className={cn(
-                  "h-full rounded-full transition-all",
+                  "h-full rounded-full",
                   s.plan_filled_count >= 6
                     ? "bg-[var(--imkon-teal)]"
                     : s.plan_filled_count >= 3
@@ -480,78 +516,83 @@ function SessionRow({ session: s }: { session: TeacherSessionDetail }) {
             </div>
             <span className="text-[10px] text-muted-foreground">{s.plan_filled_count}/6</span>
           </div>
-        </div>
-      </button>
-
-      {/* Expanded plan content (read-only) */}
+        </td>
+        <td className="py-2.5 px-3 text-center">
+          <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", statusCfg.className)}>
+            {statusCfg.label}
+          </span>
+        </td>
+      </tr>
       {expanded && (
-        <div className="px-4 pb-4 pt-0 ml-11 space-y-2 border-t border-dashed">
-          {!hasContent ? (
-            <p className="text-sm text-muted-foreground py-2 flex items-center gap-1.5">
-              <X className="h-3.5 w-3.5 text-[var(--imkon-red)]" />
-              Dars rejasi to'ldirilmagan
-            </p>
-          ) : (
-            <div className="grid gap-2 pt-2">
-              {s.topic && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Mavzu</p>
-                  <p className="text-sm">{s.topic}</p>
-                </div>
-              )}
-              {s.lesson_type && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Dars turi</p>
-                  <p className="text-sm">{LESSON_TYPES.find((t) => t.value === s.lesson_type)?.label ?? s.lesson_type}</p>
-                </div>
-              )}
-              {s.objectives && s.objectives.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Maqsadlar</p>
-                  <ul className="text-sm list-disc list-inside">
-                    {s.objectives.map((o, i) => <li key={i}>{o}</li>)}
-                  </ul>
-                </div>
-              )}
-              {s.keywords && s.keywords.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Kalit so'zlar</p>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {s.keywords.map((k, i) => (
-                      <Badge key={i} variant="outline" className="text-xs">{k}</Badge>
-                    ))}
+        <tr className="border-b">
+          <td colSpan={9} className="px-6 py-3 bg-muted/5">
+            {!hasContent ? (
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <X className="h-3.5 w-3.5 text-[var(--imkon-red)]" />
+                Dars rejasi to'ldirilmagan
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                {s.topic && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Mavzu</p>
+                    <p className="text-sm">{s.topic}</p>
                   </div>
-                </div>
-              )}
-              {s.homework && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Uy vazifasi</p>
-                  <p className="text-sm">{s.homework}</p>
-                </div>
-              )}
-              {s.materials.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Materiallar</p>
-                  <div className="flex flex-col gap-1 mt-0.5">
-                    {s.materials.map((m) => (
-                      <a
-                        key={m.id}
-                        href={m.file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        {m.original_name}
-                      </a>
-                    ))}
+                )}
+                {s.lesson_type && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Dars turi</p>
+                    <p className="text-sm">{LESSON_TYPES.find((t) => t.value === s.lesson_type)?.label ?? s.lesson_type}</p>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                )}
+                {s.objectives && s.objectives.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Maqsadlar</p>
+                    <ul className="text-sm list-disc list-inside">
+                      {s.objectives.map((o, i) => <li key={i}>{o}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {s.keywords && s.keywords.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Kalit so'zlar</p>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {s.keywords.map((k, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{k}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {s.homework && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Uy vazifasi</p>
+                    <p className="text-sm">{s.homework}</p>
+                  </div>
+                )}
+                {s.materials.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Materiallar</p>
+                    <div className="flex flex-col gap-1 mt-0.5">
+                      {s.materials.map((m) => (
+                        <a
+                          key={m.id}
+                          href={m.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Download className="h-3 w-3" />
+                          {m.original_name}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   )
 }
