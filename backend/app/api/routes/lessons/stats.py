@@ -60,7 +60,7 @@ class TeacherSessionDetail(PydanticBase):
     homework: str | None
     materials: list[TeacherSessionMaterial]
     plan_filled_count: int  # 0-6
-    lesson_number: int  # chorakdagi dars raqami
+    lesson_number: int = 0  # chorakdagi dars raqami
 
 
 class TeacherDetailResponse(PydanticBase):
