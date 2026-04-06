@@ -99,8 +99,12 @@ export function TopicHomeworkSection({
       return lessonsApi.updatePlan(pid, data)
     },
     onMutate,
-    onSuccess: () => {
+    onSuccess: (res) => {
       onSuccess()
+      // Update plan cache directly from response (avoids extra fetch)
+      if (res.data?.id) {
+        queryClient.setQueryData(queryKeys.lessonPlan(res.data.id), res.data)
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
       queryClient.invalidateQueries({ queryKey: ["lessons-for-date"] })
     },
@@ -116,8 +120,10 @@ export function TopicHomeworkSection({
   const saveImmediate = useCallback(
     (data: Record<string, unknown>) => {
       clearTimeout(debounceRef.current)
+      // Merge any pending debounced fields into this immediate save
+      const merged = pendingDataRef.current ? { ...pendingDataRef.current, ...data } : data
       pendingDataRef.current = null
-      mutateRef.current(data)
+      mutateRef.current(merged)
     },
     [],
   )
@@ -125,10 +131,12 @@ export function TopicHomeworkSection({
   const saveDebounced = useCallback(
     (data: Record<string, unknown>) => {
       clearTimeout(debounceRef.current)
-      pendingDataRef.current = data
+      // Merge with any existing pending data (e.g. topic + homework typed in quick succession)
+      pendingDataRef.current = { ...pendingDataRef.current, ...data }
+      const pending = pendingDataRef.current
       debounceRef.current = setTimeout(() => {
         pendingDataRef.current = null
-        mutateRef.current(data)
+        mutateRef.current(pending)
       }, 1000)
     },
     [],

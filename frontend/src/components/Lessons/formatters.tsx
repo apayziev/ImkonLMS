@@ -31,10 +31,10 @@ export function SaveStatusIndicator({ status, className }: { status: SaveStatus;
   )
 }
 
-export function lessonStatusFlags(lesson: { session_status?: string | null; status?: string | null; plan_id?: number | null }) {
+export function lessonStatusFlags(lesson: { session_status?: string | null; status?: string | null; plan_id?: number | null; plan_filled_count?: number }) {
   const s = lesson.session_status ?? lesson.status ?? null
   const isInProgress = s === "in_progress"
   const isCompleted = s === "completed"
-  const hasPlan = !!lesson.plan_id
+  const hasPlan = !!lesson.plan_id && (lesson.plan_filled_count ?? 0) > 0
   return { isInProgress, isCompleted, hasPlan }
 }
