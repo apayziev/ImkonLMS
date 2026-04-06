@@ -26,7 +26,7 @@ class TeacherStatRead(PydanticBase):
     total_expected: int
     total_conducted: int
     total_completed: int
-    total_planned: int       # topic filled
+    total_planned: int       # topic filled (dars rejasi to'ldirilgan)
     on_time_starts: int
     avg_duration_minutes: float | None
     avg_plan_score: float | None  # 0-100 weighted

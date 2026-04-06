@@ -12,6 +12,7 @@ from app.core.formatting import format_time
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.schemas.lessons import SessionStatusItem, SessionStatusesResponse, TodayLessonRead, TodayLessonsResponse
+from app.api.routes.lessons.stats import _plan_filled_count
 
 from ._helpers import ENTRY_LOAD, _require_teacher
 
@@ -108,22 +109,7 @@ async def get_today_lessons(
                 room=entry.room,
                 session_id=session.id if session else None,
                 session_status=session.status if session else None,
-                has_plan_content=bool(
-                    session and (
-                        session.topic or session.lesson_type
-                        or session.objectives or session.keywords
-                    )
-                ),
-                plan_filled_count=(
-                    sum([
-                        bool(session.topic and session.topic.strip()),
-                        bool(session.lesson_type),
-                        bool(session.objectives),
-                        bool(session.keywords),
-                        bool(session.homework and session.homework.strip()),
-                        bool(session.materials),
-                    ]) if session else 0
-                ),
+                plan_filled_count=_plan_filled_count(session) if session else 0,
             )
         )
 

@@ -302,8 +302,7 @@ function TeacherRow({ teacher: t, index, onClick }: { teacher: TeacherStatRead; 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   completed: { label: "Tugallangan", className: "bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)]" },
   in_progress: { label: "Davom etmoqda", className: "bg-amber-500/10 text-amber-600" },
-  planned: { label: "Rejalashtirilgan", className: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]" },
-  not_created: { label: "Boshlanmagan", className: "bg-muted text-muted-foreground" },
+  not_started: { label: "Boshlanmagan", className: "bg-muted text-muted-foreground" },
 }
 
 function formatTime(dt: string) {
@@ -441,8 +440,8 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
   isLastInGroup: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
-  const effectiveStatus = s.status === "planned" && s.plan_filled_count === 0 ? "not_created" : s.status
-  const statusCfg = STATUS_LABELS[effectiveStatus] ?? STATUS_LABELS.planned
+  const effectiveStatus = s.status === "completed" ? "completed" : s.status === "in_progress" ? "in_progress" : "not_started"
+  const statusCfg = STATUS_LABELS[effectiveStatus]
   const hasContent = s.plan_filled_count > 0
   const dur = s.started_at && s.ended_at ? durationMin(s.started_at, s.ended_at) : null
 

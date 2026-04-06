@@ -394,7 +394,7 @@ export interface TodayLessonRead {
   room: string | null
   session_id: number | null
   session_status: SessionStatus | null // planned | in_progress | completed
-  has_plan_content: boolean
+  has_plan_content?: boolean
   plan_filled_count: number // 0-6
 }
 
