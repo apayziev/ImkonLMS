@@ -1,65 +1,126 @@
-"""Session lifecycle: plan, start, get, update, end."""
+"""Session lifecycle: start, get, end. Plan is separate."""
 
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import today_local
 from app.core.enums import AttendanceStatus, SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.crud.lessons import crud_lesson_sessions
+from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.models.session_attendance import SessionAttendance
 from app.models.user import User, UserRole
 from app.schemas.lessons import (
+    LessonPlanCreateRequest,
+    LessonPlanRead,
+    LessonPlanUpdateRequest,
     SessionDetailRead,
     SessionStartRequest,
-    SessionUpdateRequest,
 )
 
 from ._helpers import (
     ENTRY_LOAD,
+    _build_plan_read,
     _build_session_detail,
+    _get_teacher_plan,
     _get_teacher_session,
     _load_attendances_with_students,
     _load_session_with_relations,
-    _require_not_completed,
     _require_teacher,
 )
 
 router = APIRouter()
 
 
-@router.post("/sessions/plan", response_model=SessionDetailRead, status_code=201)
-async def plan_session(
-    body: SessionStartRequest, db: SessionDep, current_user: CurrentUser,
-) -> SessionDetailRead:
-    """Create a planned session for a lesson (no attendance yet, just a placeholder for topic/homework/materials)."""
+# ─── Plan endpoints ────────────────────────────────────────────────────────
+
+
+async def _validate_entry_ownership(db: SessionDep, entry_id: int, teacher_id: int) -> ScheduleEntry:
+    query = select(ScheduleEntry).options(*ENTRY_LOAD).where(ScheduleEntry.id == entry_id)
+    entry = (await db.execute(query)).scalar_one_or_none()
+    if not entry:
+        raise NotFoundException("Dars jadvali topilmadi")
+    if entry.teacher_id != teacher_id:
+        raise ForbiddenException("Bu dars sizga tegishli emas")
+    return entry
+
+
+@router.post("/plans", response_model=LessonPlanRead, status_code=201)
+async def create_plan(
+    body: LessonPlanCreateRequest, db: SessionDep, current_user: CurrentUser,
+) -> LessonPlanRead:
+    """Create a lesson plan for a scheduled lesson."""
     _require_teacher(current_user)
 
     entry = await _validate_entry_ownership(db, body.schedule_entry_id, current_user.id)
-    today = body.target_date or today_local()
+    target = body.target_date or today_local()
 
-    existing = await crud_lesson_sessions.get(
-        db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,
-    )
+    # Check duplicate
+    existing = (await db.execute(
+        select(LessonPlan).where(
+            LessonPlan.schedule_entry_id == entry.id,
+            LessonPlan.plan_date == target,
+            LessonPlan.is_deleted == False,  # noqa: E712
+        )
+    )).scalar_one_or_none()
     if existing:
-        raise BadRequestException("Bu dars uchun sessiya allaqachon mavjud")
+        raise BadRequestException("Bu dars uchun reja allaqachon mavjud")
 
-    session = LessonSession(
-        schedule_entry_id=entry.id,
-        session_date=today,
-        started_at=None,
-        status=SessionStatus.PLANNED,
-    )
-    db.add(session)
+    plan = LessonPlan(schedule_entry_id=entry.id, plan_date=target)
+    db.add(plan)
     await db.commit()
-    await db.refresh(session)
+    await db.refresh(plan)
 
-    return _build_session_detail(session, entry, [])
+    return _build_plan_read(plan)
+
+
+@router.get("/plans/{plan_id}", response_model=LessonPlanRead)
+async def get_plan(plan_id: int, db: SessionDep, current_user: CurrentUser) -> LessonPlanRead:
+    """Get a lesson plan by ID."""
+    _require_teacher(current_user)
+    plan = await _get_teacher_plan(db, plan_id, current_user.id)
+    return _build_plan_read(plan)
+
+
+@router.patch("/plans/{plan_id}", response_model=LessonPlanRead)
+async def update_plan(
+    plan_id: int, body: LessonPlanUpdateRequest, db: SessionDep, current_user: CurrentUser,
+) -> LessonPlanRead:
+    """Update lesson plan fields."""
+    _require_teacher(current_user)
+    plan = await _get_teacher_plan(db, plan_id, current_user.id)
+
+    if body.topic is not None:
+        plan.topic = body.topic
+    if body.homework is not None:
+        plan.homework = body.homework
+    if body.homework_deadline is not None:
+        plan.homework_deadline = date.fromisoformat(body.homework_deadline)
+    if body.lesson_type is not None:
+        plan.lesson_type = body.lesson_type
+    if body.objectives is not None:
+        plan.objectives = body.objectives
+    if body.keywords is not None:
+        plan.keywords = body.keywords
+    if body.stages is not None:
+        plan.stages = [s.model_dump() for s in body.stages]
+    if body.resources is not None:
+        plan.resources = body.resources
+    if body.assessment_method is not None:
+        plan.assessment_method = body.assessment_method
+
+    await db.commit()
+    await db.refresh(plan)
+    return _build_plan_read(plan)
+
+
+# ─── Session endpoints ─────────────────────────────────────────────────────
 
 
 @router.post("/sessions", response_model=SessionDetailRead, status_code=201)
@@ -90,22 +151,25 @@ async def start_session(
 
     now = datetime.now(UTC)
 
-    if existing and existing.status == SessionStatus.PLANNED:
-        # Upgrade planned → in_progress
-        session = existing
-        session.started_at = now
-        session.status = SessionStatus.IN_PROGRESS
-        await db.flush()
-    else:
-        # Create new session
-        session = LessonSession(
-            schedule_entry_id=entry.id,
-            session_date=today,
-            started_at=now,
-            status=SessionStatus.IN_PROGRESS,
+    # Find existing plan for this lesson date
+    plan = (await db.execute(
+        select(LessonPlan).where(
+            LessonPlan.schedule_entry_id == entry.id,
+            LessonPlan.plan_date == today,
+            LessonPlan.is_deleted == False,  # noqa: E712
         )
-        db.add(session)
-        await db.flush()
+    )).scalar_one_or_none()
+
+    # Create new session
+    session = LessonSession(
+        schedule_entry_id=entry.id,
+        lesson_plan_id=plan.id if plan else None,
+        session_date=today,
+        started_at=now,
+        status=SessionStatus.IN_PROGRESS,
+    )
+    db.add(session)
+    await db.flush()
 
     # Get all active students in this grade
     students_query = (
@@ -134,9 +198,11 @@ async def start_session(
         attendances.append((att, student))
 
     await db.commit()
-    await db.refresh(session)
 
-    return _build_session_detail(session, entry, attendances)
+    # Reload with relations
+    full_session = await _load_session_with_relations(db, session.id)
+    attendances = await _load_attendances_with_students(db, full_session)
+    return _build_session_detail(full_session, entry, attendances)
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetailRead)
@@ -156,41 +222,6 @@ async def get_session(session_id: int, db: SessionDep, current_user: CurrentUser
     return _build_session_detail(session, entry, attendances)
 
 
-@router.patch("/sessions/{session_id}", response_model=SessionDetailRead)
-async def update_session(
-    session_id: int,
-    body: SessionUpdateRequest,
-    db: SessionDep,
-    current_user: CurrentUser,
-) -> SessionDetailRead:
-    """Update session topic and/or homework."""
-    _require_teacher(current_user)
-
-    session = await _get_teacher_session(db, session_id, current_user.id)
-    _require_not_completed(session)
-
-    if body.topic is not None:
-        session.topic = body.topic
-    if body.homework is not None:
-        session.homework = body.homework
-    if body.homework_deadline is not None:
-        session.homework_deadline = date.fromisoformat(body.homework_deadline)
-    if body.lesson_type is not None:
-        session.lesson_type = body.lesson_type
-    if body.objectives is not None:
-        session.objectives = body.objectives
-    if body.keywords is not None:
-        session.keywords = body.keywords
-
-    await db.commit()
-
-    # Reload with relations for response
-    full_session = await _load_session_with_relations(db, session_id)
-    entry = full_session.schedule_entry
-    attendances = await _load_attendances_with_students(db, full_session)
-    return _build_session_detail(full_session, entry, attendances)
-
-
 @router.post("/sessions/{session_id}/end", status_code=200)
 async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser) -> dict:
     """End a lesson session."""
@@ -205,24 +236,3 @@ async def end_session(session_id: int, db: SessionDep, current_user: CurrentUser
     await db.commit()
 
     return {"message": "Dars tugatildi", "session_id": session_id}
-
-
-# ─── Internal ───────────────────────────────────────────────────────────────
-
-
-async def _validate_entry_ownership(db: SessionDep, entry_id: int, teacher_id: int) -> ScheduleEntry:
-    """Load a schedule entry and verify the teacher owns it."""
-    entry_query = (
-        select(ScheduleEntry)
-        .options(*ENTRY_LOAD)
-        .where(
-            ScheduleEntry.id == entry_id,
-            ScheduleEntry.is_deleted == False,  # noqa: E712
-        )
-    )
-    entry = (await db.execute(entry_query)).scalar_one_or_none()
-    if not entry:
-        raise NotFoundException("Dars jadvali topilmadi")
-    if entry.teacher_id != teacher_id:
-        raise ForbiddenException("Bu dars sizga tegishli emas")
-    return entry

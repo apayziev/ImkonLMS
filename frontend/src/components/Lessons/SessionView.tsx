@@ -5,7 +5,6 @@ import {
   ChevronRight,
   FileText,
   Loader2,
-  Play,
   Square,
   TriangleAlert,
   UserX,
@@ -69,23 +68,6 @@ export function SessionView({
     },
   })
 
-  const startFromPlanMutation = useMutation({
-    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId, session?.session_date),
-    onSuccess: (response) => {
-      toast.success("Dars boshlandi")
-      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
-      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "lessons-for-date" || q.queryKey[0] === "session-statuses" })
-      queryClient.setQueryData(queryKeys.lessonSession(sessionId), response.data)
-    },
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(msg ?? "Darsni boshlashda xatolik")
-      queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
-    },
-  })
-
   const [showPlan, setShowPlan] = useState(false)
 
   if (isLoading || !session) {
@@ -100,7 +82,7 @@ export function SessionView({
     )
   }
 
-  const { isCompleted, isPlanned, isInProgress } = lessonStatusFlags(session)
+  const { isCompleted, isInProgress } = lessonStatusFlags(session)
 
   // Late warning: 5+ minutes since session started, student still unmarked
   const showLateWarning = isInProgress && (() => {
@@ -136,22 +118,7 @@ export function SessionView({
               </span>
             </div>
           )}
-          {isPlanned && (
-            <Button
-              size="lg"
-              className="text-lg h-12 px-6"
-              onClick={() => startFromPlanMutation.mutate(session.schedule_entry_id)}
-              disabled={startFromPlanMutation.isPending}
-            >
-              {startFromPlanMutation.isPending ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Play className="mr-2 h-5 w-5" />
-              )}
-              Darsni boshlash
-            </Button>
-          )}
-          {!isCompleted && !isPlanned && (
+          {!isCompleted && (
             <EndSessionDialog
               session={session}
               sessionId={sessionId}
@@ -163,63 +130,58 @@ export function SessionView({
       </div>
 
       {/* Dars rejasi */}
-      {isPlanned ? (
-        <TopicHomeworkSection session={session} sessionId={sessionId} disabled={false} />
-      ) : (
-        <>
-          <Button
-            variant="outline"
-            className="w-full justify-between h-12 text-base"
-            onClick={() => setShowPlan(!showPlan)}
-          >
-            <span className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Dars rejasi
-            </span>
-            <ChevronRight className={cn("h-4 w-4 transition-transform", showPlan && "rotate-90")} />
-          </Button>
-          {showPlan && (
-            <TopicHomeworkSection session={session} sessionId={sessionId} disabled={isCompleted} homeworkEditable={isInProgress} />
-          )}
-        </>
+      <Button
+        variant="outline"
+        className="w-full justify-between h-12 text-base"
+        onClick={() => setShowPlan(!showPlan)}
+      >
+        <span className="flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          Dars rejasi
+        </span>
+        <ChevronRight className={cn("h-4 w-4 transition-transform", showPlan && "rotate-90")} />
+      </Button>
+      {showPlan && (
+        <TopicHomeworkSection
+          plan={session.plan}
+          planId={session.plan?.id ?? null}
+          disabled={isCompleted}
+          homeworkEditable={isInProgress}
+        />
       )}
 
-      {!isPlanned && (
-        <>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-[var(--imkon-teal)] text-sm font-medium text-muted-foreground">
-                <th className="w-10 py-3 px-4 text-left font-medium">#</th>
-                <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
-                <th className="py-3 px-3 text-center font-medium">Davomat</th>
-                <th className="py-3 px-3 text-center font-medium">Ogohlantirish</th>
-                <th className="py-3 px-3 text-center font-medium">Qoidabuzarlik haqida xabar berish</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {session.students.map((student, index) => (
-                <StudentRow
-                  key={student.student_id}
-                  student={student}
-                  index={index + 1}
-                  sessionId={sessionId}
-                  disabled={isCompleted}
-                  isLate={showLateWarning && student.status === "unmarked"}
-                  yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
-                  yellowCardLimit={yellowCardData?.limit ?? 2}
-                  violations={violationData?.by_student[student.student_id] ?? []}
-                />
-              ))}
-            </tbody>
-          </table>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b-2 border-[var(--imkon-teal)] text-sm font-medium text-muted-foreground">
+            <th className="w-10 py-3 px-4 text-left font-medium">#</th>
+            <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
+            <th className="py-3 px-3 text-center font-medium">Davomat</th>
+            <th className="py-3 px-3 text-center font-medium">Ogohlantirish</th>
+            <th className="py-3 px-3 text-center font-medium">Qoidabuzarlik haqida xabar berish</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {session.students.map((student, index) => (
+            <StudentRow
+              key={student.student_id}
+              student={student}
+              index={index + 1}
+              sessionId={sessionId}
+              disabled={isCompleted}
+              isLate={showLateWarning && student.status === "unmarked"}
+              yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
+              yellowCardLimit={yellowCardData?.limit ?? 2}
+              violations={violationData?.by_student[student.student_id] ?? []}
+            />
+          ))}
+        </tbody>
+      </table>
 
-          {session.students.length === 0 && (
-            <div className="flex flex-col items-center py-12 text-muted-foreground">
-              <UserX className="h-12 w-12 mb-3 opacity-40" />
-              <p className="text-lg">Bu sinfda o'quvchilar topilmadi</p>
-            </div>
-          )}
-        </>
+      {session.students.length === 0 && (
+        <div className="flex flex-col items-center py-12 text-muted-foreground">
+          <UserX className="h-12 w-12 mb-3 opacity-40" />
+          <p className="text-lg">Bu sinfda o'quvchilar topilmadi</p>
+        </div>
       )}
     </div>
   )

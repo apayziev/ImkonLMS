@@ -23,6 +23,17 @@ export const ATTENDANCE_OPTIONS = [
   { value: "absent", label: "Kelmadi", color: "bg-[var(--imkon-red)] text-white border-[var(--imkon-red)]", badgeClassName: "bg-[var(--imkon-red)]/10 text-[var(--imkon-red)]", canHaveGrade: false },
 ] as const
 
+export const PLAN_TOTAL_FIELDS = 9
+
+export const ASSESSMENT_METHODS = [
+  { value: "oral", label: "Og'zaki so'rov" },
+  { value: "written", label: "Yozma ish" },
+  { value: "test", label: "Test" },
+  { value: "project", label: "Loyiha" },
+  { value: "observation", label: "Kuzatish" },
+  { value: "self_assessment", label: "O'z-o'zini baholash" },
+] as const
+
 
 
 

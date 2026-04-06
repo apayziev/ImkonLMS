@@ -4,16 +4,18 @@ from datetime import date, datetime, time
 
 from fastapi import APIRouter
 from pydantic import BaseModel as PydanticBase
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.enums import SessionStatus
 from app.core.exceptions import ForbiddenException, NotFoundException
+from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
-from app.models.time_slot import TimeSlot
 from app.models.user import User, UserRole
+
+from ._helpers import PLAN_TOTAL_FIELDS, _plan_filled_count
 
 router = APIRouter()
 
@@ -26,10 +28,10 @@ class TeacherStatRead(PydanticBase):
     total_expected: int
     total_conducted: int
     total_completed: int
-    total_planned: int       # topic filled (dars rejasi to'ldirilgan)
+    total_planned: int       # dars rejasi mavjud
     on_time_starts: int
     avg_duration_minutes: float | None
-    avg_plan_score: float | None  # 0-100 weighted
+    avg_plan_score: float | None  # 0-100 (filled/total %)
 
 
 class TeacherStatsResponse(PydanticBase):
@@ -53,13 +55,11 @@ class TeacherSessionDetail(PydanticBase):
     end_time: str
     started_at: datetime | None
     ended_at: datetime | None
-    topic: str | None
-    lesson_type: str | None
-    objectives: list | None
-    keywords: list | None
-    homework: str | None
-    materials: list[TeacherSessionMaterial]
-    plan_filled_count: int  # 0-6
+    # Plan info (from linked LessonPlan)
+    plan_id: int | None = None
+    topic: str | None = None
+    lesson_type: str | None = None
+    plan_filled_count: int = 0
     lesson_number: int = 0  # chorakdagi dars raqami
 
 
@@ -142,7 +142,6 @@ async def get_teacher_stats(
         select(LessonSession)
         .options(
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
-            selectinload(LessonSession.materials),
         )
         .where(
             LessonSession.session_date >= sd,
@@ -152,6 +151,20 @@ async def get_teacher_stats(
     )
     all_sessions = sessions_q.scalars().all()
 
+    # Get all plans in date range
+    all_entry_ids = {e.id for entries in teacher_entries.values() for e in entries}
+    plans_q = await db.execute(
+        select(LessonPlan)
+        .options(selectinload(LessonPlan.materials))
+        .where(
+            LessonPlan.schedule_entry_id.in_(all_entry_ids) if all_entry_ids else LessonPlan.id < 0,
+            LessonPlan.plan_date >= sd,
+            LessonPlan.plan_date <= ed,
+            LessonPlan.is_deleted == False,  # noqa: E712
+        )
+    )
+    all_plans = plans_q.scalars().all()
+
     # Group sessions by teacher (via schedule_entry)
     teacher_sessions: dict[int, list[LessonSession]] = {tid: [] for tid in teacher_entries}
     for session in all_sessions:
@@ -159,6 +172,15 @@ async def get_teacher_stats(
             for tid, entries in teacher_entries.items():
                 if any(e.id == session.schedule_entry_id for e in entries):
                     teacher_sessions[tid].append(session)
+                    break
+
+    # Group plans by teacher
+    teacher_plans: dict[int, list[LessonPlan]] = {tid: [] for tid in teacher_entries}
+    for plan in all_plans:
+        if plan.schedule_entry_id:
+            for tid, entries in teacher_entries.items():
+                if any(e.id == plan.schedule_entry_id for e in entries):
+                    teacher_plans[tid].append(plan)
                     break
 
     # Build stats
@@ -184,11 +206,14 @@ async def get_teacher_stats(
 
         conducted = [s for s in sessions if s.status in (SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED)]
         completed = [s for s in sessions if s.status == SessionStatus.COMPLETED]
-        planned = [s for s in sessions if s.topic and s.topic.strip()]
 
-        # Plan quality
-        plan_scores = [_plan_score(s) for s in sessions if s.topic and s.topic.strip()]
-        avg_plan = round(sum(plan_scores) / len(plan_scores), 1) if plan_scores else None
+        # Plans: count from LessonPlan table, score = filled/total %
+        plans = teacher_plans.get(tid, [])
+        filled_scores = [
+            round(_plan_filled_count(p) / PLAN_TOTAL_FIELDS * 100)
+            for p in plans if p.topic and p.topic.strip()
+        ]
+        avg_plan = round(sum(filled_scores) / len(filled_scores), 1) if filled_scores else None
 
         # On-time analysis
         on_time = 0
@@ -221,7 +246,7 @@ async def get_teacher_stats(
             total_expected=total_expected,
             total_conducted=len(conducted),
             total_completed=len(completed),
-            total_planned=len(planned),
+            total_planned=len([p for p in plans if p.topic and p.topic.strip()]),
             on_time_starts=on_time,
             avg_duration_minutes=avg_dur,
             avg_plan_score=avg_plan,
@@ -234,52 +259,6 @@ async def get_teacher_stats(
 
 
 # ─── Detail endpoint ────────────────────────────────────────────────────────
-
-# Weighted plan scoring (industry best practice)
-_PLAN_WEIGHTS = {
-    "topic": 30,       # eng asosiy — nimani o'rganyapti
-    "objectives": 25,  # dars sifatini belgilaydi
-    "homework": 15,    # mustahkamlash uchun zarur
-    "materials": 15,   # vizual/resurs tayyorlagan
-    "lesson_type": 10, # kategoriya — tanlash oson
-    "keywords": 5,     # yordamchi
-}  # jami = 100
-
-
-def _plan_score(session: LessonSession) -> int:
-    """Weighted plan quality score 0-100."""
-    score = 0
-    if session.topic and session.topic.strip():
-        score += _PLAN_WEIGHTS["topic"]
-    if session.objectives:
-        score += _PLAN_WEIGHTS["objectives"]
-    if session.homework and session.homework.strip():
-        score += _PLAN_WEIGHTS["homework"]
-    if session.materials:
-        score += _PLAN_WEIGHTS["materials"]
-    if session.lesson_type:
-        score += _PLAN_WEIGHTS["lesson_type"]
-    if session.keywords:
-        score += _PLAN_WEIGHTS["keywords"]
-    return score
-
-
-def _plan_filled_count(session: LessonSession) -> int:
-    count = 0
-    if session.topic and session.topic.strip():
-        count += 1
-    if session.lesson_type:
-        count += 1
-    if session.objectives:
-        count += 1
-    if session.keywords:
-        count += 1
-    if session.homework and session.homework.strip():
-        count += 1
-    if session.materials:
-        count += 1
-    return count
-
 
 def _parse_holidays(holidays: list | None) -> set[date]:
     """Parse holiday list into a set of dates."""
@@ -346,7 +325,6 @@ async def get_teacher_detail(
     # Get existing sessions
     sessions_q = await db.execute(
         select(LessonSession)
-        .options(selectinload(LessonSession.materials))
         .where(
             LessonSession.session_date >= sd,
             LessonSession.session_date <= ed,
@@ -356,11 +334,30 @@ async def get_teacher_detail(
     )
     sessions = sessions_q.scalars().all()
 
+    # Get existing plans
+    plans_q = await db.execute(
+        select(LessonPlan)
+        .options(selectinload(LessonPlan.materials))
+        .where(
+            LessonPlan.schedule_entry_id.in_(entry_ids) if entry_ids else LessonPlan.id < 0,
+            LessonPlan.plan_date >= sd,
+            LessonPlan.plan_date <= ed,
+            LessonPlan.is_deleted == False,  # noqa: E712
+        )
+    )
+    plans = plans_q.scalars().all()
+
     # Index sessions by (entry_id, date)
     session_map: dict[tuple[int, date], LessonSession] = {}
     for s in sessions:
         if s.schedule_entry_id:
             session_map[(s.schedule_entry_id, s.session_date)] = s
+
+    # Index plans by (entry_id, date)
+    plan_map: dict[tuple[int, date], LessonPlan] = {}
+    for p in plans:
+        if p.schedule_entry_id:
+            plan_map[(p.schedule_entry_id, p.plan_date)] = p
 
     # Generate ALL expected lessons from schedule
     result_sessions: list[TeacherSessionDetail] = []
@@ -372,50 +369,25 @@ async def get_teacher_detail(
         while cur <= ed:
             if cur.weekday() == py_dow and cur not in holiday_set:
                 s = session_map.get((entry.id, cur))
-                if s:
-                    result_sessions.append(TeacherSessionDetail(
-                        session_id=s.id,
-                        session_date=cur,
-                        status=s.status,
-                        subject_name=entry.subject.name if entry.subject else "—",
-                        grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
-                        period_number=ts.period_number if ts else 0,
-                        start_time=str(ts.start_time)[:5] if ts else "",
-                        end_time=str(ts.end_time)[:5] if ts else "",
-                        started_at=s.started_at,
-                        ended_at=s.ended_at,
-                        topic=s.topic,
-                        lesson_type=s.lesson_type,
-                        objectives=s.objectives,
-                        keywords=s.keywords,
-                        homework=s.homework,
-                        materials=[
-                            TeacherSessionMaterial(id=m.id, file_url=m.file_url, original_name=m.original_name)
-                            for m in s.materials
-                        ],
-                        plan_filled_count=_plan_filled_count(s),
-                    ))
-                else:
-                    # No session — expected but not created
-                    result_sessions.append(TeacherSessionDetail(
-                        session_id=0,
-                        session_date=cur,
-                        status="not_created",
-                        subject_name=entry.subject.name if entry.subject else "—",
-                        grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
-                        period_number=ts.period_number if ts else 0,
-                        start_time=str(ts.start_time)[:5] if ts else "",
-                        end_time=str(ts.end_time)[:5] if ts else "",
-                        started_at=None,
-                        ended_at=None,
-                        topic=None,
-                        lesson_type=None,
-                        objectives=None,
-                        keywords=None,
-                        homework=None,
-                        materials=[],
-                        plan_filled_count=0,
-                    ))
+                p = plan_map.get((entry.id, cur))
+
+                status = s.status if s else ("not_created" if not p else "not_created")
+                result_sessions.append(TeacherSessionDetail(
+                    session_id=s.id if s else 0,
+                    session_date=cur,
+                    status=status,
+                    subject_name=entry.subject.name if entry.subject else "—",
+                    grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
+                    period_number=ts.period_number if ts else 0,
+                    start_time=str(ts.start_time)[:5] if ts else "",
+                    end_time=str(ts.end_time)[:5] if ts else "",
+                    started_at=s.started_at if s else None,
+                    ended_at=s.ended_at if s else None,
+                    plan_id=p.id if p else None,
+                    topic=p.topic if p else None,
+                    lesson_type=p.lesson_type if p else None,
+                    plan_filled_count=_plan_filled_count(p) if p else 0,
+                ))
             cur = _next_day(cur)
 
     # Sort by date asc, then period

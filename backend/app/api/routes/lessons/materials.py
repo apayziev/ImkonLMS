@@ -1,4 +1,4 @@
-"""Lesson materials: upload and delete."""
+"""Lesson materials: upload and delete (attached to lesson plans)."""
 
 from pathlib import Path
 
@@ -11,28 +11,28 @@ from app.core.uploads import validate_and_save_file
 from app.models.lesson_material import LessonMaterial
 from app.schemas.lessons import LessonMaterialRead
 
-from ._helpers import MATERIALS_UPLOAD_DIR, _get_teacher_session, _require_teacher
+from ._helpers import MATERIALS_UPLOAD_DIR, _get_teacher_plan, _require_teacher
 
 router = APIRouter()
 
 
-@router.post("/sessions/{session_id}/materials", response_model=LessonMaterialRead)
+@router.post("/plans/{plan_id}/materials", response_model=LessonMaterialRead)
 async def upload_material(
-    session_id: int,
+    plan_id: int,
     db: SessionDep,
     current_user: CurrentUser,
     file: UploadFile = File(...),
 ) -> LessonMaterialRead:
-    """Upload a file to a lesson session."""
+    """Upload a file to a lesson plan."""
     _require_teacher(current_user)
-    session = await _get_teacher_session(db, session_id, current_user.id)
+    plan = await _get_teacher_plan(db, plan_id, current_user.id)
 
     file_url, original_name, file_size = await validate_and_save_file(
-        file, MATERIALS_UPLOAD_DIR, filename_prefix=f"{session_id}_",
+        file, MATERIALS_UPLOAD_DIR, filename_prefix=f"plan{plan_id}_",
     )
 
     material = LessonMaterial(
-        lesson_session_id=session_id,
+        lesson_plan_id=plan.id,
         file_url=file_url,
         original_name=original_name,
         file_size=file_size,
@@ -49,21 +49,21 @@ async def upload_material(
     )
 
 
-@router.delete("/sessions/{session_id}/materials/{material_id}", status_code=200)
+@router.delete("/plans/{plan_id}/materials/{material_id}", status_code=200)
 async def delete_material(
-    session_id: int,
+    plan_id: int,
     material_id: int,
     db: SessionDep,
     current_user: CurrentUser,
 ) -> dict:
-    """Delete a material from a lesson session."""
+    """Delete a material from a lesson plan."""
     _require_teacher(current_user)
-    session = await _get_teacher_session(db, session_id, current_user.id)
+    plan = await _get_teacher_plan(db, plan_id, current_user.id)
 
     material = (await db.execute(
         select(LessonMaterial).where(
             LessonMaterial.id == material_id,
-            LessonMaterial.lesson_session_id == session_id,
+            LessonMaterial.lesson_plan_id == plan.id,
             LessonMaterial.is_deleted == False,  # noqa: E712
         )
     )).scalar_one_or_none()

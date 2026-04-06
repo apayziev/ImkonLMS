@@ -4,7 +4,6 @@ from enum import Enum
 
 
 class SessionStatus(str, Enum):
-    PLANNED = "planned"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
 

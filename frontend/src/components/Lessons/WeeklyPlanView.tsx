@@ -23,14 +23,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getTodayLessonsQueryOptions, getLessonSessionQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
+import { getTodayLessonsQueryOptions, getLessonPlanQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
-import { UZ_WEEKDAYS_FULL, UZ_MONTHS } from "./constants"
+import { UZ_WEEKDAYS_FULL, UZ_MONTHS, PLAN_TOTAL_FIELDS } from "./constants"
 import { toDateString, todayStr, lessonStatusFlags } from "./formatters"
 
 export type EditingTarget =
-  | { type: "existing"; sessionId: number }
+  | { type: "existing"; planId: number; scheduleEntryId: number; date: string }
   | { type: "new"; scheduleEntryId: number; date: string }
 
 export function WeeklyPlanView({
@@ -108,7 +108,12 @@ export function WeeklyPlanView({
           key={toDateString(day)}
           day={day}
           today={today}
-          onSessionOpen={(sessionId) => onEditingChange({ type: "existing", sessionId })}
+          onSessionOpen={(lesson, date) => onEditingChange({
+            type: "existing",
+            planId: lesson.plan_id!,
+            scheduleEntryId: lesson.schedule_entry_id,
+            date,
+          })}
           onNewPlan={(lesson, date) => onEditingChange({ type: "new", scheduleEntryId: lesson.schedule_entry_id, date })}
         />
       ))}
@@ -116,7 +121,7 @@ export function WeeklyPlanView({
   )
 }
 
-/** Plan editor — shows only TopicHomeworkSection (no attendance/grades) */
+/** Plan editor — shows TopicHomeworkSection for plan editing */
 function PlanEditor({
   editing,
   onBack,
@@ -125,43 +130,38 @@ function PlanEditor({
   onBack: () => void
 }) {
   const queryClient = useQueryClient()
-  const [createdSessionId, setCreatedSessionId] = useState<number | null>(null)
+  const [createdPlanId, setCreatedPlanId] = useState<number | null>(null)
 
   // For new plans, look up lesson info from todayLessons cache
   const { data: lessonsData, isLoading: lessonsLoading } = useQuery({
-    ...getTodayLessonsQueryOptions(editing.type === "new" ? editing.date : ""),
-    enabled: editing.type === "new",
+    ...getTodayLessonsQueryOptions(editing.date),
     staleTime: 5 * 60 * 1000,
   })
-  const newLesson = editing.type === "new"
-    ? lessonsData?.data?.find(l => l.schedule_entry_id === editing.scheduleEntryId)
-    : undefined
+  const lesson = lessonsData?.data?.find(l => l.schedule_entry_id === editing.scheduleEntryId)
 
-  // Auto-resolve: if session already exists for this entry (e.g. after refresh), use it
-  const resolvedSessionId = editing.type === "existing"
-    ? editing.sessionId
-    : (createdSessionId ?? newLesson?.session_id ?? null)
+  const resolvedPlanId = editing.type === "existing"
+    ? editing.planId
+    : (createdPlanId ?? lesson?.plan_id ?? null)
 
-  // Load session from API when we have a session ID
-  const { data: session, isLoading } = useQuery({
-    ...getLessonSessionQueryOptions(resolvedSessionId ?? 0),
-    enabled: !!resolvedSessionId,
+  // Load plan from API when we have a plan ID
+  const { data: plan, isLoading } = useQuery({
+    ...getLessonPlanQueryOptions(resolvedPlanId ?? 0),
+    enabled: !!resolvedPlanId,
   })
 
-  // Lazy session creation for new plans
-  const createSession = useCallback(async () => {
-    if (editing.type !== "new") throw new Error("Invalid state")
-    const res = await lessonsApi.planSession(editing.scheduleEntryId, editing.date)
-    setCreatedSessionId(res.data.id)
-    queryClient.setQueryData(queryKeys.lessonSession(res.data.id), res.data)
+  // Lazy plan creation for new plans
+  const createPlan = useCallback(async () => {
+    const res = await lessonsApi.createPlan(editing.scheduleEntryId, editing.date)
+    setCreatedPlanId(res.data.id)
+    queryClient.setQueryData(queryKeys.lessonPlan(res.data.id), res.data)
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
     queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(editing.date) })
     return res.data
   }, [editing, queryClient])
 
   if (
-    (editing.type === "new" && !resolvedSessionId && lessonsLoading) ||
-    (resolvedSessionId && (isLoading || !session))
+    (!resolvedPlanId && lessonsLoading) ||
+    (resolvedPlanId && (isLoading || !plan))
   ) {
     return (
       <div className="space-y-6">
@@ -171,29 +171,11 @@ function PlanEditor({
     )
   }
 
-  // Use query data if available, otherwise empty session for new plans
-  const displaySession: import("@/lib/api").SessionDetailRead = session ?? {
-    id: 0,
-    schedule_entry_id: editing.type === "new" ? editing.scheduleEntryId : 0,
-    session_date: editing.type === "new" ? editing.date : "",
-    started_at: "",
-    ended_at: null,
-    status: "planned",
-    grade_display: newLesson?.grade_display ?? "",
-    subject_name: newLesson?.subject_name ?? "",
-    period_number: newLesson?.period_number ?? 0,
-    start_time: newLesson?.start_time ?? "",
-    end_time: newLesson?.end_time ?? "",
-    teacher_name: "",
-    topic: null,
-    homework: null,
-    homework_deadline: null,
-    lesson_type: null,
-    objectives: null,
-    keywords: null,
-    students: [],
-    materials: [],
-  }
+  const gradeDisplay = lesson?.grade_display ?? ""
+  const subjectName = lesson?.subject_name ?? ""
+  const periodNumber = lesson?.period_number ?? 0
+  const startTime = lesson?.start_time ?? ""
+  const endTime = lesson?.end_time ?? ""
 
   return (
     <div className="space-y-6">
@@ -202,19 +184,18 @@ function PlanEditor({
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-2xl font-bold">
-          {displaySession.grade_display} — {displaySession.subject_name}
+          {gradeDisplay} — {subjectName}
           <span className="text-base font-normal text-muted-foreground ml-2">
-            {displaySession.period_number}-soat · {displaySession.start_time} – {displaySession.end_time}
+            {periodNumber}-soat · {startTime} – {endTime}
           </span>
         </h1>
       </div>
 
       <TopicHomeworkSection
-        session={displaySession}
-        sessionId={resolvedSessionId ?? 0}
-        disabled={displaySession.status === "completed"}
-        homeworkEditable={displaySession.status === "in_progress"}
-        {...(!resolvedSessionId && { createSession })}
+        plan={plan ?? null}
+        planId={resolvedPlanId}
+        disabled={false}
+        {...(!resolvedPlanId && { createPlan })}
       />
     </div>
   )
@@ -229,7 +210,7 @@ function DayLessons({
 }: {
   day: Date
   today: string
-  onSessionOpen: (sessionId: number) => void
+  onSessionOpen: (lesson: TodayLessonRead, date: string) => void
   onNewPlan: (lesson: TodayLessonRead, date: string) => void
 }) {
   const ds = toDateString(day)
@@ -265,24 +246,22 @@ function DayLessons({
       ) : (
         <div className="space-y-1.5 mb-3">
           {lessons.map((lesson) => {
-            const { isInProgress, isCompleted, isPlanned } = lessonStatusFlags(lesson)
-            const hasSession = !!lesson.session_id
+            const { isInProgress, isCompleted, hasPlan } = lessonStatusFlags(lesson)
             const hasContent = lesson.plan_filled_count > 0
-            const hasPlan = hasContent || isInProgress
 
             return (
               <div
                 key={`${ds}-${lesson.schedule_entry_id}`}
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
-                  isCompleted && hasContent && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
+                  isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
                   isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
-                  isPlanned && hasContent && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
-                  !hasPlan && "border-border hover:bg-muted/20",
+                  hasPlan && !isInProgress && !isCompleted && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
+                  !hasPlan && !isInProgress && !isCompleted && "border-border hover:bg-muted/20",
                 )}
                 onClick={() => {
-                  if (hasSession) {
-                    onSessionOpen(lesson.session_id!)
+                  if (lesson.plan_id) {
+                    onSessionOpen(lesson, ds)
                   } else {
                     onNewPlan(lesson, ds)
                   }
@@ -292,13 +271,13 @@ function DayLessons({
                 <div
                   className={cn(
                     "flex items-center justify-center h-8 w-8 rounded-full shrink-0",
-                    isCompleted && hasContent && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
+                    isCompleted && "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal)]",
                     isInProgress && "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)]",
-                    (isPlanned || (isCompleted && !hasContent)) && hasContent && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
-                    !hasPlan && "bg-muted text-muted-foreground",
+                    hasPlan && !isInProgress && !isCompleted && "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]",
+                    !hasPlan && !isInProgress && !isCompleted && "bg-muted text-muted-foreground",
                   )}
                 >
-                  {isCompleted && hasContent ? (
+                  {isCompleted ? (
                     <Check className="h-4 w-4" />
                   ) : isInProgress ? (
                     <Play className="h-4 w-4" />
@@ -325,7 +304,7 @@ function DayLessons({
 
                 {/* Status badge + progress */}
                 <div className="shrink-0 flex flex-col items-end gap-1">
-                  {isCompleted && hasContent ? (
+                  {isCompleted ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)] font-medium">
                       Tugallangan
                     </span>
@@ -333,7 +312,7 @@ function DayLessons({
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)] font-medium">
                       Davom etmoqda
                     </span>
-                  ) : isPlanned && hasContent ? (
+                  ) : hasPlan ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]/70 font-medium">
                       Rejalashtirilgan
                     </span>
@@ -347,16 +326,16 @@ function DayLessons({
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          lesson.plan_filled_count >= 6
+                          lesson.plan_filled_count >= PLAN_TOTAL_FIELDS
                             ? "bg-[var(--imkon-teal)]"
-                            : lesson.plan_filled_count >= 3
+                            : lesson.plan_filled_count >= Math.floor(PLAN_TOTAL_FIELDS / 2)
                               ? "bg-[var(--imkon-purple)]"
                               : "bg-[var(--imkon-purple)]/50",
                         )}
-                        style={{ width: `${Math.round((lesson.plan_filled_count / 6) * 100)}%` }}
+                        style={{ width: `${Math.round((lesson.plan_filled_count / PLAN_TOTAL_FIELDS) * 100)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{lesson.plan_filled_count}/6</span>
+                    <span className="text-[10px] text-muted-foreground">{lesson.plan_filled_count}/{PLAN_TOTAL_FIELDS}</span>
                   </div>
                 </div>
               </div>

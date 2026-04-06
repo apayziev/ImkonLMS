@@ -9,12 +9,12 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import today_local
 from app.core.formatting import format_time
+from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.schemas.lessons import SessionStatusItem, SessionStatusesResponse, TodayLessonRead, TodayLessonsResponse
-from app.api.routes.lessons.stats import _plan_filled_count
 
-from ._helpers import ENTRY_LOAD, _require_teacher
+from ._helpers import ENTRY_LOAD, _plan_filled_count, _require_teacher
 
 router = APIRouter()
 
@@ -80,10 +80,9 @@ async def get_today_lessons(
     # Fetch today's sessions for this teacher's entries
     entry_ids = [e.id for e in entries]
     sessions_map: dict[int, LessonSession] = {}
+    plans_map: dict[int, LessonPlan] = {}
     if entry_ids:
-        sess_query = select(LessonSession).options(
-            selectinload(LessonSession.materials),
-        ).where(
+        sess_query = select(LessonSession).where(
             LessonSession.schedule_entry_id.in_(entry_ids),
             LessonSession.session_date == today,
             LessonSession.is_deleted == False,  # noqa: E712
@@ -92,10 +91,22 @@ async def get_today_lessons(
         for s in sess_result.scalars().all():
             sessions_map[s.schedule_entry_id] = s
 
+        plan_query = select(LessonPlan).options(
+            selectinload(LessonPlan.materials),
+        ).where(
+            LessonPlan.schedule_entry_id.in_(entry_ids),
+            LessonPlan.plan_date == today,
+            LessonPlan.is_deleted == False,  # noqa: E712
+        )
+        plan_result = await db.execute(plan_query)
+        for p in plan_result.scalars().all():
+            plans_map[p.schedule_entry_id] = p
+
     # Build response sorted by period_number
     lessons = []
     for entry in sorted(entries, key=lambda e: e.time_slot.period_number if e.time_slot else 0):
         session = sessions_map.get(entry.id)
+        plan = plans_map.get(entry.id)
         lessons.append(
             TodayLessonRead(
                 schedule_entry_id=entry.id,
@@ -109,7 +120,8 @@ async def get_today_lessons(
                 room=entry.room,
                 session_id=session.id if session else None,
                 session_status=session.status if session else None,
-                plan_filled_count=_plan_filled_count(session) if session else 0,
+                plan_id=plan.id if plan else None,
+                plan_filled_count=_plan_filled_count(plan) if plan else 0,
             )
         )
 

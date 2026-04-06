@@ -4,6 +4,7 @@ from .academic_year import AcademicYear
 from .base import BaseModel
 from .grade import Grade
 from .lesson_material import LessonMaterial
+from .lesson_plan import LessonPlan
 from .lesson_session import LessonSession
 from .quarter import Quarter
 from .schedule_entry import ScheduleEntry
@@ -21,6 +22,7 @@ __all__ = [
     "AcademicYear",
     "BaseModel",
     "Grade",
+    "LessonPlan",
     "LessonSession",
     "ScheduleEntry",
     "SchoolSettings",

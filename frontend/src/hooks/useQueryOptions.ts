@@ -15,6 +15,7 @@ export const queryKeys = {
   todayLessons: ["today-lessons"] as const,
   lessonsForDate: (date: string) => ["lessons-for-date", date] as const,
   lessonSession: (id: number) => ["lesson-session", id] as const,
+  lessonPlan: (id: number) => ["lesson-plan", id] as const,
   quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
   attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
   yellowCards: (sessionId: number) => ["yellow-cards", sessionId] as const,
@@ -159,6 +160,17 @@ export function getLessonSessionQueryOptions(sessionId: number) {
       return data
     },
     enabled: sessionId > 0,
+  }
+}
+
+export function getLessonPlanQueryOptions(planId: number) {
+  return {
+    queryKey: queryKeys.lessonPlan(planId),
+    queryFn: async () => {
+      const { data } = await lessonsApi.getPlan(planId)
+      return data
+    },
+    enabled: planId > 0,
   }
 }
 

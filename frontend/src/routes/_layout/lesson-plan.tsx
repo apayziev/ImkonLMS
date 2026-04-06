@@ -6,7 +6,7 @@ import { toDateString } from "@/components/Lessons/formatters"
 
 type LessonPlanSearch = {
   date?: string
-  sessionId?: number
+  planId?: number
   entryId?: number
   entryDate?: string
 }
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_layout/lesson-plan")({
   }),
   validateSearch: (search: Record<string, unknown>): LessonPlanSearch => ({
     date: typeof search.date === "string" ? search.date : undefined,
-    sessionId: Number(search.sessionId) || undefined,
+    planId: Number(search.planId) || undefined,
     entryId: Number(search.entryId) || undefined,
     entryDate: typeof search.entryDate === "string" ? search.entryDate : undefined,
   }),
@@ -30,8 +30,8 @@ function LessonPlanPage() {
 
   const planDate = search.date ? new Date(search.date + "T12:00:00") : new Date()
 
-  const editing: EditingTarget | null = search.sessionId
-    ? { type: "existing", sessionId: search.sessionId }
+  const editing: EditingTarget | null = search.planId && search.entryId && search.entryDate
+    ? { type: "existing", planId: search.planId, scheduleEntryId: search.entryId, date: search.entryDate }
     : search.entryId && search.entryDate
       ? { type: "new", scheduleEntryId: search.entryId, date: search.entryDate }
       : null
@@ -47,7 +47,7 @@ function LessonPlanPage() {
           if (!target) {
             navigate({ to: "/lesson-plan", search: { date: search.date } })
           } else if (target.type === "existing") {
-            navigate({ to: "/lesson-plan", search: { date: search.date, sessionId: target.sessionId } })
+            navigate({ to: "/lesson-plan", search: { date: search.date, planId: target.planId, entryId: target.scheduleEntryId, entryDate: target.date } })
           } else {
             navigate({ to: "/lesson-plan", search: { date: search.date, entryId: target.scheduleEntryId, entryDate: target.date } })
           }

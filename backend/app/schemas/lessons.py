@@ -1,4 +1,4 @@
-"""Lesson session & attendance schemas."""
+"""Lesson plan, session & attendance schemas."""
 
 from datetime import date
 
@@ -10,7 +10,7 @@ from app.core.enums import AttendanceStatus, SessionStatus
 
 
 class TodayLessonRead(BaseModel):
-    """A single scheduled lesson for today, enriched with session status."""
+    """A single scheduled lesson for today, enriched with session/plan status."""
 
     schedule_entry_id: int
     grade_id: int
@@ -25,7 +25,10 @@ class TodayLessonRead(BaseModel):
     # Session info (None if not started)
     session_id: int | None = None
     session_status: SessionStatus | None = None
-    plan_filled_count: int = 0  # 0-6: topic, lesson_type, objectives, keywords, homework, materials
+
+    # Plan info
+    plan_id: int | None = None
+    plan_filled_count: int = 0
 
 
 class TodayLessonsResponse(BaseModel):
@@ -41,6 +44,49 @@ class SessionStatusItem(BaseModel):
 
 class SessionStatusesResponse(BaseModel):
     data: list[SessionStatusItem]
+
+
+# --- Lesson Plan ---
+
+
+class LessonPlanStageRead(BaseModel):
+    title: str
+    duration_min: int
+    activity: str
+
+
+class LessonPlanRead(BaseModel):
+    id: int
+    schedule_entry_id: int | None
+    plan_date: str
+    topic: str | None = None
+    lesson_type: str | None = None
+    objectives: list[str] | None = None
+    keywords: list[str] | None = None
+    homework: str | None = None
+    homework_deadline: str | None = None
+    stages: list[LessonPlanStageRead] | None = None
+    resources: str | None = None
+    assessment_method: str | None = None
+    materials: list["LessonMaterialRead"] = []
+    plan_filled_count: int = 0
+
+
+class LessonPlanCreateRequest(BaseModel):
+    schedule_entry_id: int
+    target_date: date | None = None
+
+
+class LessonPlanUpdateRequest(BaseModel):
+    topic: str | None = None
+    homework: str | None = None
+    homework_deadline: str | None = None
+    lesson_type: str | None = None
+    objectives: list[str] | None = None
+    keywords: list[str] | None = None
+    stages: list[LessonPlanStageRead] | None = None
+    resources: str | None = None
+    assessment_method: str | None = None
 
 
 # --- Session ---
@@ -88,27 +134,13 @@ class SessionDetailRead(BaseModel):
     end_time: str
     teacher_name: str
 
-    topic: str | None = None
-    homework: str | None = None
-    homework_deadline: str | None = None
-    lesson_type: str | None = None
-    objectives: list[str] | None = None
-    keywords: list[str] | None = None
+    # Plan (linked)
+    plan: LessonPlanRead | None = None
 
     students: list[SessionStudentRead]
-    materials: list[LessonMaterialRead] = []
 
 
 # --- Attendance update ---
-
-
-class SessionUpdateRequest(BaseModel):
-    topic: str | None = None
-    homework: str | None = None
-    homework_deadline: str | None = None
-    lesson_type: str | None = None
-    objectives: list[str] | None = None
-    keywords: list[str] | None = None
 
 
 class AttendanceUpdateRequest(BaseModel):

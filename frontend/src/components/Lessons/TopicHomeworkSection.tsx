@@ -9,7 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { SessionDetailRead } from "@/lib/api"
+import type { LessonPlanRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -28,72 +28,69 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
-import { LESSON_TYPES, SUGGESTED_KEYWORDS } from "./constants"
+import { ASSESSMENT_METHODS, LESSON_TYPES, SUGGESTED_KEYWORDS } from "./constants"
 import { SaveStatusIndicator } from "./formatters"
 
 export function TopicHomeworkSection({
-  session,
-  sessionId: initialSessionId,
+  plan,
+  planId: initialPlanId,
   disabled,
   homeworkEditable = false,
-  createSession,
+  createPlan,
 }: {
-  session: SessionDetailRead
-  sessionId: number
+  plan: LessonPlanRead | null
+  planId: number | null
   disabled: boolean
   homeworkEditable?: boolean
-  createSession?: () => Promise<SessionDetailRead>
+  createPlan?: () => Promise<LessonPlanRead>
 }) {
   const queryClient = useQueryClient()
   const { status: saveStatus, onMutate, onSuccess, onError } = useSaveStatus()
 
-  // Session ID may be 0 initially for new plans — resolved after lazy creation
-  const sessionIdRef = useRef(initialSessionId)
+  const planIdRef = useRef(initialPlanId ?? 0)
 
-  const [lessonType, setLessonType] = useState(session.lesson_type ?? "")
-  const [topic, setTopic] = useState(session.topic ?? "")
-  const [homework, setHomework] = useState(session.homework ?? "")
-  const [deadline, setDeadline] = useState(session.homework_deadline ?? "")
-  const [objectives, setObjectives] = useState<string[]>(session.objectives ?? [""])
-  const [keywords, setKeywords] = useState<string[]>(session.keywords ?? [])
+  const [lessonType, setLessonType] = useState(plan?.lesson_type ?? "")
+  const [topic, setTopic] = useState(plan?.topic ?? "")
+  const [homework, setHomework] = useState(plan?.homework ?? "")
+  const [deadline, setDeadline] = useState(plan?.homework_deadline ?? "")
+  const [objectives, setObjectives] = useState<string[]>(plan?.objectives ?? [""])
+  const [keywords, setKeywords] = useState<string[]>(plan?.keywords ?? [])
   const [keywordInput, setKeywordInput] = useState("")
+  const [resources, setResources] = useState(plan?.resources ?? "")
+  const [assessmentMethod, setAssessmentMethod] = useState(plan?.assessment_method ?? "")
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // Sync state when session data changes externally
   useEffect(() => {
-    setLessonType(session.lesson_type ?? "")
-    setTopic(session.topic ?? "")
-    setHomework(session.homework ?? "")
-    setDeadline(session.homework_deadline ?? "")
-    setObjectives(session.objectives ?? [""])
-    setKeywords(session.keywords ?? [])
-  }, [session.lesson_type, session.topic, session.homework, session.homework_deadline, session.objectives, session.keywords])
+    setLessonType(plan?.lesson_type ?? "")
+    setTopic(plan?.topic ?? "")
+    setHomework(plan?.homework ?? "")
+    setDeadline(plan?.homework_deadline ?? "")
+    setObjectives(plan?.objectives ?? [""])
+    setKeywords(plan?.keywords ?? [])
+    setResources(plan?.resources ?? "")
+    setAssessmentMethod(plan?.assessment_method ?? "")
+  }, [plan?.lesson_type, plan?.topic, plan?.homework, plan?.homework_deadline, plan?.objectives, plan?.keywords, plan?.resources, plan?.assessment_method])
 
   useEffect(() => {
     return () => clearTimeout(debounceRef.current)
   }, [])
 
+  const ensurePlanId = async (): Promise<number> => {
+    if (planIdRef.current) return planIdRef.current
+    if (!createPlan) throw new Error("No createPlan callback")
+    const created = await createPlan()
+    planIdRef.current = created.id
+    return created.id
+  }
+
   const mutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      // Lazy session creation: if sessionId is 0, create plan first
-      if (!sessionIdRef.current && createSession) {
-        const created = await createSession()
-        sessionIdRef.current = created.id
-        queryClient.setQueryData(
-          queryKeys.lessonSession(created.id),
-          created,
-        )
-      }
-      return lessonsApi.updateSession(sessionIdRef.current, data)
+      const pid = await ensurePlanId()
+      return lessonsApi.updatePlan(pid, data)
     },
     onMutate,
-    onSuccess: (response) => {
+    onSuccess: () => {
       onSuccess()
-      queryClient.setQueryData(
-        queryKeys.lessonSession(sessionIdRef.current),
-        (old: SessionDetailRead | undefined) =>
-          old ? { ...old, ...response.data } : old,
-      )
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
     },
     onError: () => {
@@ -162,39 +159,23 @@ export function TopicHomeworkSection({
 
   // File upload/delete handlers
   const handleUpload = async (file: File, onProgress?: (percent: number) => void) => {
-    // Lazy session creation for file upload
-    if (!sessionIdRef.current && createSession) {
-      const created = await createSession()
-      sessionIdRef.current = created.id
-      queryClient.setQueryData(
-        queryKeys.lessonSession(created.id),
-        created,
-      )
-    }
-    const sid = sessionIdRef.current
-    const response = await lessonsApi.uploadMaterial(sid, file, onProgress)
-    queryClient.setQueryData(
-      queryKeys.lessonSession(sid),
-      (old: SessionDetailRead | undefined) =>
-        old ? { ...old, materials: [...(old.materials ?? []), response.data] } : old,
-    )
+    const pid = await ensurePlanId()
+    const response = await lessonsApi.uploadMaterial(pid, file, onProgress)
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+    return response
   }
 
   const handleDelete = async (materialId: number) => {
-    const sid = sessionIdRef.current
-    await lessonsApi.deleteMaterial(sid, materialId)
-    queryClient.setQueryData(
-      queryKeys.lessonSession(sid),
-      (old: SessionDetailRead | undefined) =>
-        old ? { ...old, materials: (old.materials ?? []).filter((m) => m.id !== materialId) } : old,
-    )
+    const pid = planIdRef.current
+    if (!pid) return
+    await lessonsApi.deleteMaterial(pid, materialId)
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
   }
 
-  const materialsCount = (session.materials ?? []).length
+  const materials = plan?.materials ?? []
+  const materialsCount = materials.length
 
-  // Progress tracking
+  // Progress tracking (8 fields, stages excluded from quick editor)
   const fields = [
     { label: "Dars turi", filled: !!lessonType },
     { label: "Mavzu", filled: !!topic.trim() },
@@ -202,6 +183,8 @@ export function TopicHomeworkSection({
     { label: "Kalit so'zlar", filled: keywords.length > 0 },
     { label: "Uyga vazifa", filled: !!homework.trim() },
     { label: "Materiallar", filled: materialsCount > 0 },
+    { label: "Resurslar", filled: !!resources.trim() },
+    { label: "Baholash usuli", filled: !!assessmentMethod },
   ]
   const filledCount = fields.filter((f) => f.filled).length
   const totalCount = fields.length
@@ -426,10 +409,50 @@ export function TopicHomeworkSection({
         </div>
       </div>
 
+      {/* Row 5: Resources + Assessment Method */}
+      <div className="grid gap-4 md:grid-cols-[1fr_200px] border-t pt-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Resurslar</label>
+          <Textarea
+            placeholder="Darsda ishlatiladigan resurslar..."
+            value={resources}
+            onChange={(e) => {
+              setResources(e.target.value)
+              saveDebounced({ resources: e.target.value || null })
+            }}
+            disabled={disabled}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Baholash usuli</label>
+          <Select
+            value={assessmentMethod}
+            onValueChange={(v) => {
+              setAssessmentMethod(v)
+              saveImmediate({ assessment_method: v })
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Tanlang..." />
+            </SelectTrigger>
+            <SelectContent>
+              {ASSESSMENT_METHODS.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Materials */}
       <div className="border-t pt-4">
         <FileUploadSection
-          files={(session.materials ?? []).map((m) => ({
+          files={materials.map((m) => ({
             id: m.id,
             file_url: m.file_url,
             original_name: m.original_name,

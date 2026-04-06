@@ -1,7 +1,6 @@
 import {
   CheckCircle2,
   Clock,
-  FileText,
   Loader2,
   Play,
 } from "lucide-react"
@@ -11,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { PatternCard } from "@/components/Common/PatternCard"
 import { lessonStatusFlags } from "./formatters"
+import { PLAN_TOTAL_FIELDS } from "./constants"
 
 export function LessonCard({
   lesson,
@@ -25,7 +25,7 @@ export function LessonCard({
   isStarting: boolean
   canStart: boolean
 }) {
-  const { isInProgress, isCompleted, isPlanned } = lessonStatusFlags(lesson)
+  const { isInProgress, isCompleted, hasPlan } = lessonStatusFlags(lesson)
 
   return (
     <PatternCard
@@ -34,8 +34,7 @@ export function LessonCard({
         "rounded-xl border-2 p-5 transition-colors",
         isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
         isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
-        isPlanned && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
-        !isInProgress && !isCompleted && !isPlanned && "border-border",
+        !isInProgress && !isCompleted && "border-border",
       )}
     >
       <div className="flex items-start justify-between mb-4">
@@ -66,32 +65,17 @@ export function LessonCard({
           <Play className="mr-2 h-5 w-5" />
           Davom etish
         </Button>
-      ) : isPlanned ? (
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Button size="lg" className="flex-1 text-lg h-12" variant="outline" onClick={onContinue}>
-              <FileText className="mr-2 h-5 w-5" />
-              Rejani ko'rish
-            </Button>
-            {canStart && (
-              <Button size="lg" className="flex-1 text-lg h-12" onClick={onStart} disabled={isStarting}>
-                {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
-                Darsni boshlash
-              </Button>
-            )}
-          </div>
-          {!canStart && (
-            <p className="text-xs text-muted-foreground text-center">
-              Kelajakdagi darsni hali boshlash mumkin emas
-            </p>
-          )}
-        </div>
       ) : (
         <div className="space-y-2">
           <Button size="lg" className="w-full text-lg h-12" onClick={onStart} disabled={!canStart || isStarting}>
             {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
             Darsni boshlash
           </Button>
+          {hasPlan && (
+            <p className="text-xs text-muted-foreground text-center">
+              Reja tayyor ({lesson.plan_filled_count}/{PLAN_TOTAL_FIELDS})
+            </p>
+          )}
           {!canStart && (
             <p className="text-xs text-muted-foreground text-center">
               Kelajakdagi darsni hali boshlash mumkin emas

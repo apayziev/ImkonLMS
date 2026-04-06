@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, Download, FileText, Info, Users, X } from "lucide-react"
+import { ArrowLeft, BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, FileText, Info, Users, X } from "lucide-react"
 
 import type { TeacherStatRead, TeacherSessionDetail } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,7 +30,7 @@ import {
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { toDateString } from "@/components/Lessons/formatters"
 import { useMemo, useState } from "react"
-import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES } from "@/components/Lessons/constants"
+import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES, PLAN_TOTAL_FIELDS } from "@/components/Lessons/constants"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -190,7 +189,7 @@ export function TeacherStatsTab() {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Mavzu yozilgan darslar soni. Sifat: mavzu 30%, maqsadlar 25%, uy vazifasi 15%, materiallar 15%, dars turi 10%, kalit so'zlar 5%</p>
+                        <p>Mavzu yozilgan darslar soni. Sifat: 9 ta maydon to'ldirilishi (mavzu, maqsadlar, kalit so'zlar, uy vazifasi, muddat, dars turi, bosqichlar, resurslar, baholash usuli)</p>
                       </TooltipContent>
                     </Tooltip>
                   </th>
@@ -463,10 +462,12 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
         </td>
         <td className="py-2.5 px-3 border-b">
           <span className="font-bold">{s.grade_display}</span>
-          <span className="text-[10px] text-muted-foreground ml-1">{s.lesson_number}-dars</span>
         </td>
         <td className="py-2.5 px-3 text-muted-foreground border-b">{s.subject_name}</td>
-        <td className="py-2.5 px-3 text-center text-muted-foreground border-b">{s.period_number}</td>
+        <td className="py-2.5 px-3 text-center text-muted-foreground border-b">
+          {s.period_number}
+          <span className="text-[10px] text-muted-foreground ml-1">({s.lesson_number}-dars)</span>
+        </td>
         <td className="py-2.5 px-3 text-center text-xs text-muted-foreground border-b">{s.start_time}–{s.end_time}</td>
         <td className="py-2.5 px-3 text-center text-xs border-b">
           {s.started_at ? (
@@ -496,16 +497,16 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
               <div
                 className={cn(
                   "h-full rounded-full",
-                  s.plan_filled_count >= 6
+                  s.plan_filled_count >= 7
                     ? "bg-[var(--imkon-teal)]"
-                    : s.plan_filled_count >= 3
+                    : s.plan_filled_count >= 4
                       ? "bg-[var(--imkon-purple)]"
                       : "bg-[var(--imkon-purple)]/50",
                 )}
-                style={{ width: `${Math.round((s.plan_filled_count / 6) * 100)}%` }}
+                style={{ width: `${Math.round((s.plan_filled_count / PLAN_TOTAL_FIELDS) * 100)}%` }}
               />
             </div>
-            <span className="text-[10px] text-muted-foreground">{s.plan_filled_count}/6</span>
+            <span className="text-[10px] text-muted-foreground">{s.plan_filled_count}/{PLAN_TOTAL_FIELDS}</span>
           </div>
         </td>
         <td className="py-2.5 px-3 text-center border-b">
@@ -516,7 +517,8 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
       </tr>
       {expanded && (
         <tr className="border-b">
-          <td colSpan={9} className="px-6 py-3 bg-muted/5">
+          <td className="border-r" />
+          <td colSpan={8} className="px-6 py-3 bg-muted/5">
             {!hasContent ? (
               <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <X className="h-3.5 w-3.5 text-[var(--imkon-red)]" />
@@ -534,49 +536,6 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Dars turi</p>
                     <p className="text-sm">{LESSON_TYPES.find((t) => t.value === s.lesson_type)?.label ?? s.lesson_type}</p>
-                  </div>
-                )}
-                {s.objectives && s.objectives.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Maqsadlar</p>
-                    <ul className="text-sm list-disc list-inside">
-                      {s.objectives.map((o, i) => <li key={i}>{o}</li>)}
-                    </ul>
-                  </div>
-                )}
-                {s.keywords && s.keywords.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Kalit so'zlar</p>
-                    <div className="flex flex-wrap gap-1 mt-0.5">
-                      {s.keywords.map((k, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">{k}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {s.homework && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Uy vazifasi</p>
-                    <p className="text-sm">{s.homework}</p>
-                  </div>
-                )}
-                {s.materials.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Materiallar</p>
-                    <div className="flex flex-col gap-1 mt-0.5">
-                      {s.materials.map((m) => (
-                        <a
-                          key={m.id}
-                          href={m.file_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          <Download className="h-3 w-3" />
-                          {m.original_name}
-                        </a>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>

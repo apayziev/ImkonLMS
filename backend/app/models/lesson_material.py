@@ -1,4 +1,4 @@
-"""Lesson material — files attached to a lesson session by the teacher."""
+"""Lesson material — files attached to a lesson plan by the teacher."""
 
 import logging
 from pathlib import Path
@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 class LessonMaterial(BaseModel):
     __tablename__ = "lesson_material"
 
-    lesson_session_id: Mapped[int] = mapped_column(
-        ForeignKey("lesson_session.id"), index=True, kw_only=True,
+    lesson_plan_id: Mapped[int] = mapped_column(
+        ForeignKey("lesson_plan.id", ondelete="CASCADE"), index=True, kw_only=True,
     )
     file_url: Mapped[str] = mapped_column(Text, kw_only=True)
     original_name: Mapped[str] = mapped_column(String(255), kw_only=True)
     file_size: Mapped[int] = mapped_column(BigInteger, kw_only=True)
 
     # === Relationships ===
-    lesson_session: Mapped["LessonSession"] = relationship(init=False)
+    lesson_plan: Mapped["LessonPlan"] = relationship(init=False)
 
 
 @event.listens_for(LessonMaterial, "after_delete")

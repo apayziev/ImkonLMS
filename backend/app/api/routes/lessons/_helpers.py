@@ -10,12 +10,14 @@ from app.core.enums import SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.core.formatting import format_time
 from app.models.lesson_material import LessonMaterial
+from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.models.session_attendance import SessionAttendance
 from app.models.user import User, UserRole
 from app.schemas.lessons import (
     LessonMaterialRead,
+    LessonPlanRead,
     SessionDetailRead,
     SessionStudentRead,
 )
@@ -52,6 +54,24 @@ async def _get_teacher_session(db: SessionDep, session_id: int, teacher_id: int)
     return session
 
 
+async def _get_teacher_plan(db: SessionDep, plan_id: int, teacher_id: int) -> LessonPlan:
+    """Load a plan and verify the teacher owns it."""
+    query = (
+        select(LessonPlan)
+        .join(ScheduleEntry, LessonPlan.schedule_entry_id == ScheduleEntry.id)
+        .options(selectinload(LessonPlan.materials))
+        .where(
+            LessonPlan.id == plan_id,
+            LessonPlan.is_deleted == False,  # noqa: E712
+            ScheduleEntry.teacher_id == teacher_id,
+        )
+    )
+    plan = (await db.execute(query)).scalar_one_or_none()
+    if not plan:
+        raise NotFoundException("Dars rejasi topilmadi")
+    return plan
+
+
 def _require_not_completed(session: LessonSession) -> None:
     """Completed sessions are immutable."""
     if session.status == SessionStatus.COMPLETED:
@@ -67,7 +87,7 @@ async def _load_session_with_relations(db: SessionDep, session_id: int) -> Lesso
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.grade),
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
             selectinload(LessonSession.attendances),
-            selectinload(LessonSession.materials),
+            selectinload(LessonSession.lesson_plan).selectinload(LessonPlan.materials),
         )
         .where(LessonSession.id == session_id, LessonSession.is_deleted == False)  # noqa: E712
     )
@@ -90,13 +110,57 @@ async def _load_attendances_with_students(
     ]
 
 
-def _get_loaded_materials(session: LessonSession) -> list:
-    """Safely get materials if relationship is already loaded (avoids MissingGreenlet)."""
-    from sqlalchemy import inspect as sa_inspect
-    state = sa_inspect(session)
-    if "materials" in state.dict:
-        return session.materials or []
-    return []
+def _plan_filled_count(plan: LessonPlan) -> int:
+    """Count how many plan fields are filled (0-9)."""
+    count = 0
+    if plan.topic and plan.topic.strip():
+        count += 1
+    if plan.lesson_type:
+        count += 1
+    if plan.objectives:
+        count += 1
+    if plan.keywords:
+        count += 1
+    if plan.homework and plan.homework.strip():
+        count += 1
+    if plan.materials:
+        count += 1
+    if plan.stages:
+        count += 1
+    if plan.resources and plan.resources.strip():
+        count += 1
+    if plan.assessment_method:
+        count += 1
+    return count
+
+
+PLAN_TOTAL_FIELDS = 9
+
+
+def _build_plan_read(plan: LessonPlan) -> LessonPlanRead:
+    """Build a LessonPlanRead from a LessonPlan model."""
+    return LessonPlanRead(
+        id=plan.id,
+        schedule_entry_id=plan.schedule_entry_id,
+        plan_date=plan.plan_date.isoformat(),
+        topic=plan.topic,
+        lesson_type=plan.lesson_type,
+        objectives=plan.objectives,
+        keywords=plan.keywords,
+        homework=plan.homework,
+        homework_deadline=plan.homework_deadline.isoformat() if plan.homework_deadline else None,
+        stages=plan.stages,
+        resources=plan.resources,
+        assessment_method=plan.assessment_method,
+        materials=[
+            LessonMaterialRead(
+                id=m.id, file_url=m.file_url, original_name=m.original_name, file_size=m.file_size,
+            )
+            for m in (plan.materials or [])
+            if not m.is_deleted
+        ],
+        plan_filled_count=_plan_filled_count(plan),
+    )
 
 
 def _build_session_detail(
@@ -119,6 +183,10 @@ def _build_session_detail(
             )
         )
 
+    plan_read = None
+    if session.lesson_plan_id and session.lesson_plan:
+        plan_read = _build_plan_read(session.lesson_plan)
+
     return SessionDetailRead(
         id=session.id,
         schedule_entry_id=session.schedule_entry_id,
@@ -132,21 +200,6 @@ def _build_session_detail(
         start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
         end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
         teacher_name=entry.teacher.full_name if entry.teacher else "",
-        topic=session.topic,
-        homework=session.homework,
-        homework_deadline=session.homework_deadline.isoformat() if session.homework_deadline else None,
-        lesson_type=session.lesson_type,
-        objectives=session.objectives,
-        keywords=session.keywords,
+        plan=plan_read,
         students=students,
-        materials=[
-            LessonMaterialRead(
-                id=m.id,
-                file_url=m.file_url,
-                original_name=m.original_name,
-                file_size=m.file_size,
-            )
-            for m in _get_loaded_materials(session)
-            if not m.is_deleted
-        ],
     )

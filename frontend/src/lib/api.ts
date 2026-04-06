@@ -78,7 +78,7 @@ export default api
 
 // --- Shared Status Types ---
 
-export type SessionStatus = "planned" | "in_progress" | "completed"
+export type SessionStatus = "in_progress" | "completed"
 export type AttendanceStatus = "unmarked" | "present" | "late" | "absent"
 
 // --- API functions ---
@@ -393,9 +393,34 @@ export interface TodayLessonRead {
   end_time: string
   room: string | null
   session_id: number | null
-  session_status: SessionStatus | null // planned | in_progress | completed
-  has_plan_content?: boolean
-  plan_filled_count: number // 0-6
+  session_status: SessionStatus | null
+  plan_id: number | null
+  plan_filled_count: number // 0-9
+}
+
+// --- Lesson Plan ---
+
+export interface LessonPlanStageRead {
+  title: string
+  duration_min: number
+  activity: string
+}
+
+export interface LessonPlanRead {
+  id: number
+  schedule_entry_id: number | null
+  plan_date: string
+  topic: string | null
+  lesson_type: string | null
+  objectives: string[] | null
+  keywords: string[] | null
+  homework: string | null
+  homework_deadline: string | null
+  stages: LessonPlanStageRead[] | null
+  resources: string | null
+  assessment_method: string | null
+  materials: LessonMaterialRead[]
+  plan_filled_count: number
 }
 
 export interface TodayLessonsResponse {
@@ -427,14 +452,8 @@ export interface SessionDetailRead {
   start_time: string
   end_time: string
   teacher_name: string
-  topic: string | null
-  homework: string | null
-  homework_deadline: string | null
-  lesson_type: string | null
-  objectives: string[] | null
-  keywords: string[] | null
+  plan: LessonPlanRead | null
   students: SessionStudentRead[]
-  materials: LessonMaterialRead[]
 }
 
 export interface LessonMaterialRead {
@@ -514,29 +533,37 @@ export const lessonsApi = {
         return parts.join("&")
       },
     }),
+  // Plans
+  createPlan: (schedule_entry_id: number, target_date?: string) =>
+    api.post<LessonPlanRead>("/api/v1/lessons/plans", { schedule_entry_id, target_date }),
+  getPlan: (planId: number) =>
+    api.get<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`),
+  updatePlan: (planId: number, data: Partial<{
+    topic: string | null; homework: string | null; homework_deadline: string | null;
+    lesson_type: string | null; objectives: string[] | null; keywords: string[] | null;
+    stages: LessonPlanStageRead[] | null; resources: string | null; assessment_method: string | null;
+  }>) =>
+    api.patch<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`, data),
+  // Sessions
   startSession: (schedule_entry_id: number, target_date?: string) =>
     api.post<SessionDetailRead>("/api/v1/lessons/sessions", { schedule_entry_id, target_date }),
-  planSession: (schedule_entry_id: number, target_date?: string) =>
-    api.post<SessionDetailRead>("/api/v1/lessons/sessions/plan", { schedule_entry_id, target_date }),
   getSession: (sessionId: number) =>
     api.get<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`),
   updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
     api.patch<SessionStudentRead>(`/api/v1/lessons/sessions/${sessionId}/attendance`, data),
-  updateSession: (sessionId: number, data: { topic?: string | null; homework?: string | null; homework_deadline?: string | null }) =>
-    api.patch<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`, data),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
-  uploadMaterial: (sessionId: number, file: File, onProgress?: (percent: number) => void) => {
+  uploadMaterial: (planId: number, file: File, onProgress?: (percent: number) => void) => {
     const formData = new FormData()
     formData.append("file", file)
-    return api.post<LessonMaterialRead>(`/api/v1/lessons/sessions/${sessionId}/materials`, formData, {
+    return api.post<LessonMaterialRead>(`/api/v1/lessons/plans/${planId}/materials`, formData, {
       onUploadProgress: onProgress
         ? (e) => { if (e.total) onProgress(Math.round((e.loaded / e.total) * 100)) }
         : undefined,
     })
   },
-  deleteMaterial: (sessionId: number, materialId: number) =>
-    api.delete(`/api/v1/lessons/sessions/${sessionId}/materials/${materialId}`),
+  deleteMaterial: (planId: number, materialId: number) =>
+    api.delete(`/api/v1/lessons/plans/${planId}/materials/${materialId}`),
   getAttendance: (gradeId: number, date?: string) =>
     api.get<AttendanceDayResponse>("/api/v1/lessons/attendance", {
       params: { grade_id: gradeId, ...(date ? { date } : {}) },
@@ -598,12 +625,9 @@ export interface TeacherSessionDetail {
   end_time: string
   started_at: string | null
   ended_at: string | null
+  plan_id: number | null
   topic: string | null
   lesson_type: string | null
-  objectives: string[] | null
-  keywords: string[] | null
-  homework: string | null
-  materials: TeacherSessionMaterial[]
   plan_filled_count: number
   lesson_number: number
 }
