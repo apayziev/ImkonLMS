@@ -29,7 +29,7 @@ import {
   getTeacherDetailQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { useState } from "react"
-import { UZ_WEEKDAYS_FULL } from "@/components/Lessons/constants"
+import { UZ_WEEKDAYS_FULL, LESSON_TYPES } from "@/components/Lessons/constants"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -431,6 +431,17 @@ function SessionRow({ session: s }: { session: TeacherSessionDetail }) {
                 boshlangan: {new Date(s.started_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
               </>
             )}
+            {s.ended_at && (
+              <>
+                <span>–</span>
+                {new Date(s.ended_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
+                {s.started_at && (
+                  <span className="text-muted-foreground/70">
+                    ({Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000)} min)
+                  </span>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -491,7 +502,7 @@ function SessionRow({ session: s }: { session: TeacherSessionDetail }) {
               {s.lesson_type && (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Dars turi</p>
-                  <p className="text-sm">{s.lesson_type}</p>
+                  <p className="text-sm">{LESSON_TYPES.find((t) => t.value === s.lesson_type)?.label ?? s.lesson_type}</p>
                 </div>
               )}
               {s.objectives && s.objectives.length > 0 && (

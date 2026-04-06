@@ -116,11 +116,11 @@ async def get_today_lessons(
                 ),
                 plan_filled_count=(
                     sum([
-                        bool(session.topic),
+                        bool(session.topic and session.topic.strip()),
                         bool(session.lesson_type),
                         bool(session.objectives),
                         bool(session.keywords),
-                        bool(session.homework),
+                        bool(session.homework and session.homework.strip()),
                         bool(session.materials),
                     ]) if session else 0
                 ),
