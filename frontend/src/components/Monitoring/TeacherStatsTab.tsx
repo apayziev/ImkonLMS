@@ -450,26 +450,25 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
       <tr
         className={cn(
           "hover:bg-muted/10 transition-colors cursor-pointer",
-          isLastInGroup && "border-b",
           isToday && "bg-primary/5",
         )}
         onClick={() => setExpanded(!expanded)}
       >
         <td className={cn(
           "py-2.5 px-3 text-sm border-r",
-          isLastInGroup ? "" : "border-b-0",
+          isLastInGroup && "border-b",
           isToday && "text-primary",
         )}>
           {dateLabel && <span className="font-semibold">{dateLabel}</span>}
         </td>
-        <td className="py-2.5 px-3">
+        <td className="py-2.5 px-3 border-b">
           <span className="font-bold">{s.grade_display}</span>
           <span className="text-[10px] text-muted-foreground ml-1">{s.lesson_number}-dars</span>
         </td>
-        <td className="py-2.5 px-3 text-muted-foreground">{s.subject_name}</td>
-        <td className="py-2.5 px-3 text-center text-muted-foreground">{s.period_number}</td>
-        <td className="py-2.5 px-3 text-center text-xs text-muted-foreground">{s.start_time}–{s.end_time}</td>
-        <td className="py-2.5 px-3 text-center text-xs">
+        <td className="py-2.5 px-3 text-muted-foreground border-b">{s.subject_name}</td>
+        <td className="py-2.5 px-3 text-center text-muted-foreground border-b">{s.period_number}</td>
+        <td className="py-2.5 px-3 text-center text-xs text-muted-foreground border-b">{s.start_time}–{s.end_time}</td>
+        <td className="py-2.5 px-3 text-center text-xs border-b">
           {s.started_at ? (
             <span>
               {formatTime(s.started_at)}
@@ -479,7 +478,7 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
             <span className="text-muted-foreground">—</span>
           )}
         </td>
-        <td className="py-2.5 px-3 text-center">
+        <td className="py-2.5 px-3 text-center border-b">
           {dur != null ? (
             <span className={cn(
               "text-xs font-medium",
@@ -491,7 +490,7 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
             <span className="text-xs text-muted-foreground">—</span>
           )}
         </td>
-        <td className="py-2.5 px-3 text-center">
+        <td className="py-2.5 px-3 text-center border-b">
           <div className="flex items-center justify-center gap-1.5">
             <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
@@ -509,7 +508,7 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
             <span className="text-[10px] text-muted-foreground">{s.plan_filled_count}/6</span>
           </div>
         </td>
-        <td className="py-2.5 px-3 text-center">
+        <td className="py-2.5 px-3 text-center border-b">
           <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", statusCfg.className)}>
             {statusCfg.label}
           </span>
