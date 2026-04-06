@@ -421,9 +421,11 @@ async def get_teacher_detail(
     # Sort by date asc, then period
     result_sessions.sort(key=lambda r: (r.session_date.toordinal(), r.period_number))
 
-    # Number lessons sequentially within the quarter
-    for i, s in enumerate(result_sessions, 1):
-        s.lesson_number = i
+    # Number lessons per grade (e.g. 8A's 18th lesson, 7A's 17th lesson)
+    grade_counters: dict[str, int] = {}
+    for s in result_sessions:
+        grade_counters[s.grade_display] = grade_counters.get(s.grade_display, 0) + 1
+        s.lesson_number = grade_counters[s.grade_display]
 
     return TeacherDetailResponse(
         teacher_id=teacher_id,

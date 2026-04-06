@@ -413,16 +413,12 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
               const isToday = dateStr === todayStr
               const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
               const sorted = sessions.sort((a, b) => a.period_number - b.period_number)
-              const firstNum = sorted[0].lesson_number
-              const lastNum = sorted[sorted.length - 1].lesson_number
-              const rangeLabel = firstNum === lastNum ? `${firstNum}-dars` : `${firstNum}–${lastNum}-dars`
 
               return sorted.map((s, idx) => (
                 <SessionTableRow
                   key={`${dateStr}-${s.period_number}-${s.grade_display}`}
                   session={s}
                   dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
-                  lessonRange={idx === 0 ? rangeLabel : ""}
                   isToday={isToday}
                 />
               ))
@@ -436,10 +432,9 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   )
 }
 
-function SessionTableRow({ session: s, dateLabel, lessonRange, isToday }: {
+function SessionTableRow({ session: s, dateLabel, isToday }: {
   session: TeacherSessionDetail
   dateLabel: string
-  lessonRange: string
   isToday: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -457,14 +452,12 @@ function SessionTableRow({ session: s, dateLabel, lessonRange, isToday }: {
         onClick={() => setExpanded(!expanded)}
       >
         <td className={cn("py-2.5 px-3 text-sm border-r", isToday && "text-primary")}>
-          {dateLabel && (
-            <div>
-              <span className="font-semibold">{dateLabel}</span>
-              <span className="text-[10px] text-muted-foreground ml-1.5">{lessonRange}</span>
-            </div>
-          )}
+          {dateLabel && <span className="font-semibold">{dateLabel}</span>}
         </td>
-        <td className="py-2.5 px-3 font-bold">{s.grade_display}</td>
+        <td className="py-2.5 px-3">
+          <span className="font-bold">{s.grade_display}</span>
+          <span className="text-[10px] text-muted-foreground ml-1">{s.lesson_number}-dars</span>
+        </td>
         <td className="py-2.5 px-3 text-muted-foreground">{s.subject_name}</td>
         <td className="py-2.5 px-3 text-center text-muted-foreground">{s.period_number}</td>
         <td className="py-2.5 px-3 text-center text-xs text-muted-foreground">{s.start_time}–{s.end_time}</td>
