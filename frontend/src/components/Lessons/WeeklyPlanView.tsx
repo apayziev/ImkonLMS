@@ -176,6 +176,8 @@ function PlanEditor({
   const periodNumber = lesson?.period_number ?? 0
   const startTime = lesson?.start_time ?? ""
   const endTime = lesson?.end_time ?? ""
+  const lessonNumber = lesson?.lesson_number ?? 0
+  const totalLessons = lesson?.total_lessons ?? 0
 
   return (
     <div className="space-y-6">
@@ -187,6 +189,7 @@ function PlanEditor({
           {gradeDisplay} — {subjectName}
           <span className="text-base font-normal text-muted-foreground ml-2">
             {periodNumber}-soat · {startTime} – {endTime}
+            {lessonNumber > 0 && ` · ${lessonNumber}/${totalLessons}-dars`}
           </span>
         </h1>
       </div>
