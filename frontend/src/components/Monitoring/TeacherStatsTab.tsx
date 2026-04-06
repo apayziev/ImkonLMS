@@ -413,14 +413,17 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
               const isToday = dateStr === todayStr
               const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
               const sorted = sessions.sort((a, b) => a.period_number - b.period_number)
+              const firstNum = sorted[0].lesson_number
+              const lastNum = sorted[sorted.length - 1].lesson_number
+              const rangeLabel = firstNum === lastNum ? `${firstNum}-dars` : `${firstNum}–${lastNum}-dars`
 
               return sorted.map((s, idx) => (
                 <SessionTableRow
                   key={`${dateStr}-${s.period_number}-${s.grade_display}`}
                   session={s}
                   dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
+                  lessonRange={idx === 0 ? rangeLabel : ""}
                   isToday={isToday}
-                  lessonNumber={s.lesson_number}
                 />
               ))
             })}
@@ -433,11 +436,11 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   )
 }
 
-function SessionTableRow({ session: s, dateLabel, isToday, lessonNumber }: {
+function SessionTableRow({ session: s, dateLabel, lessonRange, isToday }: {
   session: TeacherSessionDetail
   dateLabel: string
+  lessonRange: string
   isToday: boolean
-  lessonNumber: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.planned
@@ -454,9 +457,12 @@ function SessionTableRow({ session: s, dateLabel, isToday, lessonNumber }: {
         onClick={() => setExpanded(!expanded)}
       >
         <td className={cn("py-2.5 px-3 text-sm border-r", isToday && "text-primary")}>
-          {dateLabel && <span className="font-semibold">{dateLabel}</span>}
-          {dateLabel && <span className="text-xs text-muted-foreground ml-1">#{lessonNumber}</span>}
-          {!dateLabel && <span className="text-xs text-muted-foreground">#{lessonNumber}</span>}
+          {dateLabel && (
+            <div>
+              <span className="font-semibold">{dateLabel}</span>
+              <span className="text-[10px] text-muted-foreground ml-1.5">{lessonRange}</span>
+            </div>
+          )}
         </td>
         <td className="py-2.5 px-3 font-bold">{s.grade_display}</td>
         <td className="py-2.5 px-3 text-muted-foreground">{s.subject_name}</td>
