@@ -299,6 +299,11 @@ function DayLessons({
                     <Clock className="h-3 w-3" />
                     <span>{lesson.start_time} – {lesson.end_time}</span>
                     <span>({lesson.period_number}-soat)</span>
+                    {lesson.lesson_number > 0 && (
+                      <span className="text-[var(--imkon-purple)] font-medium">
+                        · {lesson.lesson_number}/{lesson.total_lessons}-dars
+                      </span>
+                    )}
                   </div>
                 </div>
 

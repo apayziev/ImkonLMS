@@ -1,5 +1,7 @@
 """Shared helpers for lesson routes."""
 
+from collections import defaultdict
+from datetime import date, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
@@ -133,6 +135,75 @@ def _plan_filled_count(plan: LessonPlan) -> int:
 
 
 PLAN_TOTAL_FIELDS = 8
+
+
+def _count_weekday_between(start: date, end: date, day_of_week: int, holidays: set[date]) -> int:
+    """Count occurrences of day_of_week (1=Mon..7=Sun) between start and end inclusive, excluding holidays."""
+    if start > end:
+        return 0
+    py_weekday = day_of_week - 1  # Convert to Python weekday (0=Mon..6=Sun)
+    days_ahead = (py_weekday - start.weekday()) % 7
+    first = start + timedelta(days=days_ahead)
+    if first > end:
+        return 0
+    total = (end - first).days // 7 + 1
+    # Subtract holidays that fall on this weekday
+    for h in holidays:
+        if first <= h <= end and h.weekday() == py_weekday:
+            total -= 1
+    return total
+
+
+def _calc_lesson_numbers(
+    entries: list[ScheduleEntry],
+    all_teacher_entries: list[ScheduleEntry],
+    target_date: date,
+    quarter_start: date,
+    quarter_end: date,
+    holidays: set[date],
+) -> dict[int, tuple[int, int]]:
+    """Calculate (lesson_number, total_lessons) per schedule_entry_id for the target_date.
+
+    Groups entries by (grade_id, subject_id) so that multiple weekly slots
+    of the same subject are numbered sequentially.
+    """
+    gs_entries: dict[tuple[int, int], list[ScheduleEntry]] = defaultdict(list)
+    for e in all_teacher_entries:
+        gs_entries[(e.grade_id, e.subject_id)].append(e)
+
+    result: dict[int, tuple[int, int]] = {}
+    today_dow = target_date.weekday() + 1  # 1=Mon..7=Sun
+
+    for entry in entries:
+        key = (entry.grade_id, entry.subject_id)
+        group = gs_entries.get(key, [])
+
+        # Sort group by (day_of_week, period_number) for consistent ordering
+        group_sorted = sorted(group, key=lambda e: (e.day_of_week, e.time_slot.period_number if e.time_slot else 0))
+
+        # Count lessons from quarter_start to day before target_date
+        yesterday = target_date - timedelta(days=1)
+        count = 0
+        for e in group_sorted:
+            count += _count_weekday_between(quarter_start, yesterday, e.day_of_week, holidays)
+
+        # On target_date, count entries with period <= this entry's period (same day_of_week only)
+        if target_date not in holidays:
+            entry_period = entry.time_slot.period_number if entry.time_slot else 0
+            for e in group_sorted:
+                if e.day_of_week == today_dow:
+                    ep = e.time_slot.period_number if e.time_slot else 0
+                    if ep <= entry_period:
+                        count += 1
+
+        # Total lessons in the whole quarter
+        total = 0
+        for e in group_sorted:
+            total += _count_weekday_between(quarter_start, quarter_end, e.day_of_week, holidays)
+
+        result[entry.id] = (count, total)
+
+    return result
 
 
 def _build_plan_read(plan: LessonPlan) -> LessonPlanRead:

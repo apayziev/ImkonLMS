@@ -61,6 +61,7 @@ export function TopicHomeworkSection({
   const [resources, setResources] = useState<string[]>(plan?.resources ?? [])
   const [assessmentMethods, setAssessmentMethods] = useState<string[]>(plan?.assessment_methods ?? [])
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const pendingDataRef = useRef<Record<string, unknown> | null>(null)
 
   useEffect(() => {
     setLessonType(plan?.lesson_type ?? "")
@@ -73,8 +74,15 @@ export function TopicHomeworkSection({
     setAssessmentMethods(plan?.assessment_methods ?? [])
   }, [plan?.lesson_type, plan?.topic, plan?.homework, plan?.homework_deadline, plan?.objectives, plan?.keywords, plan?.resources, plan?.assessment_methods])
 
+  // Flush pending debounced save on unmount
   useEffect(() => {
-    return () => clearTimeout(debounceRef.current)
+    return () => {
+      clearTimeout(debounceRef.current)
+      if (pendingDataRef.current) {
+        mutateRef.current(pendingDataRef.current)
+        pendingDataRef.current = null
+      }
+    }
   }, [])
 
   const ensurePlanId = async (): Promise<number> => {
@@ -107,6 +115,7 @@ export function TopicHomeworkSection({
   const saveImmediate = useCallback(
     (data: Record<string, unknown>) => {
       clearTimeout(debounceRef.current)
+      pendingDataRef.current = null
       mutateRef.current(data)
     },
     [],
@@ -115,7 +124,9 @@ export function TopicHomeworkSection({
   const saveDebounced = useCallback(
     (data: Record<string, unknown>) => {
       clearTimeout(debounceRef.current)
+      pendingDataRef.current = data
       debounceRef.current = setTimeout(() => {
+        pendingDataRef.current = null
         mutateRef.current(data)
       }, 1000)
     },

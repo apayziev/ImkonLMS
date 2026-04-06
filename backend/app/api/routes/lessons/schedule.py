@@ -11,10 +11,11 @@ from app.core.config import today_local
 from app.core.formatting import format_time
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
+from app.models.quarter import Quarter
 from app.models.schedule_entry import ScheduleEntry
 from app.schemas.lessons import SessionStatusItem, SessionStatusesResponse, TodayLessonRead, TodayLessonsResponse
 
-from ._helpers import ENTRY_LOAD, _plan_filled_count, _require_teacher
+from ._helpers import ENTRY_LOAD, _calc_lesson_numbers, _plan_filled_count, _require_teacher
 
 router = APIRouter()
 
@@ -124,5 +125,36 @@ async def get_today_lessons(
                 plan_filled_count=_plan_filled_count(plan) if plan else 0,
             )
         )
+
+    # Calculate lesson numbers within the current quarter
+    if entries:
+        quarter_result = await db.execute(
+            select(Quarter).where(
+                Quarter.start_date <= today,
+                Quarter.end_date >= today,
+                Quarter.is_deleted == False,  # noqa: E712
+            )
+        )
+        quarter = quarter_result.scalar_one_or_none()
+        if quarter:
+            # Get ALL schedule entries for this teacher in current academic year
+            all_entries_result = await db.execute(
+                select(ScheduleEntry)
+                .options(*ENTRY_LOAD)
+                .where(
+                    ScheduleEntry.teacher_id == current_user.id,
+                    ScheduleEntry.academic_year_id == quarter.academic_year_id,
+                    ScheduleEntry.is_deleted == False,  # noqa: E712
+                )
+            )
+            all_entries = all_entries_result.scalars().all()
+            holidays_set = set(quarter.holidays or [])
+            ln_map = _calc_lesson_numbers(
+                entries, all_entries, today, quarter.start_date, quarter.end_date, holidays_set,
+            )
+            for lesson in lessons:
+                nums = ln_map.get(lesson.schedule_entry_id)
+                if nums:
+                    lesson.lesson_number, lesson.total_lessons = nums
 
     return TodayLessonsResponse(data=lessons, date=today.isoformat())

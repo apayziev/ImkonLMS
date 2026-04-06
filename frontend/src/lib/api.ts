@@ -395,7 +395,9 @@ export interface TodayLessonRead {
   session_id: number | null
   session_status: SessionStatus | null
   plan_id: number | null
-  plan_filled_count: number // 0-9
+  plan_filled_count: number // 0-8
+  lesson_number: number
+  total_lessons: number
 }
 
 // --- Lesson Plan ---

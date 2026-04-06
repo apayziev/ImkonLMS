@@ -30,6 +30,10 @@ class TodayLessonRead(BaseModel):
     plan_id: int | None = None
     plan_filled_count: int = 0
 
+    # Lesson number in quarter
+    lesson_number: int = 0
+    total_lessons: int = 0
+
 
 class TodayLessonsResponse(BaseModel):
     data: list[TodayLessonRead]
