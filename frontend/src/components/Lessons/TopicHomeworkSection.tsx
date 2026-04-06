@@ -102,6 +102,7 @@ export function TopicHomeworkSection({
     onSuccess: () => {
       onSuccess()
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+      queryClient.invalidateQueries({ queryKey: ["lessons-for-date"] })
     },
     onError: () => {
       onError()
@@ -184,6 +185,7 @@ export function TopicHomeworkSection({
     const response = await lessonsApi.uploadMaterial(pid, file, onProgress)
     queryClient.invalidateQueries({ queryKey: queryKeys.lessonPlan(pid) })
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+    queryClient.invalidateQueries({ queryKey: ["lessons-for-date"] })
     return response
   }
 
@@ -193,6 +195,7 @@ export function TopicHomeworkSection({
     await lessonsApi.deleteMaterial(pid, materialId)
     queryClient.invalidateQueries({ queryKey: queryKeys.lessonPlan(pid) })
     queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
+    queryClient.invalidateQueries({ queryKey: ["lessons-for-date"] })
   }
 
   const materials = plan?.materials ?? []
