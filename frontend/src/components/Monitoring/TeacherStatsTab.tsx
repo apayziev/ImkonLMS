@@ -420,6 +420,7 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
                   session={s}
                   dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
                   isToday={isToday}
+                  lessonNumber={s.lesson_number}
                 />
               ))
             })}
@@ -432,10 +433,11 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   )
 }
 
-function SessionTableRow({ session: s, dateLabel, isToday }: {
+function SessionTableRow({ session: s, dateLabel, isToday, lessonNumber }: {
   session: TeacherSessionDetail
   dateLabel: string
   isToday: boolean
+  lessonNumber: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.planned
@@ -451,8 +453,10 @@ function SessionTableRow({ session: s, dateLabel, isToday }: {
         )}
         onClick={() => setExpanded(!expanded)}
       >
-        <td className={cn("py-2.5 px-3 text-sm font-semibold border-r", isToday && "text-primary")}>
-          {dateLabel}
+        <td className={cn("py-2.5 px-3 text-sm border-r", isToday && "text-primary")}>
+          {dateLabel && <span className="font-semibold">{dateLabel}</span>}
+          {dateLabel && <span className="text-xs text-muted-foreground ml-1">#{lessonNumber}</span>}
+          {!dateLabel && <span className="text-xs text-muted-foreground">#{lessonNumber}</span>}
         </td>
         <td className="py-2.5 px-3 font-bold">{s.grade_display}</td>
         <td className="py-2.5 px-3 text-muted-foreground">{s.subject_name}</td>

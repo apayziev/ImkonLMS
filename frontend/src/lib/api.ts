@@ -605,6 +605,7 @@ export interface TeacherSessionDetail {
   homework: string | null
   materials: TeacherSessionMaterial[]
   plan_filled_count: number
+  lesson_number: number
 }
 
 export interface TeacherDetailResponse {

@@ -60,6 +60,7 @@ class TeacherSessionDetail(PydanticBase):
     homework: str | None
     materials: list[TeacherSessionMaterial]
     plan_filled_count: int  # 0-6
+    lesson_number: int  # chorakdagi dars raqami
 
 
 class TeacherDetailResponse(PydanticBase):
@@ -417,8 +418,12 @@ async def get_teacher_detail(
                     ))
             cur = _next_day(cur)
 
-    # Sort by date desc, then period
-    result_sessions.sort(key=lambda r: (-r.session_date.toordinal(), r.period_number))
+    # Sort by date asc, then period
+    result_sessions.sort(key=lambda r: (r.session_date.toordinal(), r.period_number))
+
+    # Number lessons sequentially within the quarter
+    for i, s in enumerate(result_sessions, 1):
+        s.lesson_number = i
 
     return TeacherDetailResponse(
         teacher_id=teacher_id,
