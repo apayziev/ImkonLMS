@@ -331,6 +331,7 @@ export function TopicHomeworkSection({
               </div>
               {obj.text.trim() && !disabled && (
                 <div className="flex items-center gap-1.5 ml-7">
+                  <span className="text-[10px] text-muted-foreground/60 mr-0.5">Daraja:</span>
                   {BLOOM_LEVELS.map((bl) => (
                     <button
                       key={bl.value}

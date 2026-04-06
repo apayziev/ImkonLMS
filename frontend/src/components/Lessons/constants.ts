@@ -37,12 +37,12 @@ export const RESOURCE_TYPES = [
 ] as const
 
 export const ASSESSMENT_METHODS = [
-  { value: "oral", label: "Og'zaki so'rov" },
-  { value: "written", label: "Yozma ish" },
+  { value: "oral", label: "Og'zaki" },
+  { value: "written", label: "Yozma" },
   { value: "test", label: "Test" },
   { value: "project", label: "Loyiha" },
-  { value: "observation", label: "Kuzatish" },
-  { value: "self_assessment", label: "O'z-o'zini baholash" },
+  { value: "practical", label: "Amaliy" },
+  { value: "homework", label: "Uy vazifasi" },
 ] as const
 
 export const BLOOM_LEVELS = [
