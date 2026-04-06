@@ -147,7 +147,10 @@ async def get_teacher_stats(
     # Get all sessions in date range
     sessions_q = await db.execute(
         select(LessonSession)
-        .options(selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot))
+        .options(
+            selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
+            selectinload(LessonSession.materials),
+        )
         .where(
             LessonSession.session_date >= sd,
             LessonSession.session_date <= ed,
