@@ -301,6 +301,7 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   completed: { label: "Tugallangan", className: "bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)]" },
   in_progress: { label: "Davom etmoqda", className: "bg-amber-500/10 text-amber-600" },
   planned: { label: "Rejalashtirilgan", className: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]" },
+  not_created: { label: "Boshlanmagan", className: "bg-muted text-muted-foreground" },
 }
 
 function formatTime(dt: string) {
@@ -431,8 +432,7 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
                   key={s.session_id}
                   session={s}
                   dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
-                  isToday={isToday && idx === 0}
-                  rowSpan={idx === 0 ? sorted.length : 0}
+                  isToday={isToday}
                 />
               ))
             })}
@@ -445,11 +445,10 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
   )
 }
 
-function SessionTableRow({ session: s, dateLabel, isToday, rowSpan }: {
+function SessionTableRow({ session: s, dateLabel, isToday }: {
   session: TeacherSessionDetail
   dateLabel: string
   isToday: boolean
-  rowSpan: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.planned
@@ -465,14 +464,9 @@ function SessionTableRow({ session: s, dateLabel, isToday, rowSpan }: {
         )}
         onClick={() => setExpanded(!expanded)}
       >
-        {rowSpan > 0 && (
-          <td
-            className={cn("py-2.5 px-3 text-sm font-semibold align-top border-r", isToday && "text-primary")}
-            rowSpan={rowSpan}
-          >
-            {dateLabel}
-          </td>
-        )}
+        <td className={cn("py-2.5 px-3 text-sm font-semibold border-r", isToday && "text-primary")}>
+          {dateLabel}
+        </td>
         <td className="py-2.5 px-3 font-bold">{s.grade_display}</td>
         <td className="py-2.5 px-3 text-muted-foreground">{s.subject_name}</td>
         <td className="py-2.5 px-3 text-center text-muted-foreground">{s.period_number}</td>

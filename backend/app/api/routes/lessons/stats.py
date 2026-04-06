@@ -78,15 +78,7 @@ def _count_expected_lessons(
     holidays: list | None,
 ) -> int:
     """Count how many lessons teacher should have had in date range."""
-    holiday_set: set[date] = set()
-    for h in (holidays or []):
-        if isinstance(h, date):
-            holiday_set.add(h)
-        elif isinstance(h, str) and h:
-            try:
-                holiday_set.add(date.fromisoformat(h))
-            except ValueError:
-                pass
+    holiday_set = _parse_holidays(holidays)
     total = 0
     for entry in schedule_entries:
         js_dow = entry.day_of_week
@@ -288,6 +280,20 @@ def _plan_filled_count(session: LessonSession) -> int:
     return count
 
 
+def _parse_holidays(holidays: list | None) -> set[date]:
+    """Parse holiday list into a set of dates."""
+    result: set[date] = set()
+    for h in (holidays or []):
+        if isinstance(h, date):
+            result.add(h)
+        elif isinstance(h, str) and h:
+            try:
+                result.add(date.fromisoformat(h))
+            except ValueError:
+                pass
+    return result
+
+
 @router.get("/teacher-stats/{teacher_id}", response_model=TeacherDetailResponse)
 async def get_teacher_detail(
     teacher_id: int,
@@ -323,9 +329,20 @@ async def get_teacher_detail(
     )
     entries = entries_q.scalars().all()
     entry_ids = {e.id for e in entries}
-    entry_map = {e.id: e for e in entries}
 
-    # Get sessions
+    # Get holidays
+    from app.models.quarter import Quarter
+    quarter_q = await db.execute(
+        select(Quarter).where(
+            Quarter.start_date <= ed,
+            Quarter.end_date >= sd,
+            Quarter.is_deleted == False,  # noqa: E712
+        )
+    )
+    quarter = quarter_q.scalar_one_or_none()
+    holiday_set = _parse_holidays(quarter.holidays if quarter else [])
+
+    # Get existing sessions
     sessions_q = await db.execute(
         select(LessonSession)
         .options(selectinload(LessonSession.materials))
@@ -335,38 +352,73 @@ async def get_teacher_detail(
             LessonSession.schedule_entry_id.in_(entry_ids) if entry_ids else LessonSession.id < 0,
             LessonSession.is_deleted == False,  # noqa: E712
         )
-        .order_by(LessonSession.session_date.desc())
     )
     sessions = sessions_q.scalars().all()
 
-    result_sessions: list[TeacherSessionDetail] = []
+    # Index sessions by (entry_id, date)
+    session_map: dict[tuple[int, date], LessonSession] = {}
     for s in sessions:
-        entry = entry_map.get(s.schedule_entry_id) if s.schedule_entry_id else None
-        if not entry:
-            continue
+        if s.schedule_entry_id:
+            session_map[(s.schedule_entry_id, s.session_date)] = s
+
+    # Generate ALL expected lessons from schedule
+    result_sessions: list[TeacherSessionDetail] = []
+    for entry in entries:
         ts = entry.time_slot
-        result_sessions.append(TeacherSessionDetail(
-            session_id=s.id,
-            session_date=s.session_date,
-            status=s.status,
-            subject_name=entry.subject.name if entry.subject else "—",
-            grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
-            period_number=ts.period_number if ts else 0,
-            start_time=str(ts.start_time)[:5] if ts else "",
-            end_time=str(ts.end_time)[:5] if ts else "",
-            started_at=s.started_at,
-            ended_at=s.ended_at,
-            topic=s.topic,
-            lesson_type=s.lesson_type,
-            objectives=s.objectives,
-            keywords=s.keywords,
-            homework=s.homework,
-            materials=[
-                TeacherSessionMaterial(id=m.id, file_url=m.file_url, original_name=m.original_name)
-                for m in s.materials
-            ],
-            plan_filled_count=_plan_filled_count(s),
-        ))
+        js_dow = entry.day_of_week
+        py_dow = js_dow - 1 if js_dow < 7 else 6
+        cur = sd
+        while cur <= ed:
+            if cur.weekday() == py_dow and cur not in holiday_set:
+                s = session_map.get((entry.id, cur))
+                if s:
+                    result_sessions.append(TeacherSessionDetail(
+                        session_id=s.id,
+                        session_date=cur,
+                        status=s.status,
+                        subject_name=entry.subject.name if entry.subject else "—",
+                        grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
+                        period_number=ts.period_number if ts else 0,
+                        start_time=str(ts.start_time)[:5] if ts else "",
+                        end_time=str(ts.end_time)[:5] if ts else "",
+                        started_at=s.started_at,
+                        ended_at=s.ended_at,
+                        topic=s.topic,
+                        lesson_type=s.lesson_type,
+                        objectives=s.objectives,
+                        keywords=s.keywords,
+                        homework=s.homework,
+                        materials=[
+                            TeacherSessionMaterial(id=m.id, file_url=m.file_url, original_name=m.original_name)
+                            for m in s.materials
+                        ],
+                        plan_filled_count=_plan_filled_count(s),
+                    ))
+                else:
+                    # No session — expected but not created
+                    result_sessions.append(TeacherSessionDetail(
+                        session_id=0,
+                        session_date=cur,
+                        status="not_created",
+                        subject_name=entry.subject.name if entry.subject else "—",
+                        grade_display=f"{entry.grade.level}{entry.grade.section}" if entry.grade else "—",
+                        period_number=ts.period_number if ts else 0,
+                        start_time=str(ts.start_time)[:5] if ts else "",
+                        end_time=str(ts.end_time)[:5] if ts else "",
+                        started_at=None,
+                        ended_at=None,
+                        topic=None,
+                        lesson_type=None,
+                        objectives=None,
+                        keywords=None,
+                        homework=None,
+                        materials=[],
+                        plan_filled_count=0,
+                    ))
+            cur = _next_day(cur)
+
+    # Sort by date desc, then period
+    result_sessions.sort(key=lambda r: (-r.session_date.toordinal(), r.period_number))
 
     return TeacherDetailResponse(
         teacher_id=teacher_id,
