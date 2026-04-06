@@ -28,6 +28,8 @@ import {
   getTeacherStatsQueryOptions,
   getTeacherDetailQueryOptions,
 } from "@/hooks/useQueryOptions"
+import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
+import { toDateString } from "@/components/Lessons/formatters"
 import { useMemo, useState } from "react"
 import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES } from "@/components/Lessons/constants"
 
@@ -317,43 +319,29 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
     getTeacherDetailQueryOptions(teacherId, startDate, endDate),
   )
 
-  // Week navigation state — default to current week
-  const [weekOffset, setWeekOffset] = useState(0)
+  // Reuse same week navigation as Dars rejasi page
+  const [selectedDate, setSelectedDate] = useState<Date>(getEffectiveWeekDate)
+  const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
 
-  const { weekSessions, weekLabel, canPrev, canNext } = useMemo(() => {
-    if (!detail?.sessions.length) return { weekSessions: [], weekLabel: "", canPrev: false, canNext: false }
+  const weekStart = weekDays.length > 0 ? toDateString(weekDays[0]) : ""
+  const weekEnd = weekDays.length > 0 ? toDateString(weekDays[weekDays.length - 1]) : ""
 
-    // Derive last work day from actual data (e.g. Fri=5, Sat=6)
-    let maxWeekday = 5 // default Fri
-    for (const s of detail.sessions) {
-      const d = new Date(s.session_date).getDay() // 0=Sun
-      if (d > 0 && d > maxWeekday) maxWeekday = d
-    }
-    const weekDays = maxWeekday - 1 // Mon=0 offset
+  const weekSessions = useMemo(() => {
+    if (!detail?.sessions.length || !weekStart) return []
+    return detail.sessions.filter((s) => s.session_date >= weekStart && s.session_date <= weekEnd)
+  }, [detail, weekStart, weekEnd])
 
-    // Find current week's Monday
-    const now = new Date()
-    const todayDay = now.getDay() // 0=Sun
-    const mondayOffset = todayDay === 0 ? -6 : 1 - todayDay
-    const currentMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset + weekOffset * 7)
+  const canPrev = !!detail?.sessions.some((s) => s.session_date < weekStart)
+  const canNext = !!detail?.sessions.some((s) => s.session_date > weekEnd)
 
-    const lastDay = new Date(currentMonday)
-    lastDay.setDate(currentMonday.getDate() + weekDays)
-
-    const pad = (n: number) => String(n).padStart(2, "0")
-    const monStr = `${currentMonday.getFullYear()}-${pad(currentMonday.getMonth() + 1)}-${pad(currentMonday.getDate())}`
-    const lastStr = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`
-
-    const filtered = detail.sessions.filter((s) => s.session_date >= monStr && s.session_date <= lastStr)
-    const hasPrev = detail.sessions.some((s) => s.session_date < monStr)
-    const hasNext = detail.sessions.some((s) => s.session_date > lastStr)
-
-    const label = currentMonday.getMonth() === lastDay.getMonth()
-      ? `${currentMonday.getDate()} – ${lastDay.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]}`
-      : `${currentMonday.getDate()} ${UZ_MONTHS[currentMonday.getMonth()]} – ${lastDay.getDate()} ${UZ_MONTHS[lastDay.getMonth()]}`
-
-    return { weekSessions: filtered, weekLabel: label, canPrev: hasPrev, canNext: hasNext }
-  }, [detail, weekOffset])
+  const weekLabel = useMemo(() => {
+    if (weekDays.length === 0) return ""
+    const first = weekDays[0]
+    const last = weekDays[weekDays.length - 1]
+    return first.getMonth() === last.getMonth()
+      ? `${first.getDate()} – ${last.getDate()} ${UZ_MONTHS[first.getMonth()]}`
+      : `${first.getDate()} ${UZ_MONTHS[first.getMonth()]} – ${last.getDate()} ${UZ_MONTHS[last.getMonth()]}`
+  }, [weekDays])
 
   if (isLoading) {
     return (
@@ -389,18 +377,11 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
     <div className="space-y-3">
       {/* Week navigation */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => setWeekOffset((o) => o - 1)} disabled={!canPrev}>
+        <Button variant="ghost" size="icon" onClick={prevWeek} disabled={!canPrev}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
-          {weekOffset !== 0 && (
-            <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setWeekOffset(0)}>
-              Joriy hafta
-            </Button>
-          )}
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => setWeekOffset((o) => o + 1)} disabled={!canNext}>
+        <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
+        <Button variant="ghost" size="icon" onClick={nextWeek} disabled={!canNext}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -428,14 +409,14 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
           </thead>
           <tbody>
             {[...grouped.entries()].map(([dateStr, sessions]) => {
-              const d = new Date(dateStr)
+              const d = new Date(dateStr + "T00:00:00")
               const isToday = dateStr === todayStr
               const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
               const sorted = sessions.sort((a, b) => a.period_number - b.period_number)
 
               return sorted.map((s, idx) => (
                 <SessionTableRow
-                  key={s.session_id}
+                  key={`${dateStr}-${s.period_number}-${s.grade_display}`}
                   session={s}
                   dateLabel={idx === 0 ? `${dayName}, ${d.getDate()}` : ""}
                   isToday={isToday}
