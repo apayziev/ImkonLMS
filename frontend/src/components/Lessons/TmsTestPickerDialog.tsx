@@ -7,7 +7,7 @@
  * 3. Teacher selects a test → TMS sends postMessage
  * 4. Dialog calls onSelect with { test_id, title }
  */
-import { Loader2, Unlink } from "lucide-react"
+import { Loader2, Unlink, ExternalLink } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -88,6 +88,16 @@ export function TmsTestPickerDialog({
           <span className="text-muted-foreground">Test: </span>
           <span className="font-medium">{currentTestTitle || `#${currentTestId}`}</span>
         </div>
+        <a
+          href={`${TMS.origin}/tests/${currentTestId}/questions`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="TMS da tahrirlash"
+        >
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        </a>
         {!disabled && (
           <>
             <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
