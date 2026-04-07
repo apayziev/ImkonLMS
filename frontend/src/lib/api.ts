@@ -436,6 +436,8 @@ export interface LessonPlanRead {
   stages: LessonPlanStageRead[] | null
   resources: string[] | null
   assessment_methods: string[] | null
+  homework_test_id: number | null
+  homework_test_title: string | null
   materials: LessonMaterialRead[]
   plan_filled_count: number
 }
@@ -552,6 +554,7 @@ export const lessonsApi = {
     topic: string | null; homework: string | null; homework_deadline: string | null;
     lesson_type: string | null; objectives: LessonPlanObjectiveRead[] | null; keywords: string[] | null;
     stages: LessonPlanStageRead[] | null; resources: string[] | null; assessment_methods: string[] | null;
+    homework_test_id: number | null; homework_test_title: string | null;
   }>) =>
     api.patch<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`, data),
   // Sessions
@@ -754,4 +757,15 @@ export const violationsApi = {
     api.get<ViolationSessionSummary>(`/api/v1/violations/reports/session/${sessionId}`),
   remove: (reportId: number) =>
     api.delete(`/api/v1/violations/reports/${reportId}`),
+}
+
+// ────────────── TMS Integration ──────────────────────────────────────────
+
+export interface TMSTokenResponse {
+  access_token: string
+  embed_url: string
+}
+
+export const tmsApi = {
+  getEmbedToken: () => api.post<TMSTokenResponse>("/api/v1/tms/embed-token"),
 }

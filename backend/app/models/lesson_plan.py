@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Index, String, Text
+from sqlalchemy import Date, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,6 +56,14 @@ class LessonPlan(BaseModel):
     )
     assessment_methods: Mapped[list | None] = mapped_column(
         JSONB, nullable=True, default=None, kw_only=True,
+    )
+
+    # --- TMS integration ---
+    homework_test_id: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=None, kw_only=True,
+    )
+    homework_test_title: Mapped[str | None] = mapped_column(
+        String(200), nullable=True, default=None, kw_only=True,
     )
 
     # === Relationships ===

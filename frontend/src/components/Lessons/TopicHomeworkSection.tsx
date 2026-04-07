@@ -26,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
+import { TmsTestPickerDialog } from "./TmsTestPickerDialog"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
 import { ASSESSMENT_METHODS, BLOOM_LEVELS, LESSON_TYPES, RESOURCE_TYPES, SUGGESTED_KEYWORDS } from "./constants"
@@ -481,7 +482,23 @@ export function TopicHomeworkSection({
         </div>
       </div>
 
-      {/* Row 5: Resources + Assessment Methods */}
+      {/* Row 5: TMS Test */}
+      <div className="space-y-2 border-t pt-4">
+        <label className="text-sm font-medium text-muted-foreground">Uyga vazifa testi (TMS)</label>
+        <TmsTestPickerDialog
+          currentTestId={plan?.homework_test_id ?? null}
+          currentTestTitle={plan?.homework_test_title ?? null}
+          disabled={disabled}
+          onSelect={(testId, title) => {
+            saveImmediate({ homework_test_id: testId, homework_test_title: title })
+          }}
+          onRemove={() => {
+            saveImmediate({ homework_test_id: null, homework_test_title: null })
+          }}
+        />
+      </div>
+
+      {/* Row 6: Resources + Assessment Methods */}
       <div className="grid gap-4 md:grid-cols-[1fr_1fr] border-t pt-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">Resurslar</label>

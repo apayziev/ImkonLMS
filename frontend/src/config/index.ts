@@ -11,3 +11,7 @@ export const AUTH = {
   tokenKey: "access_token",
   loginPath: "/login",
 } as const
+
+export const TMS = {
+  origin: import.meta.env.VITE_TMS_ORIGIN || "https://tms.imkonschool.uz",
+} as const

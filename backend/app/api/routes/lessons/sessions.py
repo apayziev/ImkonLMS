@@ -101,6 +101,7 @@ async def update_plan(
     simple_fields = (
         "topic", "homework", "lesson_type",
         "objectives", "keywords", "stages", "resources", "assessment_methods",
+        "homework_test_id", "homework_test_title",
     )
     for field in simple_fields:
         if field in data:

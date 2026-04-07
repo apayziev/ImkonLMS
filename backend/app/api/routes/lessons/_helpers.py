@@ -221,6 +221,8 @@ def _build_plan_read(plan: LessonPlan) -> LessonPlanRead:
         stages=plan.stages,
         resources=plan.resources,
         assessment_methods=plan.assessment_methods,
+        homework_test_id=plan.homework_test_id,
+        homework_test_title=plan.homework_test_title,
         materials=[
             LessonMaterialRead(
                 id=m.id, file_url=m.file_url, original_name=m.original_name, file_size=m.file_size,

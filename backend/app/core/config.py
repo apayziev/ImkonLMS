@@ -64,6 +64,14 @@ class UploadSettings(BaseSettings):
     MAX_FILE_SIZE_MB: int = 20
 
 
+class TMSSettings(BaseSettings):
+    """TMS integration (test system embed)."""
+
+    TMS_API_URL: str = "http://localhost:8000"
+    TMS_EMBED_API_KEY: str = ""
+    TMS_ORIGIN: str = "https://tms.imkonschool.uz"
+
+
 class CORSSettings(BaseSettings):
     CORS_ORIGINS_STR: str = "http://localhost:5173"
     CORS_METHODS: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
@@ -84,6 +92,7 @@ class Settings(
     CORSSettings,
     SyncSettings,
     UploadSettings,
+    TMSSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

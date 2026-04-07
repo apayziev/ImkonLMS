@@ -77,6 +77,8 @@ class LessonPlanRead(BaseModel):
     stages: list[LessonPlanStageRead] | None = None
     resources: list[str] | None = None
     assessment_methods: list[str] | None = None
+    homework_test_id: int | None = None
+    homework_test_title: str | None = None
     materials: list["LessonMaterialRead"] = []
     plan_filled_count: int = 0
 
@@ -96,6 +98,8 @@ class LessonPlanUpdateRequest(BaseModel):
     stages: list[LessonPlanStageRead] | None = None
     resources: list[str] | None = None
     assessment_methods: list[str] | None = None
+    homework_test_id: int | None = None
+    homework_test_title: str | None = None
 
 
 # --- Session ---
