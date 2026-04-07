@@ -3,6 +3,7 @@
 from .academic_year import AcademicYear
 from .base import BaseModel
 from .grade import Grade
+from .parent_auth import ParentAuth
 from .lesson_material import LessonMaterial
 from .lesson_plan import LessonPlan
 from .lesson_session import LessonSession
@@ -24,6 +25,7 @@ __all__ = [
     "Grade",
     "LessonPlan",
     "LessonSession",
+    "ParentAuth",
     "ScheduleEntry",
     "SchoolSettings",
     "SessionAttendance",

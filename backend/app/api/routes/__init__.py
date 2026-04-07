@@ -10,6 +10,8 @@ from .health import router as health_router
 from .lessons import router as lessons_router
 from .login import router as login_router
 from .logout import router as logout_router
+from .parent import router as parent_router
+from .parents import router as parents_router
 from .quarters import router as quarters_router
 from .students import router as students_router
 from .subjects import router as subjects_router
@@ -42,3 +44,7 @@ router.include_router(sync_router, dependencies=[Depends(get_current_user)])
 router.include_router(violations_router, dependencies=[Depends(get_current_user)])
 router.include_router(yellow_cards_router, dependencies=[Depends(get_current_user)])
 router.include_router(tms_router, dependencies=[Depends(get_current_user)])
+router.include_router(parents_router, dependencies=[Depends(get_current_user)])
+
+# Parent portal (own auth via get_current_parent dependency)
+router.include_router(parent_router)

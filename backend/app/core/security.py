@@ -51,6 +51,6 @@ def verify_token(token: str, expected_token_type: TokenType) -> dict[str, Any] |
         token_type: str | None = payload.get("token_type")
         if document_id is None or token_type != expected_token_type:
             return None
-        return {"document_id": document_id}
+        return {"document_id": document_id, "role": payload.get("role")}
     except jwt.PyJWTError:
         return None

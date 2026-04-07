@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as ParentLoginRouteImport } from './routes/parent/login'
+import { Route as ParentParentRouteImport } from './routes/parent/_parent'
 import { Route as LayoutTimetableRouteImport } from './routes/_layout/timetable'
 import { Route as LayoutTeachersRouteImport } from './routes/_layout/teachers'
 import { Route as LayoutStudentsRouteImport } from './routes/_layout/students'
@@ -20,6 +22,11 @@ import { Route as LayoutMonitoringRouteImport } from './routes/_layout/monitorin
 import { Route as LayoutLessonsRouteImport } from './routes/_layout/lessons'
 import { Route as LayoutLessonPlanRouteImport } from './routes/_layout/lesson-plan'
 import { Route as LayoutAttendanceRouteImport } from './routes/_layout/attendance'
+import { Route as ParentParentIndexRouteImport } from './routes/parent/_parent/index'
+import { Route as ParentParentTimetableRouteImport } from './routes/parent/_parent/timetable'
+import { Route as ParentParentHomeworkRouteImport } from './routes/parent/_parent/homework'
+import { Route as ParentParentDisciplineRouteImport } from './routes/parent/_parent/discipline'
+import { Route as ParentParentAttendanceRouteImport } from './routes/parent/_parent/attendance'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,6 +41,16 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LayoutRoute,
+} as any)
+const ParentLoginRoute = ParentLoginRouteImport.update({
+  id: '/parent/login',
+  path: '/parent/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParentParentRoute = ParentParentRouteImport.update({
+  id: '/parent/_parent',
+  path: '/parent',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutTimetableRoute = LayoutTimetableRouteImport.update({
   id: '/timetable',
@@ -75,6 +92,31 @@ const LayoutAttendanceRoute = LayoutAttendanceRouteImport.update({
   path: '/attendance',
   getParentRoute: () => LayoutRoute,
 } as any)
+const ParentParentIndexRoute = ParentParentIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ParentParentRoute,
+} as any)
+const ParentParentTimetableRoute = ParentParentTimetableRouteImport.update({
+  id: '/timetable',
+  path: '/timetable',
+  getParentRoute: () => ParentParentRoute,
+} as any)
+const ParentParentHomeworkRoute = ParentParentHomeworkRouteImport.update({
+  id: '/homework',
+  path: '/homework',
+  getParentRoute: () => ParentParentRoute,
+} as any)
+const ParentParentDisciplineRoute = ParentParentDisciplineRouteImport.update({
+  id: '/discipline',
+  path: '/discipline',
+  getParentRoute: () => ParentParentRoute,
+} as any)
+const ParentParentAttendanceRoute = ParentParentAttendanceRouteImport.update({
+  id: '/attendance',
+  path: '/attendance',
+  getParentRoute: () => ParentParentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -87,6 +129,13 @@ export interface FileRoutesByFullPath {
   '/students': typeof LayoutStudentsRoute
   '/teachers': typeof LayoutTeachersRoute
   '/timetable': typeof LayoutTimetableRoute
+  '/parent': typeof ParentParentRouteWithChildren
+  '/parent/login': typeof ParentLoginRoute
+  '/parent/attendance': typeof ParentParentAttendanceRoute
+  '/parent/discipline': typeof ParentParentDisciplineRoute
+  '/parent/homework': typeof ParentParentHomeworkRoute
+  '/parent/timetable': typeof ParentParentTimetableRoute
+  '/parent/': typeof ParentParentIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -98,7 +147,13 @@ export interface FileRoutesByTo {
   '/students': typeof LayoutStudentsRoute
   '/teachers': typeof LayoutTeachersRoute
   '/timetable': typeof LayoutTimetableRoute
+  '/parent/login': typeof ParentLoginRoute
   '/': typeof LayoutIndexRoute
+  '/parent/attendance': typeof ParentParentAttendanceRoute
+  '/parent/discipline': typeof ParentParentDisciplineRoute
+  '/parent/homework': typeof ParentParentHomeworkRoute
+  '/parent/timetable': typeof ParentParentTimetableRoute
+  '/parent': typeof ParentParentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,7 +167,14 @@ export interface FileRoutesById {
   '/_layout/students': typeof LayoutStudentsRoute
   '/_layout/teachers': typeof LayoutTeachersRoute
   '/_layout/timetable': typeof LayoutTimetableRoute
+  '/parent/_parent': typeof ParentParentRouteWithChildren
+  '/parent/login': typeof ParentLoginRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/parent/_parent/attendance': typeof ParentParentAttendanceRoute
+  '/parent/_parent/discipline': typeof ParentParentDisciplineRoute
+  '/parent/_parent/homework': typeof ParentParentHomeworkRoute
+  '/parent/_parent/timetable': typeof ParentParentTimetableRoute
+  '/parent/_parent/': typeof ParentParentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,6 +189,13 @@ export interface FileRouteTypes {
     | '/students'
     | '/teachers'
     | '/timetable'
+    | '/parent'
+    | '/parent/login'
+    | '/parent/attendance'
+    | '/parent/discipline'
+    | '/parent/homework'
+    | '/parent/timetable'
+    | '/parent/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -138,7 +207,13 @@ export interface FileRouteTypes {
     | '/students'
     | '/teachers'
     | '/timetable'
+    | '/parent/login'
     | '/'
+    | '/parent/attendance'
+    | '/parent/discipline'
+    | '/parent/homework'
+    | '/parent/timetable'
+    | '/parent'
   id:
     | '__root__'
     | '/_layout'
@@ -151,12 +226,21 @@ export interface FileRouteTypes {
     | '/_layout/students'
     | '/_layout/teachers'
     | '/_layout/timetable'
+    | '/parent/_parent'
+    | '/parent/login'
     | '/_layout/'
+    | '/parent/_parent/attendance'
+    | '/parent/_parent/discipline'
+    | '/parent/_parent/homework'
+    | '/parent/_parent/timetable'
+    | '/parent/_parent/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ParentParentRoute: typeof ParentParentRouteWithChildren
+  ParentLoginRoute: typeof ParentLoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -181,6 +265,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/parent/login': {
+      id: '/parent/login'
+      path: '/parent/login'
+      fullPath: '/parent/login'
+      preLoaderRoute: typeof ParentLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parent/_parent': {
+      id: '/parent/_parent'
+      path: '/parent'
+      fullPath: '/parent'
+      preLoaderRoute: typeof ParentParentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_layout/timetable': {
       id: '/_layout/timetable'
@@ -238,6 +336,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAttendanceRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/parent/_parent/': {
+      id: '/parent/_parent/'
+      path: '/'
+      fullPath: '/parent/'
+      preLoaderRoute: typeof ParentParentIndexRouteImport
+      parentRoute: typeof ParentParentRoute
+    }
+    '/parent/_parent/timetable': {
+      id: '/parent/_parent/timetable'
+      path: '/timetable'
+      fullPath: '/parent/timetable'
+      preLoaderRoute: typeof ParentParentTimetableRouteImport
+      parentRoute: typeof ParentParentRoute
+    }
+    '/parent/_parent/homework': {
+      id: '/parent/_parent/homework'
+      path: '/homework'
+      fullPath: '/parent/homework'
+      preLoaderRoute: typeof ParentParentHomeworkRouteImport
+      parentRoute: typeof ParentParentRoute
+    }
+    '/parent/_parent/discipline': {
+      id: '/parent/_parent/discipline'
+      path: '/discipline'
+      fullPath: '/parent/discipline'
+      preLoaderRoute: typeof ParentParentDisciplineRouteImport
+      parentRoute: typeof ParentParentRoute
+    }
+    '/parent/_parent/attendance': {
+      id: '/parent/_parent/attendance'
+      path: '/attendance'
+      fullPath: '/parent/attendance'
+      preLoaderRoute: typeof ParentParentAttendanceRouteImport
+      parentRoute: typeof ParentParentRoute
+    }
   }
 }
 
@@ -268,9 +401,31 @@ const LayoutRouteChildren: LayoutRouteChildren = {
 const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
+interface ParentParentRouteChildren {
+  ParentParentAttendanceRoute: typeof ParentParentAttendanceRoute
+  ParentParentDisciplineRoute: typeof ParentParentDisciplineRoute
+  ParentParentHomeworkRoute: typeof ParentParentHomeworkRoute
+  ParentParentTimetableRoute: typeof ParentParentTimetableRoute
+  ParentParentIndexRoute: typeof ParentParentIndexRoute
+}
+
+const ParentParentRouteChildren: ParentParentRouteChildren = {
+  ParentParentAttendanceRoute: ParentParentAttendanceRoute,
+  ParentParentDisciplineRoute: ParentParentDisciplineRoute,
+  ParentParentHomeworkRoute: ParentParentHomeworkRoute,
+  ParentParentTimetableRoute: ParentParentTimetableRoute,
+  ParentParentIndexRoute: ParentParentIndexRoute,
+}
+
+const ParentParentRouteWithChildren = ParentParentRoute._addFileChildren(
+  ParentParentRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   LoginRoute: LoginRoute,
+  ParentParentRoute: ParentParentRouteWithChildren,
+  ParentLoginRoute: ParentLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

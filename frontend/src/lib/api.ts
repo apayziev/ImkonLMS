@@ -76,6 +76,36 @@ api.interceptors.response.use(
 
 export default api
 
+// --- Parent API client (uses parent_token) ---
+
+const parentAxiosInstance = axios.create({
+  baseURL: API.baseUrl,
+  timeout: API.timeout,
+})
+
+parentAxiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem(AUTH.parentTokenKey)
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+parentAxiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const isUnauthorized = error.response?.status === 401
+    const isLoginEndpoint = error.config?.url?.includes("/login/")
+    const isOnParentLogin = window.location.pathname === AUTH.parentLoginPath
+
+    if (isUnauthorized && !isLoginEndpoint && !isOnParentLogin) {
+      localStorage.removeItem(AUTH.parentTokenKey)
+      window.location.href = AUTH.parentLoginPath
+    }
+    return Promise.reject(error)
+  },
+)
+
 // Serialize params with array support (entry_id=1&entry_id=2)
 const arrayParamsSerializer = (params: Record<string, unknown>) => {
   const parts: string[] = []
@@ -768,4 +798,123 @@ export interface TMSTokenResponse {
 
 export const tmsApi = {
   getEmbedToken: () => api.post<TMSTokenResponse>("/api/v1/tms/embed-token"),
+}
+
+// ────────────── Parent Portal ──────────────────────────────────────────
+
+export interface ParentChildRead {
+  id: number
+  first_name: string
+  last_name: string
+  full_name: string
+  photo_url: string | null
+  grade_id: number | null
+  grade_display: string | null
+  is_active: boolean
+  is_frozen: boolean
+}
+
+export interface ParentMeRead {
+  phone: string
+  name: string
+  children: ParentChildRead[]
+}
+
+export interface ParentTokenResponse {
+  access_token: string
+  token_type: string
+  parent: ParentMeRead
+}
+
+export interface ParentLoginRequest {
+  phone: string
+  password: string
+}
+
+export interface ChildAttendanceRecord {
+  date: string
+  subject_name: string
+  period_number: number
+  start_time: string
+  end_time: string
+  status: AttendanceStatus
+}
+
+export interface AttendanceSummary {
+  total: number
+  present: number
+  late: number
+  absent: number
+}
+
+export interface ChildAttendanceResponse {
+  records: ChildAttendanceRecord[]
+  summary: AttendanceSummary
+}
+
+export interface ChildTimetableEntry {
+  day_of_week: number
+  period_number: number
+  start_time: string
+  end_time: string
+  subject_name: string
+  teacher_name: string
+  room: string | null
+}
+
+export interface ChildTimetableResponse {
+  entries: ChildTimetableEntry[]
+}
+
+export interface ChildHomeworkItem {
+  subject_name: string
+  topic: string | null
+  homework: string
+  homework_deadline: string | null
+  plan_date: string
+  teacher_name: string | null
+}
+
+export interface ChildHomeworkResponse {
+  items: ChildHomeworkItem[]
+}
+
+export interface ChildViolationItem {
+  violation_type: string
+  points: number
+  note: string | null
+  location: string | null
+  occurred_at: string
+  reported_by: string
+}
+
+export interface ChildYellowCardItem {
+  reason: string | null
+  issued_by: string
+  created_at: string
+}
+
+export interface ChildDisciplineResponse {
+  violations: ChildViolationItem[]
+  yellow_cards: ChildYellowCardItem[]
+  total_violation_points: number
+}
+
+export const parentApi = {
+  login: (data: ParentLoginRequest) =>
+    api.post<ParentTokenResponse>("/api/v1/login/parent", data),
+
+  me: () => parentAxiosInstance.get<ParentMeRead>("/api/v1/parent/me"),
+
+  attendance: (studentId: number, params?: { start_date?: string; end_date?: string }) =>
+    parentAxiosInstance.get<ChildAttendanceResponse>(`/api/v1/parent/children/${studentId}/attendance`, { params }),
+
+  timetable: (studentId: number) =>
+    parentAxiosInstance.get<ChildTimetableResponse>(`/api/v1/parent/children/${studentId}/timetable`),
+
+  homework: (studentId: number, limit = 20) =>
+    parentAxiosInstance.get<ChildHomeworkResponse>(`/api/v1/parent/children/${studentId}/homework`, { params: { limit } }),
+
+  discipline: (studentId: number, params?: { start_date?: string; end_date?: string }) =>
+    parentAxiosInstance.get<ChildDisciplineResponse>(`/api/v1/parent/children/${studentId}/discipline`, { params }),
 }

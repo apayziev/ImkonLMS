@@ -10,6 +10,8 @@ export const API = {
 export const AUTH = {
   tokenKey: "access_token",
   loginPath: "/login",
+  parentTokenKey: "parent_token",
+  parentLoginPath: "/parent/login",
 } as const
 
 export const TMS = {

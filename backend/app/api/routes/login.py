@@ -4,14 +4,23 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import async_get_db
 from app.core.exceptions import UnauthorizedException
-from app.core.security import TokenType, create_access_token, create_refresh_token, verify_token
+from app.core.security import (
+    TokenType,
+    create_access_token,
+    create_refresh_token,
+    verify_password,
+    verify_token,
+)
 from app.crud.users import crud_users
-from app.models.user import User
+from app.models.parent_auth import ParentAuth
+from app.models.user import User, UserRole
+from app.schemas.parent import ParentChildRead, ParentLoginRequest, ParentMeRead, ParentTokenResponse
 from app.schemas.users import LoginRequest, StudentLoginRequest, TokenResponse, UserRead
 
 router = APIRouter(prefix="/login", tags=["login"])
@@ -84,7 +93,11 @@ async def refresh_access_token(
     if not user_data:
         raise UnauthorizedException("Yaroqsiz refresh token.")
 
-    return {"access_token": create_access_token(data={"sub": user_data["document_id"]}), "token_type": "bearer"}
+    # Preserve role in refreshed token
+    token_payload: dict = {"sub": user_data["document_id"]}
+    if user_data.get("role"):
+        token_payload["role"] = user_data["role"]
+    return {"access_token": create_access_token(data=token_payload), "token_type": "bearer"}
 
 
 @router.post("/student", response_model=TokenResponse)
@@ -101,3 +114,66 @@ async def login_student(
         raise UnauthorizedException("Foydalanuvchi faol emas.")
 
     return _create_token_response(response, user)
+
+
+@router.post("/parent", response_model=ParentTokenResponse)
+async def login_parent(
+    response: Response,
+    login_data: ParentLoginRequest,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+) -> ParentTokenResponse:
+    """Ota-ona uchun tizimga kirish (telefon + parol)."""
+    result = await db.execute(
+        select(ParentAuth).where(ParentAuth.phone == login_data.phone)
+    )
+    parent = result.scalar_one_or_none()
+
+    if not parent or not verify_password(login_data.password, parent.hashed_password):
+        raise UnauthorizedException("Noto'g'ri telefon raqami yoki parol.")
+    if not parent.is_active:
+        raise UnauthorizedException("Hisob faol emas.")
+
+    # Find children by phone match
+    children_result = await db.execute(
+        select(User).where(
+            User.role == UserRole.STUDENT.value,
+            User.is_deleted == False,  # noqa: E712
+            (User.father_phone == parent.phone) | (User.mother_phone == parent.phone),
+        )
+    )
+    children = children_result.scalars().all()
+
+    # Determine parent name from first child's data
+    name = parent.phone
+    for child in children:
+        if child.father_phone == parent.phone and child.father_first_name:
+            name = f"{child.father_last_name or ''} {child.father_first_name}".strip()
+            break
+        if child.mother_phone == parent.phone and child.mother_first_name:
+            name = f"{child.mother_last_name or ''} {child.mother_first_name}".strip()
+            break
+
+    access_token = create_access_token(data={"sub": parent.phone, "role": "parent"})
+    refresh_token = create_refresh_token(data={"sub": parent.phone, "role": "parent"})
+    _set_auth_cookie(response, refresh_token)
+
+    child_reads = []
+    for c in children:
+        grade_display = None
+        if c.grade_id:
+            from app.models.grade import Grade
+            grade_result = await db.execute(select(Grade).where(Grade.id == c.grade_id))
+            grade = grade_result.scalar_one_or_none()
+            if grade:
+                grade_display = grade.display_name
+        child_reads.append(ParentChildRead(
+            id=c.id, first_name=c.first_name, last_name=c.last_name,
+            full_name=c.full_name, photo_url=c.photo_url,
+            grade_id=c.grade_id, grade_display=grade_display,
+            is_active=c.is_active, is_frozen=c.is_frozen,
+        ))
+
+    return ParentTokenResponse(
+        access_token=access_token,
+        parent=ParentMeRead(phone=parent.phone, name=name, children=child_reads),
+    )
