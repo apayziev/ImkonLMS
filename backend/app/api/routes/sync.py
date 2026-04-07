@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 from datetime import date, datetime
 
 import httpx
@@ -207,82 +208,146 @@ async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[
     return created, updated, deactivated
 
 
+def _make_photo_url_absolute(record: dict, pms_base: str) -> None:
+    """Convert relative photo_url to absolute URL."""
+    if record.get("photo_url") and not record["photo_url"].startswith("http"):
+        record["photo_url"] = f"{pms_base}{record['photo_url']}"
+
+
+def _build_field_value(field: str, value: object) -> object:
+    """Parse date fields, pass others through."""
+    return _parse_date(value) if field in _DATE_FIELDS else value
+
+
+async def _sync_users(
+    db: SessionDep,
+    role: UserRole,
+    payment_users: list[dict],
+    grade_map: dict[int, int],
+    sync_fields: list[str],
+    *,
+    extra_fields_fn: Callable[[dict, dict], dict] | None = None,
+    all_payment_document_ids: list[str] | None = None,
+) -> tuple[int, int, int, list[str]]:
+    """Generic user sync. Returns (created, updated, deactivated, errors).
+
+    extra_fields_fn(record, grade_map) -> dict of additional fields for create/update.
+    """
+    existing_result = await db.execute(
+        select(User).where(User.role == role.value)
+    )
+    user_map: dict[str, User] = {u.document_id: u for u in existing_result.scalars().all()}
+
+    pms_base = settings.PAYMENT_API_URL.rstrip("/")
+    created = updated = 0
+    errors: list[str] = []
+
+    for record in payment_users:
+        doc_id = record.get("document_id")
+        if not doc_id:
+            continue
+
+        try:
+            _make_photo_url_absolute(record, pms_base)
+            extra = extra_fields_fn(record, grade_map) if extra_fields_fn else {}
+            existing = user_map.get(doc_id)
+
+            if existing:
+                changed = False
+                for field in sync_fields:
+                    if field in record:
+                        new_val = _build_field_value(field, record[field])
+                        if getattr(existing, field, None) != new_val:
+                            setattr(existing, field, new_val)
+                            changed = True
+                for field, val in extra.items():
+                    if getattr(existing, field, None) != val:
+                        setattr(existing, field, val)
+                        changed = True
+                if changed:
+                    updated += 1
+            else:
+                user_data: dict = {}
+                for f in sync_fields:
+                    if f in record:
+                        user_data[f] = _build_field_value(f, record[f])
+                user_data.update(extra)
+                user_data["document_id"] = doc_id
+                user_data["role"] = role.value
+                if not user_data.get("hashed_password"):
+                    loop = asyncio.get_running_loop()
+                    user_data["hashed_password"] = await loop.run_in_executor(
+                        None, get_password_hash, doc_id,
+                    )
+                new_user = User(**user_data)
+                db.add(new_user)
+                user_map[doc_id] = new_user
+                created += 1
+        except Exception as e:
+            logger.warning("Sync %s failed for %s: %s", role.value, doc_id, e)
+            errors.append(f"{doc_id}: {e}")
+
+    # Detect hard-deleted users (no longer in Payment)
+    deactivated = 0
+    if all_payment_document_ids is not None:
+        active_ids = set(all_payment_document_ids)
+        for doc_id, user in user_map.items():
+            if doc_id not in active_ids and not user.is_deleted:
+                user.is_deleted = True
+                deactivated += 1
+
+    return created, updated, deactivated, errors
+
+
+# ── Role-specific sync field configs ────────────────────────────────────────
+
+_STUDENT_SYNC_FIELDS = [
+    "first_name", "last_name", "middle_name", "birth_date", "gender",
+    "phone_number", "student_id", "photo_url",
+    "father_first_name", "father_last_name", "father_phone",
+    "mother_first_name", "mother_last_name", "mother_phone",
+    "address", "enrollment_date", "withdrawal_date",
+    "is_active", "is_frozen", "frozen_at", "frozen_reason",
+    "departure_date", "return_date", "is_deleted", "deleted_at",
+]
+
+_TEACHER_SYNC_FIELDS = [
+    "first_name", "last_name", "middle_name", "birth_date", "gender",
+    "phone_number", "photo_url", "is_active", "is_deleted", "subjects",
+    "hashed_password",
+]
+
+
+def _student_extra_fields(record: dict, grade_map: dict[int, int]) -> dict:
+    """Compute student-specific fields (grade_id)."""
+    lms_grade_id = grade_map.get(record.get("grade_id")) if record.get("grade_id") else None
+    return {"grade_id": lms_grade_id}
+
+
+def _teacher_extra_fields(record: dict, grade_map: dict[int, int]) -> dict:
+    """Compute teacher-specific fields (class_teacher_grade_id, teaching_grade_ids)."""
+    payment_ct = record.get("class_teacher_grade_id")
+    lms_ct = grade_map.get(payment_ct) if payment_ct else None
+
+    payment_teaching = record.get("teaching_grade_ids") or []
+    lms_teaching = [grade_map[gid] for gid in payment_teaching if gid in grade_map] or None
+
+    return {"class_teacher_grade_id": lms_ct, "teaching_grade_ids": lms_teaching}
+
+
 async def _sync_students(
     db: SessionDep,
     payment_students: list[dict],
     grade_map: dict[int, int],
     all_payment_document_ids: list[str] | None = None,
-) -> tuple[int, int, int]:
-    """Upsert students by document_id. Returns (created, updated, deactivated)."""
-    existing_result = await db.execute(
-        select(User).where(User.role == UserRole.STUDENT.value)
+) -> tuple[int, int, int, list[str]]:
+    """Upsert students by document_id. Returns (created, updated, deactivated, errors)."""
+    return await _sync_users(
+        db, UserRole.STUDENT, payment_students, grade_map,
+        _STUDENT_SYNC_FIELDS,
+        extra_fields_fn=_student_extra_fields,
+        all_payment_document_ids=all_payment_document_ids,
     )
-    student_map: dict[str, User] = {s.document_id: s for s in existing_result.scalars().all()}
-
-    sync_fields = [
-        "first_name", "last_name", "middle_name", "birth_date", "gender",
-        "phone_number", "student_id", "photo_url",
-        "father_first_name", "father_last_name", "father_phone",
-        "mother_first_name", "mother_last_name", "mother_phone",
-        "address", "enrollment_date", "withdrawal_date",
-        "is_active", "is_frozen", "frozen_at", "frozen_reason",
-        "departure_date", "return_date", "is_deleted", "deleted_at",
-    ]
-
-    pms_base = settings.PAYMENT_API_URL.rstrip("/")
-
-    created = updated = 0
-
-    for ps in payment_students:
-        # Make relative photo_url absolute so LMS frontend can load from PMS
-        if ps.get("photo_url") and not ps["photo_url"].startswith("http"):
-            ps["photo_url"] = f"{pms_base}{ps['photo_url']}"
-
-        doc_id = ps.get("document_id")
-        if not doc_id:
-            continue
-
-        lms_grade_id = grade_map.get(ps.get("grade_id")) if ps.get("grade_id") else None
-        existing = student_map.get(doc_id)
-
-        if existing:
-            changed = False
-            for field in sync_fields:
-                if field in ps:
-                    new_val = _parse_date(ps[field]) if field in _DATE_FIELDS else ps[field]
-                    if getattr(existing, field, None) != new_val:
-                        setattr(existing, field, new_val)
-                        changed = True
-            if existing.grade_id != lms_grade_id:
-                existing.grade_id = lms_grade_id
-                changed = True
-            if changed:
-                updated += 1
-        else:
-            student_data = {}
-            for f in sync_fields:
-                if f in ps:
-                    student_data[f] = _parse_date(ps[f]) if f in _DATE_FIELDS else ps[f]
-            student_data["document_id"] = doc_id
-            student_data["grade_id"] = lms_grade_id
-            student_data["role"] = UserRole.STUDENT.value
-            loop = asyncio.get_running_loop()
-            student_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)
-            new_student = User(**student_data)
-            db.add(new_student)
-            student_map[doc_id] = new_student
-            created += 1
-
-    # Detect hard-deleted students (no longer in Payment)
-    deactivated = 0
-    if all_payment_document_ids is not None:
-        active_ids = set(all_payment_document_ids)
-        for doc_id, student in student_map.items():
-            if doc_id not in active_ids and not student.is_deleted:
-                student.is_deleted = True
-                deactivated += 1
-
-    return created, updated, deactivated
 
 
 async def _sync_teachers(
@@ -290,88 +355,14 @@ async def _sync_teachers(
     payment_teachers: list[dict],
     grade_map: dict[int, int],
     all_payment_document_ids: list[str] | None = None,
-) -> tuple[int, int, int]:
-    """Upsert teachers by document_id. Returns (created, updated, deactivated)."""
-    existing_result = await db.execute(
-        select(User).where(User.role == UserRole.TEACHER.value)
+) -> tuple[int, int, int, list[str]]:
+    """Upsert teachers by document_id. Returns (created, updated, deactivated, errors)."""
+    return await _sync_users(
+        db, UserRole.TEACHER, payment_teachers, grade_map,
+        _TEACHER_SYNC_FIELDS,
+        extra_fields_fn=_teacher_extra_fields,
+        all_payment_document_ids=all_payment_document_ids,
     )
-    teacher_map: dict[str, User] = {t.document_id: t for t in existing_result.scalars().all()}
-
-    sync_fields = [
-        "first_name", "last_name", "middle_name", "birth_date", "gender",
-        "phone_number", "photo_url", "is_active", "is_deleted", "subjects",
-        "hashed_password",
-    ]
-
-    pms_base = settings.PAYMENT_API_URL.rstrip("/")
-
-    created = updated = 0
-
-    for pt in payment_teachers:
-        # Make relative photo_url absolute so LMS frontend can load from PMS
-        if pt.get("photo_url") and not pt["photo_url"].startswith("http"):
-            pt["photo_url"] = f"{pms_base}{pt['photo_url']}"
-
-        doc_id = pt.get("document_id")
-        if not doc_id:
-            continue
-
-        payment_ct_grade_id = pt.get("class_teacher_grade_id")
-        lms_ct_grade_id = grade_map.get(payment_ct_grade_id) if payment_ct_grade_id else None
-
-        # Convert Payment teaching_grade_ids -> LMS teaching_grade_ids (map PMS IDs to LMS IDs)
-        payment_teaching_ids = pt.get("teaching_grade_ids") or []
-        lms_teaching_ids = [
-            grade_map[gid]
-            for gid in payment_teaching_ids
-            if gid in grade_map
-        ] or None
-
-        existing = teacher_map.get(doc_id)
-
-        if existing:
-            changed = False
-            for field in sync_fields:
-                if field in pt:
-                    new_val = _parse_date(pt[field]) if field in _DATE_FIELDS else pt[field]
-                    if getattr(existing, field, None) != new_val:
-                        setattr(existing, field, new_val)
-                        changed = True
-            if existing.class_teacher_grade_id != lms_ct_grade_id:
-                existing.class_teacher_grade_id = lms_ct_grade_id
-                changed = True
-            if existing.teaching_grade_ids != lms_teaching_ids:
-                existing.teaching_grade_ids = lms_teaching_ids
-                changed = True
-            if changed:
-                updated += 1
-        else:
-            teacher_data = {}
-            for f in sync_fields:
-                if f in pt:
-                    teacher_data[f] = _parse_date(pt[f]) if f in _DATE_FIELDS else pt[f]
-            teacher_data["document_id"] = doc_id
-            teacher_data["class_teacher_grade_id"] = lms_ct_grade_id
-            teacher_data["teaching_grade_ids"] = lms_teaching_ids
-            teacher_data["role"] = UserRole.TEACHER.value
-            if not teacher_data.get("hashed_password"):
-                loop = asyncio.get_running_loop()
-                teacher_data["hashed_password"] = await loop.run_in_executor(None, get_password_hash, doc_id)
-            new_teacher = User(**teacher_data)
-            db.add(new_teacher)
-            teacher_map[doc_id] = new_teacher
-            created += 1
-
-    # Detect hard-deleted teachers (no longer in Payment)
-    deactivated = 0
-    if all_payment_document_ids is not None:
-        active_ids = set(all_payment_document_ids)
-        for doc_id, teacher in teacher_map.items():
-            if doc_id not in active_ids and not teacher.is_deleted:
-                teacher.is_deleted = True
-                deactivated += 1
-
-    return created, updated, deactivated
 
 
 async def _get_last_successful_sync(db: AsyncSession) -> datetime | None:
@@ -407,17 +398,18 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     academic_years_created, academic_years_updated, academic_years_deactivated = await _sync_academic_years(db, data.get("academic_years", []))
     grades_created, grades_deactivated, grade_map = await _sync_grades(db, data.get("grades", []))
     subjects_created, subjects_updated, subjects_deactivated = await _sync_subjects(db, data.get("subjects", []))
-    students_created, students_updated, students_deactivated = await _sync_students(
+    students_created, students_updated, students_deactivated, student_errors = await _sync_students(
         db, data.get("students", []), grade_map,
         all_payment_document_ids=data.get("all_student_document_ids"),
     )
-    teachers_created, teachers_updated, teachers_deactivated = await _sync_teachers(
+    teachers_created, teachers_updated, teachers_deactivated, teacher_errors = await _sync_teachers(
         db, data.get("teachers", []), grade_map,
         all_payment_document_ids=data.get("all_teacher_document_ids"),
     )
 
     await db.commit()
 
+    all_errors = student_errors + teacher_errors
     result = {
         "message": "Sinxronizatsiya muvaffaqiyatli yakunlandi",
         "incremental": last_sync is not None,
@@ -438,9 +430,14 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "teachers_deactivated": teachers_deactivated,
         "total_students": len(data.get("students", [])),
         "total_teachers": len(data.get("teachers", [])),
+        "errors": all_errors[:50] if all_errors else [],
     }
 
-    await _save_sync_log(db, status="success", stats=result, triggered_by=triggered_by)
+    log_status = "partial" if all_errors else "success"
+    await _save_sync_log(db, status=log_status, stats=result, triggered_by=triggered_by)
+
+    if all_errors:
+        logger.warning("Sync completed with %d error(s)", len(all_errors))
 
     logger.info(
         "Sync completed (%s, %s): academic_years=%d/%d/%d, grades=%d/%d, subjects=%d/%d, "

@@ -4,7 +4,6 @@ from datetime import UTC, date, datetime
 
 from fastapi import APIRouter
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import today_local
@@ -98,24 +97,17 @@ async def update_plan(
 
     data = body.model_dump(exclude_unset=True)
 
-    if "topic" in data:
-        plan.topic = data["topic"] or None
-    if "homework" in data:
-        plan.homework = data["homework"] or None
+    # Simple fields: set to value or None
+    simple_fields = (
+        "topic", "homework", "lesson_type",
+        "objectives", "keywords", "stages", "resources", "assessment_methods",
+    )
+    for field in simple_fields:
+        if field in data:
+            setattr(plan, field, data[field] or None)
+
     if "homework_deadline" in data:
         plan.homework_deadline = date.fromisoformat(data["homework_deadline"]) if data["homework_deadline"] else None
-    if "lesson_type" in data:
-        plan.lesson_type = data["lesson_type"] or None
-    if "objectives" in data:
-        plan.objectives = data["objectives"] or None
-    if "keywords" in data:
-        plan.keywords = data["keywords"] or None
-    if "stages" in data:
-        plan.stages = data["stages"] or None
-    if "resources" in data:
-        plan.resources = data["resources"] or None
-    if "assessment_methods" in data:
-        plan.assessment_methods = data["assessment_methods"] or None
 
     await db.commit()
     await db.refresh(plan, ["materials"])

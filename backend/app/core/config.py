@@ -60,6 +60,10 @@ class SyncSettings(BaseSettings):
     PAYMENT_SYNC_API_KEY: str = ""
 
 
+class UploadSettings(BaseSettings):
+    MAX_FILE_SIZE_MB: int = 20
+
+
 class CORSSettings(BaseSettings):
     CORS_ORIGINS_STR: str = "http://localhost:5173"
     CORS_METHODS: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
@@ -79,6 +83,7 @@ class Settings(
     EnvironmentSettings,
     CORSSettings,
     SyncSettings,
+    UploadSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

@@ -76,6 +76,16 @@ api.interceptors.response.use(
 
 export default api
 
+// Serialize params with array support (entry_id=1&entry_id=2)
+const arrayParamsSerializer = (params: Record<string, unknown>) => {
+  const parts: string[] = []
+  for (const [k, v] of Object.entries(params)) {
+    if (Array.isArray(v)) v.forEach((item) => parts.push(`${k}=${item}`))
+    else parts.push(`${k}=${v}`)
+  }
+  return parts.join("&")
+}
+
 // --- Shared Status Types ---
 
 export type SessionStatus = "in_progress" | "completed"
@@ -531,14 +541,7 @@ export const lessonsApi = {
   sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
     api.get<SessionStatusesResponse>("/api/v1/lessons/sessions/statuses", {
       params: { entry_id: entryIds, start_date: startDate, end_date: endDate },
-      paramsSerializer: (params) => {
-        const parts: string[] = []
-        for (const [k, v] of Object.entries(params)) {
-          if (Array.isArray(v)) v.forEach((item) => parts.push(`${k}=${item}`))
-          else parts.push(`${k}=${v}`)
-        }
-        return parts.join("&")
-      },
+      paramsSerializer: arrayParamsSerializer,
     }),
   // Plans
   createPlan: (schedule_entry_id: number, target_date?: string) =>
@@ -578,14 +581,7 @@ export const lessonsApi = {
   attendanceHistory: (entryIds: number[], startDate: string, endDate: string) =>
     api.get<AttendanceHistoryResponse>("/api/v1/lessons/attendance/history", {
       params: { entry_id: entryIds, start_date: startDate, end_date: endDate },
-      paramsSerializer: (params) => {
-        const parts: string[] = []
-        for (const [k, v] of Object.entries(params)) {
-          if (Array.isArray(v)) v.forEach((item) => parts.push(`${k}=${item}`))
-          else parts.push(`${k}=${v}`)
-        }
-        return parts.join("&")
-      },
+      paramsSerializer: arrayParamsSerializer,
     }),
   teacherStats: (startDate: string, endDate: string) =>
     api.get<TeacherStatsResponse>("/api/v1/lessons/teacher-stats", {

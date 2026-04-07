@@ -14,6 +14,28 @@ _DUMMY_HASH = get_password_hash("dummy-password-for-timing-safety")
 
 class CRUDUser(BaseCRUD[User]):
 
+    @staticmethod
+    def _apply_search(query, search: str | None, fields: list):
+        """Apply ilike search across given fields."""
+        if not search:
+            return query
+        term = f"%{search}%"
+        return query.where(or_(*[f.ilike(term) for f in fields]))
+
+    @staticmethod
+    async def _paginate(db: AsyncSession, base, *, options=None, order_by=None, skip: int = 0, limit: int = 100):
+        """Count + fetch paginated results."""
+        count_q = select(func.count()).select_from(base.subquery())
+        total = (await db.execute(count_q)).scalar_one()
+        data_q = base
+        if options:
+            data_q = data_q.options(*options)
+        if order_by is not None:
+            data_q = data_q.order_by(*order_by) if isinstance(order_by, (list, tuple)) else data_q.order_by(order_by)
+        data_q = data_q.offset(skip).limit(limit)
+        rows = (await db.execute(data_q)).scalars().all()
+        return list(rows), total
+
     async def get_by_phone_number(
         self,
         db: AsyncSession,
@@ -98,25 +120,17 @@ class CRUDUser(BaseCRUD[User]):
         elif status == "inactive":
             base = base.where(User.is_active == False, User.is_frozen == False)  # noqa: E712
 
-        if search:
-            term = f"%{search}%"
-            base = base.where(
-                or_(
-                    User.first_name.ilike(term),
-                    User.last_name.ilike(term),
-                    User.document_id.ilike(term),
-                    User.student_id.ilike(term),
-                    User.phone_number.ilike(term),
-                )
-            )
+        base = self._apply_search(base, search, [
+            User.first_name, User.last_name, User.document_id,
+            User.student_id, User.phone_number,
+        ])
 
-        count_q = select(func.count()).select_from(base.subquery())
-        total = (await db.execute(count_q)).scalar_one()
-
-        data_q = base.options(selectinload(User.grade)).offset(skip).limit(limit).order_by(User.id.desc())
-        rows = (await db.execute(data_q)).scalars().all()
-
-        return list(rows), total
+        return await self._paginate(
+            db, base,
+            options=[selectinload(User.grade)],
+            order_by=User.id.desc(),
+            skip=skip, limit=limit,
+        )
 
     async def get_deleted_students(
         self,
@@ -131,24 +145,16 @@ class CRUDUser(BaseCRUD[User]):
             User.is_deleted == True,  # noqa: E712
         )
 
-        if search:
-            term = f"%{search}%"
-            base = base.where(
-                or_(
-                    User.first_name.ilike(term),
-                    User.last_name.ilike(term),
-                    User.document_id.ilike(term),
-                    User.student_id.ilike(term),
-                )
-            )
+        base = self._apply_search(base, search, [
+            User.first_name, User.last_name, User.document_id, User.student_id,
+        ])
 
-        count_q = select(func.count()).select_from(base.subquery())
-        total = (await db.execute(count_q)).scalar_one()
-
-        data_q = base.options(selectinload(User.grade)).offset(skip).limit(limit).order_by(User.id.desc())
-        rows = (await db.execute(data_q)).scalars().all()
-
-        return list(rows), total
+        return await self._paginate(
+            db, base,
+            options=[selectinload(User.grade)],
+            order_by=User.id.desc(),
+            skip=skip, limit=limit,
+        )
 
     async def hard_delete(self, db: AsyncSession, *, id: int) -> bool:
         user = await self.get(db, id=id, is_deleted=True)
@@ -173,29 +179,16 @@ class CRUDUser(BaseCRUD[User]):
             User.is_deleted == False,  # noqa: E712
         )
 
-        if search:
-            term = f"%{search}%"
-            base = base.where(
-                or_(
-                    User.first_name.ilike(term),
-                    User.last_name.ilike(term),
-                    User.document_id.ilike(term),
-                    User.phone_number.ilike(term),
-                )
-            )
+        base = self._apply_search(base, search, [
+            User.first_name, User.last_name, User.document_id, User.phone_number,
+        ])
 
-        count_q = select(func.count()).select_from(base.subquery())
-        total = (await db.execute(count_q)).scalar_one()
-
-        data_q = (
-            base.options(selectinload(User.class_teacher_grade))
-            .offset(skip)
-            .limit(limit)
-            .order_by(User.last_name, User.first_name)
+        return await self._paginate(
+            db, base,
+            options=[selectinload(User.class_teacher_grade)],
+            order_by=(User.last_name, User.first_name),
+            skip=skip, limit=limit,
         )
-        rows = (await db.execute(data_q)).scalars().all()
-
-        return list(rows), total
 
 
 crud_users = CRUDUser(User)

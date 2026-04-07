@@ -4,8 +4,6 @@ import type { AxiosError } from "axios"
 
 import { AUTH } from "@/config"
 import {
-  type LoginRequest,
-  type StudentLoginRequest,
   type UserRead,
   loginApi,
   logoutApi,
@@ -32,37 +30,32 @@ const useAuth = () => {
     staleTime: 5 * 60_000,
   })
 
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginRequest) => {
-      const { data: response } = await loginApi.login(data)
-      localStorage.setItem(AUTH.tokenKey, response.access_token)
-      return response
-    },
-    onSuccess: () => {
-      navigate({ to: "/" })
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message =
-        error.response?.data?.detail || "Tizimga kirish muvaffaqiyatsiz"
-      showErrorToast(message)
-    },
-  })
+  const createLoginMutation = (
+    loginFn: (data: never) => Promise<{ data: { access_token: string } }>,
+    errorMsg: string,
+  ) =>
+    useMutation({
+      mutationFn: async (data: never) => {
+        const { data: response } = await loginFn(data)
+        localStorage.setItem(AUTH.tokenKey, response.access_token)
+        return response
+      },
+      onSuccess: () => {
+        navigate({ to: "/" })
+      },
+      onError: (error: AxiosError<{ detail?: string }>) => {
+        showErrorToast(error.response?.data?.detail || errorMsg)
+      },
+    })
 
-  const loginStudentMutation = useMutation({
-    mutationFn: async (data: StudentLoginRequest) => {
-      const { data: response } = await loginApi.loginStudent(data)
-      localStorage.setItem(AUTH.tokenKey, response.access_token)
-      return response
-    },
-    onSuccess: () => {
-      navigate({ to: "/" })
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message =
-        error.response?.data?.detail || "O'quvchi kirishda xatolik"
-      showErrorToast(message)
-    },
-  })
+  const loginMutation = createLoginMutation(
+    loginApi.login as never,
+    "Tizimga kirish muvaffaqiyatsiz",
+  )
+  const loginStudentMutation = createLoginMutation(
+    loginApi.loginStudent as never,
+    "O'quvchi kirishda xatolik",
+  )
 
   const logout = async () => {
     try {

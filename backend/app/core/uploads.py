@@ -6,9 +6,10 @@ from pathlib import Path
 import filetype
 from fastapi import UploadFile
 
+from app.core.config import settings
 from app.core.exceptions import BadRequestException
 
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_FILE_SIZE = settings.MAX_FILE_SIZE_MB * 1024 * 1024
 
 # Allowed extensions for lesson materials (documents, images, archives)
 ALLOWED_MATERIAL_EXTENSIONS = {
@@ -69,7 +70,7 @@ async def validate_and_save_file(
     contents = await file.read()
 
     if len(contents) > MAX_FILE_SIZE:
-        raise BadRequestException("Fayl hajmi 20MB dan oshmasligi kerak")
+        raise BadRequestException(f"Fayl hajmi {settings.MAX_FILE_SIZE_MB}MB dan oshmasligi kerak")
 
     # Magic bytes validation — ensure file content matches the declared extension
     expected_mimes = _EXT_MIME_MAP.get(ext)
