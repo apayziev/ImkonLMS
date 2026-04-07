@@ -1,6 +1,6 @@
 """CRUD operations for User model."""
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,20 +21,6 @@ class CRUDUser(BaseCRUD[User]):
             return query
         term = f"%{search}%"
         return query.where(or_(*[f.ilike(term) for f in fields]))
-
-    @staticmethod
-    async def _paginate(db: AsyncSession, base, *, options=None, order_by=None, skip: int = 0, limit: int = 100):
-        """Count + fetch paginated results."""
-        count_q = select(func.count()).select_from(base.subquery())
-        total = (await db.execute(count_q)).scalar_one()
-        data_q = base
-        if options:
-            data_q = data_q.options(*options)
-        if order_by is not None:
-            data_q = data_q.order_by(*order_by) if isinstance(order_by, (list, tuple)) else data_q.order_by(order_by)
-        data_q = data_q.offset(skip).limit(limit)
-        rows = (await db.execute(data_q)).scalars().all()
-        return list(rows), total
 
     async def get_by_phone_number(
         self,
@@ -125,11 +111,11 @@ class CRUDUser(BaseCRUD[User]):
             User.student_id, User.phone_number,
         ])
 
-        return await self._paginate(
+        return await self._paginate_query(
             db, base,
             options=[selectinload(User.grade)],
             order_by=User.id.desc(),
-            skip=skip, limit=limit,
+            offset=skip, limit=limit,
         )
 
     async def get_deleted_students(
@@ -149,11 +135,11 @@ class CRUDUser(BaseCRUD[User]):
             User.first_name, User.last_name, User.document_id, User.student_id,
         ])
 
-        return await self._paginate(
+        return await self._paginate_query(
             db, base,
             options=[selectinload(User.grade)],
             order_by=User.id.desc(),
-            skip=skip, limit=limit,
+            offset=skip, limit=limit,
         )
 
     async def hard_delete(self, db: AsyncSession, *, id: int) -> bool:
@@ -183,11 +169,11 @@ class CRUDUser(BaseCRUD[User]):
             User.first_name, User.last_name, User.document_id, User.phone_number,
         ])
 
-        return await self._paginate(
+        return await self._paginate_query(
             db, base,
             options=[selectinload(User.class_teacher_grade)],
             order_by=(User.last_name, User.first_name),
-            skip=skip, limit=limit,
+            offset=skip, limit=limit,
         )
 
 

@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
+import { Button } from "@/components/ui/button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
@@ -141,15 +141,14 @@ function LoginPage() {
               )}
             />
 
-            <LoadingButton
+            <Button
               type="submit"
               loading={loginMutation.isPending}
-              disabled={loginMutation.isPending}
               className="w-full h-12 text-base font-semibold rounded-xl"
             >
               Tizimga kirish
               <ArrowRight className="ml-2 h-5 w-5" />
-            </LoadingButton>
+            </Button>
           </form>
         </Form>
       </div>

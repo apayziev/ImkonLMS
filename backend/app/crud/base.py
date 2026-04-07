@@ -50,6 +50,28 @@ class BaseCRUD(Generic[ModelType]):
         await db.refresh(db_obj)
         return db_obj
 
+    async def _paginate_query(
+        self,
+        db: AsyncSession,
+        query: Select,
+        *,
+        options: Sequence[Any] | None = None,
+        order_by: Any | Sequence[Any] | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[ModelType], int]:
+        """Count + fetch paginated results from a pre-built query."""
+        count_q = select(func.count()).select_from(query.subquery())
+        total = (await db.execute(count_q)).scalar_one()
+        data_q = query
+        if options:
+            data_q = data_q.options(*options)
+        if order_by is not None:
+            data_q = data_q.order_by(*(order_by if isinstance(order_by, (list, tuple)) else [order_by]))
+        data_q = data_q.offset(offset).limit(limit)
+        rows = (await db.execute(data_q)).scalars().all()
+        return list(rows), total
+
     async def get_multi(
         self,
         db: AsyncSession,
@@ -59,17 +81,10 @@ class BaseCRUD(Generic[ModelType]):
         **kwargs: Any,
     ) -> dict[str, Any]:
         base_query = self._build_query(**kwargs)
-
-        count_query = select(func.count()).select_from(base_query.subquery())
-        data_query = base_query.offset(offset).limit(limit)
-        if options:
-            data_query = data_query.options(*options)
-
-        total_result, data_result = await db.execute(count_query), await db.execute(data_query)
-        total_count = total_result.scalar_one()
-        data = data_result.scalars().all()
-
-        return {"data": data, "count": total_count}
+        data, total = await self._paginate_query(
+            db, base_query, options=options, offset=offset, limit=limit,
+        )
+        return {"data": data, "count": total}
 
     async def delete(
         self,
