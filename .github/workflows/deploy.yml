@@ -68,21 +68,23 @@ jobs:
           ssh_run() { ssh -o ConnectTimeout=30 $USER@$HOST "$@"; }
           DC="docker compose -f docker-compose.prod.yml"
 
-          sleep 10
+          sleep 15
 
           # Check 1: container state
           STATE=$(ssh_run "cd $DEPLOY_PATH && $DC ps api --format '{{.State}}'")
           echo "API container state: $STATE"
 
-          # Check 2: HTTP health check — 5 attempts, 10s apart
+          # Check 2: HTTP health check — 8 attempts, 10s apart
           HEALTHY=false
-          for i in 1 2 3 4 5; do
-            CODE=$(ssh_run "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost/health" || echo "000")
+          for i in 1 2 3 4 5 6 7 8; do
+            CODE=$(ssh_run "curl -sf -o /dev/null -w '%{http_code}' --max-time 10 http://localhost/health 2>/dev/null" || echo "000")
+            # Strip any whitespace/extra output
+            CODE=$(echo "$CODE" | tr -d '[:space:]' | tail -c 3)
+            echo "Attempt $i: HTTP $CODE"
             if [ "$CODE" = "200" ]; then
               HEALTHY=true
               break
             fi
-            echo "Attempt $i: HTTP $CODE, waiting 10s..."
             sleep 10
           done
 
@@ -98,8 +100,12 @@ jobs:
 
           # Health check failed → rollback to previous version
           echo "Health check failed! Rolling back..."
+          echo "--- Nginx logs ---"
+          ssh_run "cd $DEPLOY_PATH && $DC logs --tail=30 nginx" || true
           echo "--- API logs ---"
           ssh_run "cd $DEPLOY_PATH && $DC logs --tail=50 api" || true
+          echo "--- Container states ---"
+          ssh_run "cd $DEPLOY_PATH && $DC ps" || true
           echo "--- Rolling back ---"
           ssh_run "docker tag imkon-lms-api:prev imkon-lms-api:latest 2>/dev/null || true"
           ssh_run "docker tag imkon-lms-frontend:prev imkon-lms-frontend:latest 2>/dev/null || true"
