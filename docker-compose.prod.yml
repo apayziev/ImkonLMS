@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:16-alpine
     restart: always
+    shm_size: 256m
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -13,12 +14,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
 
   api:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: bash -c "/app/scripts/prestart.sh && gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --timeout 120"
+    command: bash -c "/app/scripts/prestart.sh && gunicorn app.main:app -w 3 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --timeout 120"
     restart: always
     expose:
       - "8000"
@@ -32,6 +38,17 @@ services:
         condition: service_healthy
     volumes:
       - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
     logging:
       driver: "json-file"
       options:
@@ -52,6 +69,11 @@ services:
       interval: 30s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
 
   nginx:
     image: nginx:1.27-alpine
@@ -71,6 +93,11 @@ services:
       interval: 30s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
     logging:
       driver: "json-file"
       options:
@@ -78,7 +105,7 @@ services:
         max-file: "3"
 
   certbot:
-    image: certbot/certbot:latest
+    image: certbot/certbot:v3.3.0
     volumes:
       - certbot_www:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
