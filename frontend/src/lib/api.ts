@@ -900,6 +900,13 @@ export interface ChildDisciplineResponse {
   total_violation_points: number
 }
 
+// ─── Sync ───────────────────────────────────────────────────────────────────
+
+export const syncApi = {
+  runSync: () => api.post<Record<string, unknown>>("/api/v1/sync/all"),
+  status: () => api.get<Record<string, unknown>>("/api/v1/sync/status"),
+}
+
 export const parentApi = {
   login: (data: ParentLoginRequest) =>
     api.post<ParentTokenResponse>("/api/v1/login/parent", data),
