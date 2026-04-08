@@ -1,6 +1,4 @@
-/**
- * Application configuration
- */
+import { isParentDomain } from "@/lib/subdomain"
 
 export const API = {
   baseUrl: import.meta.env.VITE_API_URL || "",
@@ -11,7 +9,9 @@ export const AUTH = {
   tokenKey: "access_token",
   loginPath: "/login",
   parentTokenKey: "parent_token",
-  parentLoginPath: "/parent/login",
+  get parentLoginPath() {
+    return isParentDomain() ? "/login" : "/parent/login"
+  },
 } as const
 
 export const TMS = {

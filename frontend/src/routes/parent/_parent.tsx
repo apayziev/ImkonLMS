@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { ErrorBoundary } from "react-error-boundary"
 
+import { AUTH } from "@/config"
 import { ErrorComponent } from "@/components/Common/ErrorComponent"
 import { Footer } from "@/components/Common/Footer"
 import { isParentLoggedIn } from "@/hooks/useParentAuth"
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/parent/_parent")({
   component: ParentLayout,
   beforeLoad: async () => {
     if (!isParentLoggedIn()) {
-      throw redirect({ to: "/parent/login" })
+      throw redirect({ to: AUTH.parentLoginPath })
     }
   },
   errorComponent: ({ error }) => <ErrorComponent error={error} />,

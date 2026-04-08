@@ -1,11 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createFileRoute, redirect } from "@tanstack/react-router"
 import { ArrowRight, Lock, Phone } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { AuthLayout } from "@/components/Common/AuthLayout"
-import { ParentLoginForm } from "@/components/Auth/ParentLoginForm"
 import {
   Form,
   FormControl,
@@ -17,30 +15,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { PasswordInput } from "@/components/ui/password-input"
-import useAuth, { isLoggedIn } from "@/hooks/useAuth"
-import { isParentLoggedIn } from "@/hooks/useParentAuth"
-import { isParentDomain } from "@/lib/subdomain"
-
-export const Route = createFileRoute("/login")({
-  component: LoginPage,
-  beforeLoad: async () => {
-    if (isParentDomain()) {
-      if (isParentLoggedIn()) {
-        throw redirect({ to: "/parent" })
-      }
-      return
-    }
-    if (isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
-  head: () => ({
-    meta: [{ title: isParentDomain() ? "Ota-ona paneli - Kirish" : "Kirish - IMKON LMS" }],
-  }),
-})
+import useParentAuth from "@/hooks/useParentAuth"
 
 const loginSchema = z.object({
-  phone_number: z
+  phone: z
     .string()
     .min(9, { message: "Telefon raqamni kiriting" })
     .regex(/^[\d+ ]+$/, { message: "Faqat raqamlar kiriting" }),
@@ -60,21 +38,14 @@ const formatPhone = (value: string) => {
   return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10, 12)}`
 }
 
-function LoginPage() {
-  if (isParentDomain()) {
-    return <ParentLoginForm />
-  }
-  return <AdminLoginForm />
-}
-
-function AdminLoginForm() {
-  const { loginMutation } = useAuth()
+export function ParentLoginForm() {
+  const { loginMutation } = useParentAuth()
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     mode: "onBlur",
     defaultValues: {
-      phone_number: "+998",
+      phone: "+998",
       password: "",
     },
   })
@@ -82,7 +53,7 @@ function AdminLoginForm() {
   const onSubmit = (data: LoginFormData) => {
     if (loginMutation.isPending) return
     loginMutation.mutate({
-      document_id: data.phone_number.replace(/\s/g, ""),
+      phone: data.phone.replace(/\s/g, ""),
       password: data.password,
     })
   }
@@ -90,37 +61,33 @@ function AdminLoginForm() {
   return (
     <AuthLayout>
       <div className="flex flex-col w-full mx-auto">
-        {/* Header */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
             <div className="w-14 h-14 rounded-full bg-[#FF3B47]/10 flex items-center justify-center border-2 border-[#FF3B47]/20">
               <img src="/images/icons/red-icon.png" alt="IMKON" className="w-8 h-8" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Xush kelibsiz!</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Ota-ona paneli</h1>
           <p className="text-muted-foreground text-sm">
-            IMKON O'quv boshqaruv tizimiga kirish
+            Farzandingiz haqida ma'lumotlarni kuzating
           </p>
         </div>
 
-        {/* Login Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
-              name="phone_number"
+              name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">
-                    Telefon raqam
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium">Telefon raqam</FormLabel>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <FormControl>
                       <Input
                         type="tel"
                         placeholder="+998 90 123 45 67"
-                        autoComplete="username"
+                        autoComplete="tel"
                         className="pl-12 h-12"
                         autoFocus
                         {...field}
@@ -138,9 +105,7 @@ function AdminLoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">
-                    Parol
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium">Parol</FormLabel>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                     <FormControl>
@@ -162,7 +127,7 @@ function AdminLoginForm() {
               loading={loginMutation.isPending}
               className="w-full h-12 text-base font-semibold rounded-xl"
             >
-              Tizimga kirish
+              Kirish
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </form>
