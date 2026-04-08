@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.academic_year import AcademicYear
 from app.models.grade import Grade
+from app.models.parent_auth import ParentAuth
 from app.models.subject import Subject
 from app.models.sync_log import SyncLog
 from app.models.user import User, UserRole
@@ -365,6 +366,43 @@ async def _sync_teachers(
     )
 
 
+async def _sync_parent_auth(
+    db: AsyncSession,
+    payment_students: list[dict],
+) -> tuple[int, int]:
+    """Auto-create ParentAuth for father/mother phones.
+
+    Password = student's document_id (fallback: last 4 digits of phone).
+    Returns (created, skipped).
+    """
+    result = await db.execute(select(ParentAuth.phone))
+    existing_phones: set[str] = {row[0] for row in result.all()}
+
+    created = 0
+    loop = asyncio.get_running_loop()
+
+    for student in payment_students:
+        doc_id = student.get("document_id", "")
+
+        for phone_field in ("father_phone", "mother_phone"):
+            phone = student.get(phone_field)
+            if not phone or phone in existing_phones:
+                continue
+
+            password = doc_id if doc_id else phone[-4:]
+            hashed = await loop.run_in_executor(None, get_password_hash, password)
+
+            db.add(ParentAuth(
+                phone=phone,
+                hashed_password=hashed,
+                is_active=True,
+            ))
+            existing_phones.add(phone)
+            created += 1
+
+    return created, len(payment_students) * 2 - created
+
+
 async def _get_last_successful_sync(db: AsyncSession) -> datetime | None:
     """Get the timestamp of the last successful sync."""
     result = await db.execute(
@@ -407,6 +445,8 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         all_payment_document_ids=data.get("all_teacher_document_ids"),
     )
 
+    parents_created, _ = await _sync_parent_auth(db, data.get("students", []))
+
     await db.commit()
 
     all_errors = student_errors + teacher_errors
@@ -430,6 +470,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "teachers_deactivated": teachers_deactivated,
         "total_students": len(data.get("students", [])),
         "total_teachers": len(data.get("teachers", [])),
+        "parents_created": parents_created,
         "errors": all_errors[:50] if all_errors else [],
     }
 
