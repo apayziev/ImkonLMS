@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { CalendarDays } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -57,21 +59,31 @@ function TimetablePage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Dars jadvali</h1>
-          <p className="text-muted-foreground">Haftalik dars jadvali</p>
+          <h1 className="text-2xl font-bold tracking-tight">Dars jadvali</h1>
+          <p className="text-muted-foreground text-sm">Haftalik dars jadvali</p>
         </div>
 
         <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
+              <CardContent className="space-y-2">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <Skeleton key={j} className="h-10 w-full" />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : days.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Dars jadvali topilmadi
+            <CalendarDays className="size-12 mx-auto mb-3 opacity-50" />
+            <p>Dars jadvali topilmadi</p>
           </CardContent>
         </Card>
       ) : (

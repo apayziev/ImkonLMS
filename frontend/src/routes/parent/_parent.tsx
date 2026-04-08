@@ -26,7 +26,7 @@ export const Route = createFileRoute("/parent/_parent")({
       throw redirect({ to: AUTH.parentLoginPath })
     }
   },
-  errorComponent: ({ error }) => <ErrorComponent error={error} />,
+  errorComponent: ({ error }) => <ErrorComponent error={error} homePath="/parent" />,
 })
 
 const menuItems = [
@@ -116,7 +116,7 @@ function ParentLayout() {
 
       {/* Main content */}
       <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <ErrorBoundary fallback={<ErrorComponent />}>
+        <ErrorBoundary fallback={<ErrorComponent homePath="/parent" />}>
           <Outlet />
         </ErrorBoundary>
       </main>

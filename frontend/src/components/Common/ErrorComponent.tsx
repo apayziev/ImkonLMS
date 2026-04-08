@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button"
 
 interface ErrorComponentProps {
   error?: Error | unknown
+  homePath?: string
 }
 
-export function ErrorComponent({ error }: ErrorComponentProps) {
+export function ErrorComponent({ error, homePath = "/" }: ErrorComponentProps) {
   const router = useRouter()
   const errorMessage = error instanceof Error ? error.message : undefined
 
@@ -22,7 +23,7 @@ export function ErrorComponent({ error }: ErrorComponentProps) {
         <Button variant="outline" onClick={() => router.invalidate()}>
           Qayta urinish
         </Button>
-        <Link to="/">
+        <Link to={homePath}>
           <Button>Bosh sahifaga</Button>
         </Link>
       </div>

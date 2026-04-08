@@ -35,10 +35,10 @@ function ParentDashboard() {
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold tracking-tight">
           Assalomu alaykum, {parent.name}!
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Farzandingiz haqida ma'lumotlar
         </p>
       </div>

@@ -53,8 +53,8 @@ function SettingsPage() {
   return (
     <div className="space-y-6 max-w-lg mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Sozlamalar</h1>
-        <p className="text-muted-foreground">Hisobingiz sozlamalari</p>
+        <h1 className="text-2xl font-bold tracking-tight">Sozlamalar</h1>
+        <p className="text-muted-foreground text-sm">Hisobingiz sozlamalari</p>
       </div>
 
       <Card>

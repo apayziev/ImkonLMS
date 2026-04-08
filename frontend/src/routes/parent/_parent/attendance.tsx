@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { CheckCircle2, Clock, XCircle } from "lucide-react"
+import { CheckCircle2, ClipboardList, Clock, XCircle } from "lucide-react"
 import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePicker } from "@/components/ui/date-picker"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -66,8 +67,8 @@ function AttendancePage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Davomat</h1>
-          <p className="text-muted-foreground">Farzandingizning davomat tarixi</p>
+          <h1 className="text-2xl font-bold tracking-tight">Davomat</h1>
+          <p className="text-muted-foreground text-sm">Farzandingizning davomat tarixi</p>
         </div>
 
         <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
@@ -116,13 +117,33 @@ function AttendancePage() {
 
       {/* Records by date */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-4 text-center space-y-2">
+                  <Skeleton className="h-8 w-16 mx-auto" />
+                  <Skeleton className="h-3 w-12 mx-auto" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-48" /></CardHeader>
+              <CardContent className="space-y-2">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <Skeleton key={j} className="h-10 w-full" />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : dates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Davomat ma'lumotlari topilmadi
+            <ClipboardList className="size-12 mx-auto mb-3 opacity-50" />
+            <p>Davomat ma'lumotlari topilmadi</p>
           </CardContent>
         </Card>
       ) : (

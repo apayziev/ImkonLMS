@@ -4,6 +4,7 @@ import { BookOpen, Calendar, User } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ChildSelector } from "@/components/Common/ChildSelector"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi } from "@/lib/api"
@@ -38,21 +39,33 @@ function HomeworkPage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Uyga vazifa</h1>
-          <p className="text-muted-foreground">Farzandingizga berilgan vazifalar</p>
+          <h1 className="text-2xl font-bold tracking-tight">Uyga vazifa</h1>
+          <p className="text-muted-foreground text-sm">Farzandingizga berilgan vazifalar</p>
         </div>
 
         <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2 space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Uyga vazifalar topilmadi
+            <BookOpen className="size-12 mx-auto mb-3 opacity-50" />
+            <p>Uyga vazifalar topilmadi</p>
           </CardContent>
         </Card>
       ) : (
