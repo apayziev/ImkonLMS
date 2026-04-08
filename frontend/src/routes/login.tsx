@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { AuthLayout } from "@/components/Common/AuthLayout"
-import { ParentLoginForm } from "@/components/Auth/ParentLoginForm"
 import {
   Form,
   FormControl,
@@ -18,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
-import { isParentLoggedIn } from "@/hooks/useParentAuth"
+import useParentAuth, { isParentLoggedIn } from "@/hooks/useParentAuth"
 import { isParentDomain } from "@/lib/subdomain"
 
 export const Route = createFileRoute("/login")({
@@ -61,14 +60,11 @@ const formatPhone = (value: string) => {
 }
 
 function LoginPage() {
-  if (isParentDomain()) {
-    return <ParentLoginForm />
-  }
-  return <AdminLoginForm />
-}
+  const isParent = isParentDomain()
+  const { loginMutation: adminLogin } = useAuth()
+  const { loginMutation: parentLogin } = useParentAuth()
 
-function AdminLoginForm() {
-  const { loginMutation } = useAuth()
+  const loginMutation = isParent ? parentLogin : adminLogin
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -81,29 +77,33 @@ function AdminLoginForm() {
 
   const onSubmit = (data: LoginFormData) => {
     if (loginMutation.isPending) return
-    loginMutation.mutate({
-      document_id: data.phone_number.replace(/\s/g, ""),
-      password: data.password,
-    })
+    const phone = data.phone_number.replace(/\s/g, "")
+    if (isParent) {
+      parentLogin.mutate({ phone, password: data.password })
+    } else {
+      adminLogin.mutate({ document_id: phone, password: data.password })
+    }
   }
 
   return (
     <AuthLayout>
       <div className="flex flex-col w-full mx-auto">
-        {/* Header */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
             <div className="w-14 h-14 rounded-full bg-[#FF3B47]/10 flex items-center justify-center border-2 border-[#FF3B47]/20">
               <img src="/images/icons/red-icon.png" alt="IMKON" className="w-8 h-8" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Xush kelibsiz!</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-1">
+            {isParent ? "Ota-ona paneli" : "Xush kelibsiz!"}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            IMKON O'quv boshqaruv tizimiga kirish
+            {isParent
+              ? "Farzandingiz haqida ma'lumotlarni kuzating"
+              : "IMKON O'quv boshqaruv tizimiga kirish"}
           </p>
         </div>
 
-        {/* Login Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
@@ -162,7 +162,7 @@ function AdminLoginForm() {
               loading={loginMutation.isPending}
               className="w-full h-12 text-base font-semibold rounded-xl"
             >
-              Tizimga kirish
+              {isParent ? "Kirish" : "Tizimga kirish"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </form>
