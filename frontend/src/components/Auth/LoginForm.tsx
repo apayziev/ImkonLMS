@@ -38,14 +38,11 @@ const formatPhone = (value: string) => {
 }
 
 interface LoginFormProps {
-  title: string
-  subtitle: string
-  buttonText: string
   isPending: boolean
   onSubmit: (data: LoginFormData) => void
 }
 
-export function LoginForm({ title, subtitle, buttonText, isPending, onSubmit }: LoginFormProps) {
+export function LoginForm({ isPending, onSubmit }: LoginFormProps) {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     mode: "onBlur",
@@ -69,8 +66,10 @@ export function LoginForm({ title, subtitle, buttonText, isPending, onSubmit }: 
               <img src="/images/icons/red-icon.png" alt="IMKON" className="w-8 h-8" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">{title}</h1>
-          <p className="text-muted-foreground text-sm">{subtitle}</p>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Xush kelibsiz!</h1>
+          <p className="text-muted-foreground text-sm">
+            IMKON O'quv boshqaruv tizimiga kirish
+          </p>
         </div>
 
         <Form {...form}>
@@ -127,7 +126,7 @@ export function LoginForm({ title, subtitle, buttonText, isPending, onSubmit }: 
               loading={isPending}
               className="w-full h-12 text-base font-semibold rounded-xl"
             >
-              {buttonText}
+              Tizimga kirish
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </form>

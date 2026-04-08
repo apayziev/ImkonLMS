@@ -15,7 +15,7 @@ export const Route = createFileRoute("/login")({
     if (isLoggedIn()) throw redirect({ to: "/" })
   },
   head: () => ({
-    meta: [{ title: isParentDomain() ? "Ota-ona paneli - Kirish" : "Kirish - IMKON LMS" }],
+    meta: [{ title: "Kirish - IMKON LMS" }],
   }),
 })
 
@@ -27,9 +27,6 @@ function AdminLogin() {
   const { loginMutation } = useAuth()
   return (
     <LoginForm
-      title="Xush kelibsiz!"
-      subtitle="IMKON O'quv boshqaruv tizimiga kirish"
-      buttonText="Tizimga kirish"
       isPending={loginMutation.isPending}
       onSubmit={(data: LoginFormData) =>
         loginMutation.mutate({
@@ -45,9 +42,6 @@ function ParentLogin() {
   const { loginMutation } = useParentAuth()
   return (
     <LoginForm
-      title="Ota-ona paneli"
-      subtitle="Farzandingiz haqida ma'lumotlarni kuzating"
-      buttonText="Kirish"
       isPending={loginMutation.isPending}
       onSubmit={(data: LoginFormData) =>
         loginMutation.mutate({
