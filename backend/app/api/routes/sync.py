@@ -366,26 +366,28 @@ async def _sync_teachers(
     )
 
 
-async def _sync_parent_auth(
-    db: AsyncSession,
-    payment_students: list[dict],
-) -> tuple[int, int]:
-    """Auto-create ParentAuth for father/mother phones.
+async def _sync_parent_auth(db: AsyncSession) -> tuple[int, int]:
+    """Auto-create ParentAuth for father/mother phones from DB students.
 
     Password = student's document_id (fallback: last 4 digits of phone).
     Returns (created, skipped).
     """
+    # Get existing parent phones
     result = await db.execute(select(ParentAuth.phone))
     existing_phones: set[str] = {row[0] for row in result.all()}
+
+    # Get all active students with parent phones from LMS DB
+    students = (await db.execute(
+        select(User.document_id, User.father_phone, User.mother_phone)
+        .where(User.role == "student", User.is_active == True, User.is_deleted == False)  # noqa: E712
+        .where((User.father_phone.isnot(None)) | (User.mother_phone.isnot(None)))
+    )).all()
 
     created = 0
     loop = asyncio.get_running_loop()
 
-    for student in payment_students:
-        doc_id = student.get("document_id", "")
-
-        for phone_field in ("father_phone", "mother_phone"):
-            phone = student.get(phone_field)
+    for doc_id, father_phone, mother_phone in students:
+        for phone in (father_phone, mother_phone):
             if not phone or phone in existing_phones:
                 continue
 
@@ -400,7 +402,7 @@ async def _sync_parent_auth(
             existing_phones.add(phone)
             created += 1
 
-    return created, len(payment_students) * 2 - created
+    return created, len(students) * 2 - created
 
 
 async def _get_last_successful_sync(db: AsyncSession) -> datetime | None:
@@ -445,7 +447,7 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         all_payment_document_ids=data.get("all_teacher_document_ids"),
     )
 
-    parents_created, _ = await _sync_parent_auth(db, data.get("students", []))
+    parents_created, _ = await _sync_parent_auth(db)
 
     await db.commit()
 
