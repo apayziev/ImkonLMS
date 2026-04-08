@@ -44,8 +44,17 @@ function Layout() {
     mutationFn: () => syncApi.runSync(),
     onSuccess: (res) => {
       const d = res.data as Record<string, number>
+      const parts = [
+        d.students_created && `${d.students_created} yangi o'quvchi`,
+        d.students_updated && `${d.students_updated} o'quvchi yangilandi`,
+        d.teachers_created && `${d.teachers_created} yangi o'qituvchi`,
+        d.teachers_updated && `${d.teachers_updated} o'qituvchi yangilandi`,
+        d.parents_created && `${d.parents_created} yangi ota-ona`,
+      ].filter(Boolean)
       toast.success("Sync muvaffaqiyatli!", {
-        description: `O'quvchilar: +${d.students_created ?? 0}, O'qituvchilar: +${d.teachers_created ?? 0}, Ota-onalar: +${d.parents_created ?? 0}`,
+        description: parts.length
+          ? parts.join(", ")
+          : "Barcha ma'lumotlar dolzarb — o'zgarish yo'q",
       })
       queryClient.invalidateQueries()
     },
