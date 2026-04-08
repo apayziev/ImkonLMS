@@ -913,6 +913,9 @@ export const parentApi = {
 
   me: () => parentAxiosInstance.get<ParentMeRead>("/api/v1/parent/me"),
 
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    parentAxiosInstance.put("/api/v1/parent/me/password", data),
+
   attendance: (studentId: number, params?: { start_date?: string; end_date?: string }) =>
     parentAxiosInstance.get<ChildAttendanceResponse>(`/api/v1/parent/children/${studentId}/attendance`, { params }),
 

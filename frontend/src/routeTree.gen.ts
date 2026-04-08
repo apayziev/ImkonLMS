@@ -24,6 +24,7 @@ import { Route as LayoutLessonPlanRouteImport } from './routes/_layout/lesson-pl
 import { Route as LayoutAttendanceRouteImport } from './routes/_layout/attendance'
 import { Route as ParentParentIndexRouteImport } from './routes/parent/_parent/index'
 import { Route as ParentParentTimetableRouteImport } from './routes/parent/_parent/timetable'
+import { Route as ParentParentSettingsRouteImport } from './routes/parent/_parent/settings'
 import { Route as ParentParentHomeworkRouteImport } from './routes/parent/_parent/homework'
 import { Route as ParentParentDisciplineRouteImport } from './routes/parent/_parent/discipline'
 import { Route as ParentParentAttendanceRouteImport } from './routes/parent/_parent/attendance'
@@ -102,6 +103,11 @@ const ParentParentTimetableRoute = ParentParentTimetableRouteImport.update({
   path: '/timetable',
   getParentRoute: () => ParentParentRoute,
 } as any)
+const ParentParentSettingsRoute = ParentParentSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ParentParentRoute,
+} as any)
 const ParentParentHomeworkRoute = ParentParentHomeworkRouteImport.update({
   id: '/homework',
   path: '/homework',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/parent/attendance': typeof ParentParentAttendanceRoute
   '/parent/discipline': typeof ParentParentDisciplineRoute
   '/parent/homework': typeof ParentParentHomeworkRoute
+  '/parent/settings': typeof ParentParentSettingsRoute
   '/parent/timetable': typeof ParentParentTimetableRoute
   '/parent/': typeof ParentParentIndexRoute
 }
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/parent/attendance': typeof ParentParentAttendanceRoute
   '/parent/discipline': typeof ParentParentDisciplineRoute
   '/parent/homework': typeof ParentParentHomeworkRoute
+  '/parent/settings': typeof ParentParentSettingsRoute
   '/parent/timetable': typeof ParentParentTimetableRoute
   '/parent': typeof ParentParentIndexRoute
 }
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/parent/_parent/attendance': typeof ParentParentAttendanceRoute
   '/parent/_parent/discipline': typeof ParentParentDisciplineRoute
   '/parent/_parent/homework': typeof ParentParentHomeworkRoute
+  '/parent/_parent/settings': typeof ParentParentSettingsRoute
   '/parent/_parent/timetable': typeof ParentParentTimetableRoute
   '/parent/_parent/': typeof ParentParentIndexRoute
 }
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/parent/attendance'
     | '/parent/discipline'
     | '/parent/homework'
+    | '/parent/settings'
     | '/parent/timetable'
     | '/parent/'
   fileRoutesByTo: FileRoutesByTo
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/parent/attendance'
     | '/parent/discipline'
     | '/parent/homework'
+    | '/parent/settings'
     | '/parent/timetable'
     | '/parent'
   id:
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/parent/_parent/attendance'
     | '/parent/_parent/discipline'
     | '/parent/_parent/homework'
+    | '/parent/_parent/settings'
     | '/parent/_parent/timetable'
     | '/parent/_parent/'
   fileRoutesById: FileRoutesById
@@ -350,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParentParentTimetableRouteImport
       parentRoute: typeof ParentParentRoute
     }
+    '/parent/_parent/settings': {
+      id: '/parent/_parent/settings'
+      path: '/settings'
+      fullPath: '/parent/settings'
+      preLoaderRoute: typeof ParentParentSettingsRouteImport
+      parentRoute: typeof ParentParentRoute
+    }
     '/parent/_parent/homework': {
       id: '/parent/_parent/homework'
       path: '/homework'
@@ -405,6 +424,7 @@ interface ParentParentRouteChildren {
   ParentParentAttendanceRoute: typeof ParentParentAttendanceRoute
   ParentParentDisciplineRoute: typeof ParentParentDisciplineRoute
   ParentParentHomeworkRoute: typeof ParentParentHomeworkRoute
+  ParentParentSettingsRoute: typeof ParentParentSettingsRoute
   ParentParentTimetableRoute: typeof ParentParentTimetableRoute
   ParentParentIndexRoute: typeof ParentParentIndexRoute
 }
@@ -413,6 +433,7 @@ const ParentParentRouteChildren: ParentParentRouteChildren = {
   ParentParentAttendanceRoute: ParentParentAttendanceRoute,
   ParentParentDisciplineRoute: ParentParentDisciplineRoute,
   ParentParentHomeworkRoute: ParentParentHomeworkRoute,
+  ParentParentSettingsRoute: ParentParentSettingsRoute,
   ParentParentTimetableRoute: ParentParentTimetableRoute,
   ParentParentIndexRoute: ParentParentIndexRoute,
 }

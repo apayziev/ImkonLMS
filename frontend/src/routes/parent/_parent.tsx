@@ -5,6 +5,7 @@ import {
   Home,
   LogOut,
   ClipboardList,
+  Settings,
   Shield,
 } from "lucide-react"
 import { ErrorBoundary } from "react-error-boundary"
@@ -34,6 +35,7 @@ const menuItems = [
   { icon: CalendarDays, title: "Dars jadvali", path: "/parent/timetable" },
   { icon: BookOpen, title: "Uyga vazifa", path: "/parent/homework" },
   { icon: Shield, title: "Intizom", path: "/parent/discipline" },
+  { icon: Settings, title: "Sozlamalar", path: "/parent/settings" },
 ]
 
 function ParentLayout() {

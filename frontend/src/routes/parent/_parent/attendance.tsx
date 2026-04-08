@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
   Table,
   TableBody,
@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import useParentAuth from "@/hooks/useParentAuth"
+import { ChildSelector } from "@/components/Common/ChildSelector"
+import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi, type ChildAttendanceRecord } from "@/lib/api"
 
 export const Route = createFileRoute("/parent/_parent/attendance")({
@@ -31,16 +32,19 @@ const statusConfig: Record<string, { icon: typeof CheckCircle2; label: string; c
 }
 
 function AttendancePage() {
-  const { parent } = useParentAuth()
-  const children = parent?.children ?? []
-  const [selectedChildId, setSelectedChildId] = useState<number>(
-    children[0]?.id ?? 0,
-  )
+  const { children, selectedChildId, setSelectedChildId } = useSelectedChild()
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+
+  const params = {
+    ...(startDate && { start_date: startDate }),
+    ...(endDate && { end_date: endDate }),
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ["parent-attendance-full", selectedChildId],
+    queryKey: ["parent-attendance-full", selectedChildId, startDate, endDate],
     queryFn: async () => {
-      const { data } = await parentApi.attendance(selectedChildId)
+      const { data } = await parentApi.attendance(selectedChildId, Object.keys(params).length ? params : undefined)
       return data
     },
     enabled: selectedChildId > 0,
@@ -66,22 +70,17 @@ function AttendancePage() {
           <p className="text-muted-foreground">Farzandingizning davomat tarixi</p>
         </div>
 
-        {children.length > 1 && (
-          <Select
-            value={String(selectedChildId)}
-            onValueChange={(v) => setSelectedChildId(Number(v))}
-          >
-            <SelectTrigger className="w-full sm:w-60">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {children.map((child) => (
-                <SelectItem key={child.id} value={String(child.id)}>
-                  {child.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+      </div>
+
+      {/* Date filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <DatePicker value={startDate || null} onChange={setStartDate} placeholder="Boshlanish sanasi" className="w-full sm:w-48" />
+        <DatePicker value={endDate || null} onChange={setEndDate} placeholder="Tugash sanasi" className="w-full sm:w-48" />
+        {(startDate || endDate) && (
+          <button type="button" onClick={() => { setStartDate(""); setEndDate("") }} className="text-sm text-muted-foreground hover:text-foreground">
+            Tozalash
+          </button>
         )}
       </div>
 

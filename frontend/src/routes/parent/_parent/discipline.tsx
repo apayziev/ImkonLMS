@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { AlertTriangle, Clock, MapPin, MessageSquare, Shield, User } from "lucide-react"
-import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import useParentAuth from "@/hooks/useParentAuth"
+import { ChildSelector } from "@/components/Common/ChildSelector"
+import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi } from "@/lib/api"
 
 export const Route = createFileRoute("/parent/_parent/discipline")({
@@ -17,11 +16,7 @@ export const Route = createFileRoute("/parent/_parent/discipline")({
 })
 
 function DisciplinePage() {
-  const { parent } = useParentAuth()
-  const children = parent?.children ?? []
-  const [selectedChildId, setSelectedChildId] = useState<number>(
-    children[0]?.id ?? 0,
-  )
+  const { children, selectedChildId, setSelectedChildId } = useSelectedChild()
 
   const { data, isLoading } = useQuery({
     queryKey: ["parent-discipline-full", selectedChildId],
@@ -44,23 +39,7 @@ function DisciplinePage() {
           <p className="text-muted-foreground">Qoidabuzarliklar va ogohlantirishlar</p>
         </div>
 
-        {children.length > 1 && (
-          <Select
-            value={String(selectedChildId)}
-            onValueChange={(v) => setSelectedChildId(Number(v))}
-          >
-            <SelectTrigger className="w-full sm:w-60">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {children.map((child) => (
-                <SelectItem key={child.id} value={String(child.id)}>
-                  {child.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (

@@ -10,13 +10,12 @@ import {
   Shield,
   XCircle,
 } from "lucide-react"
-import { useState } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import useParentAuth from "@/hooks/useParentAuth"
+import { ChildSelector } from "@/components/Common/ChildSelector"
+import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi, type ParentChildRead } from "@/lib/api"
 import { getInitials } from "@/lib/utils"
 
@@ -28,13 +27,7 @@ export const Route = createFileRoute("/parent/_parent/")({
 })
 
 function ParentDashboard() {
-  const { parent } = useParentAuth()
-  const children = parent?.children ?? []
-  const [selectedChildId, setSelectedChildId] = useState<number | null>(
-    children.length > 0 ? children[0].id : null,
-  )
-
-  const selectedChild = children.find((c) => c.id === selectedChildId) ?? null
+  const { children, selectedChildId, setSelectedChildId, selectedChild, parent } = useSelectedChild()
 
   if (!parent) return null
 
@@ -50,24 +43,7 @@ function ParentDashboard() {
         </p>
       </div>
 
-      {/* Child selector — only if multiple children */}
-      {children.length > 1 && (
-        <Select
-          value={String(selectedChildId)}
-          onValueChange={(v) => setSelectedChildId(Number(v))}
-        >
-          <SelectTrigger className="w-full sm:w-72">
-            <SelectValue placeholder="Farzandni tanlang" />
-          </SelectTrigger>
-          <SelectContent>
-            {children.map((child) => (
-              <SelectItem key={child.id} value={String(child.id)}>
-                {child.full_name} — {child.grade_display || "Sinf belgilanmagan"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+      <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} showGrade className="w-full sm:w-72" />
 
       {selectedChild && <ChildOverview child={selectedChild} />}
     </div>

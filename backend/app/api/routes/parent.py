@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentParent, SessionDep
-from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.exceptions import ForbiddenException
 from app.core.security import get_password_hash, verify_password
 from app.models.grade import Grade
 from app.models.lesson_plan import LessonPlan
@@ -16,7 +16,6 @@ from app.models.subject import Subject
 from app.models.time_slot import TimeSlot
 from app.models.user import User, UserRole
 from app.models.violation_report import ViolationReport
-from app.models.violation_type import ViolationType
 from app.models.yellow_card import YellowCard
 from app.schemas.parent import (
     AttendanceSummary,
@@ -50,11 +49,18 @@ async def _get_children(db, parent_phone: str) -> list[User]:
 
 async def _verify_child(db, parent_phone: str, student_id: int) -> User:
     """Verify parent has access to this student."""
-    children = await _get_children(db, parent_phone)
-    for child in children:
-        if child.id == student_id:
-            return child
-    raise ForbiddenException("Bu o'quvchi sizning farzandingiz emas.")
+    result = await db.execute(
+        select(User).where(
+            User.id == student_id,
+            User.role == UserRole.STUDENT.value,
+            User.is_deleted == False,  # noqa: E712
+            (User.father_phone == parent_phone) | (User.mother_phone == parent_phone),
+        )
+    )
+    child = result.scalar_one_or_none()
+    if not child:
+        raise ForbiddenException("Bu o'quvchi sizning farzandingiz emas.")
+    return child
 
 
 @router.get("/me", response_model=ParentMeRead)

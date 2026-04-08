@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { useState } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -12,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import useParentAuth from "@/hooks/useParentAuth"
+import { ChildSelector } from "@/components/Common/ChildSelector"
+import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi, type ChildTimetableEntry } from "@/lib/api"
 
 export const Route = createFileRoute("/parent/_parent/timetable")({
@@ -32,11 +31,7 @@ const DAY_NAMES: Record<number, string> = {
 }
 
 function TimetablePage() {
-  const { parent } = useParentAuth()
-  const children = parent?.children ?? []
-  const [selectedChildId, setSelectedChildId] = useState<number>(
-    children[0]?.id ?? 0,
-  )
+  const { children, selectedChildId, setSelectedChildId } = useSelectedChild()
 
   const { data, isLoading } = useQuery({
     queryKey: ["parent-timetable", selectedChildId],
@@ -66,23 +61,7 @@ function TimetablePage() {
           <p className="text-muted-foreground">Haftalik dars jadvali</p>
         </div>
 
-        {children.length > 1 && (
-          <Select
-            value={String(selectedChildId)}
-            onValueChange={(v) => setSelectedChildId(Number(v))}
-          >
-            <SelectTrigger className="w-full sm:w-60">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {children.map((child) => (
-                <SelectItem key={child.id} value={String(child.id)}>
-                  {child.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (
