@@ -1,7 +1,7 @@
 """Admin routes for parent account management."""
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select, union_all
 
 from app.api.deps import SessionDep, SuperUser
 from app.core.exceptions import DuplicateValueException, NotFoundException
@@ -13,6 +13,37 @@ from app.schemas.parent import ParentCreate, ParentListResponse, ParentRead
 router = APIRouter(prefix="/parents", tags=["parents"])
 
 
+def _children_count_subquery():
+    """Subquery: count children per parent phone (single query, no N+1)."""
+    father = select(
+        User.father_phone.label("phone"),
+        func.count().label("cnt"),
+    ).where(
+        User.role == UserRole.STUDENT.value,
+        User.is_deleted == False,  # noqa: E712
+        User.father_phone.isnot(None),
+    ).group_by(User.father_phone)
+
+    mother = select(
+        User.mother_phone.label("phone"),
+        func.count().label("cnt"),
+    ).where(
+        User.role == UserRole.STUDENT.value,
+        User.is_deleted == False,  # noqa: E712
+        User.mother_phone.isnot(None),
+    ).group_by(User.mother_phone)
+
+    return (
+        select(
+            literal_column("phone"),
+            func.sum(literal_column("cnt")).label("children_count"),
+        )
+        .select_from(union_all(father, mother).subquery())
+        .group_by(literal_column("phone"))
+        .subquery()
+    )
+
+
 @router.get("/", response_model=ParentListResponse)
 async def list_parents(
     db: SessionDep,
@@ -22,36 +53,28 @@ async def list_parents(
     search: str | None = None,
 ) -> ParentListResponse:
     """Barcha ota-ona hisoblarini ko'rish."""
-    query = select(ParentAuth)
     count_query = select(func.count()).select_from(ParentAuth)
-
     if search:
-        term = f"%{search}%"
-        query = query.where(ParentAuth.phone.ilike(term))
-        count_query = count_query.where(ParentAuth.phone.ilike(term))
-
+        count_query = count_query.where(ParentAuth.phone.ilike(f"%{search}%"))
     total = (await db.execute(count_query)).scalar() or 0
-    result = await db.execute(
-        query.order_by(ParentAuth.created_at.desc()).offset(skip).limit(limit)
+
+    children_sq = _children_count_subquery()
+    query = (
+        select(ParentAuth, func.coalesce(children_sq.c.children_count, 0).label("children_count"))
+        .outerjoin(children_sq, ParentAuth.phone == children_sq.c.phone)
     )
-    parents = result.scalars().all()
+    if search:
+        query = query.where(ParentAuth.phone.ilike(f"%{search}%"))
+    query = query.order_by(ParentAuth.created_at.desc()).offset(skip).limit(limit)
 
-    data = []
-    for p in parents:
-        # Count children
-        children_count_result = await db.execute(
-            select(func.count()).select_from(User).where(
-                User.role == UserRole.STUDENT.value,
-                User.is_deleted == False,  # noqa: E712
-                (User.father_phone == p.phone) | (User.mother_phone == p.phone),
-            )
-        )
-        children_count = children_count_result.scalar() or 0
-        data.append(ParentRead(
+    rows = (await db.execute(query)).all()
+    data = [
+        ParentRead(
             id=p.id, phone=p.phone, is_active=p.is_active,
-            created_at=p.created_at, children_count=children_count,
-        ))
-
+            created_at=p.created_at, children_count=cnt,
+        )
+        for p, cnt in rows
+    ]
     return ParentListResponse(data=data, count=total)
 
 

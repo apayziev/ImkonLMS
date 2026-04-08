@@ -157,21 +157,23 @@ async def login_parent(
     refresh_token = create_refresh_token(data={"sub": parent.phone, "role": "parent"})
     _set_auth_cookie(response, refresh_token)
 
-    child_reads = []
-    for c in children:
-        grade_display = None
-        if c.grade_id:
-            from app.models.grade import Grade
-            grade_result = await db.execute(select(Grade).where(Grade.id == c.grade_id))
-            grade = grade_result.scalar_one_or_none()
-            if grade:
-                grade_display = grade.display_name
-        child_reads.append(ParentChildRead(
+    # Batch load grades for all children (no N+1)
+    grade_ids = {c.grade_id for c in children if c.grade_id}
+    grade_map: dict[int, str] = {}
+    if grade_ids:
+        from app.models.grade import Grade
+        grade_result = await db.execute(select(Grade).where(Grade.id.in_(grade_ids)))
+        grade_map = {g.id: g.display_name for g in grade_result.scalars().all()}
+
+    child_reads = [
+        ParentChildRead(
             id=c.id, first_name=c.first_name, last_name=c.last_name,
             full_name=c.full_name, photo_url=c.photo_url,
-            grade_id=c.grade_id, grade_display=grade_display,
+            grade_id=c.grade_id, grade_display=grade_map.get(c.grade_id),
             is_active=c.is_active, is_frozen=c.is_frozen,
-        ))
+        )
+        for c in children
+    ]
 
     return ParentTokenResponse(
         access_token=access_token,

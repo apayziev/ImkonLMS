@@ -134,6 +134,11 @@ class ParentCreate(BaseModel):
         return v.replace(" ", "").replace("-", "") if isinstance(v, str) else v
 
 
+class ParentChangePassword(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=4)
+
+
 class ParentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
