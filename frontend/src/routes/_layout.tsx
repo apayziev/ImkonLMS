@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router"
 import { GraduationCap, RefreshCw } from "lucide-react"
+import { useEffect } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 import { toast } from "sonner"
 
@@ -39,6 +40,22 @@ function Layout() {
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const router = useRouterState()
+  const currentPath = router.location.pathname
+
+  // Teacher subdomain: non-teacher → stays on admin home (different subdomain is just cosmetic for admin)
+  // Teacher user (any subdomain): block admin-only routes
+  const isTeacher = user?.role === "teacher"
+  const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"]
+
+  useEffect(() => {
+    if (!user) return
+
+    if (isTeacher && !TEACHER_ALLOWED.some((r) => r === "/" ? currentPath === "/" : currentPath.startsWith(r))) {
+      navigate({ to: "/lessons" })
+    }
+  }, [user, currentPath, isTeacher, navigate])
 
   const syncMutation = useMutation({
     mutationFn: () => syncApi.runSync(),

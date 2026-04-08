@@ -90,11 +90,15 @@ class CRUDUser(BaseCRUD[User]):
         grade_id: int | None = None,
         search: str | None = None,
         status: str | None = None,
+        grade_ids: list[int] | None = None,
     ) -> tuple[list[User], int]:
         base = select(User).where(
             User.role == UserRole.STUDENT.value,
             User.is_deleted == False,  # noqa: E712
         )
+
+        if grade_ids is not None:
+            base = base.where(User.grade_id.in_(grade_ids))
 
         if grade_id is not None:
             base = base.where(User.grade_id == grade_id)

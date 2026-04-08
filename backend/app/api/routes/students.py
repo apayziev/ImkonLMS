@@ -1,11 +1,13 @@
 """Student management routes — read-only (data synced from Payment)."""
 
 from fastapi import APIRouter, Query
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import SessionDep, SuperUser
-from app.core.exceptions import NotFoundException
+from app.api.deps import CurrentUser, SessionDep, SuperUser
+from app.core.exceptions import ForbiddenException, NotFoundException
 from app.crud.users import crud_users
+from app.models.schedule_entry import ScheduleEntry
 from app.models.user import User, UserRole
 from app.schemas.students import (
     StudentList,
@@ -13,6 +15,16 @@ from app.schemas.students import (
 )
 
 router = APIRouter(prefix="/students", tags=["students"])
+
+
+async def _teacher_grade_ids(db: SessionDep, teacher_id: int) -> list[int]:
+    """Get grade IDs where this teacher has schedule entries."""
+    result = await db.execute(
+        select(ScheduleEntry.grade_id)
+        .where(ScheduleEntry.teacher_id == teacher_id, ScheduleEntry.is_deleted == False)  # noqa: E712
+        .distinct()
+    )
+    return list(result.scalars().all())
 
 
 async def _get_student_or_404(db: SessionDep, student_id: int) -> User:
@@ -28,15 +40,24 @@ async def _get_student_or_404(db: SessionDep, student_id: int) -> User:
 @router.get("/", response_model=StudentList)
 async def read_students(
     db: SessionDep,
+    current_user: CurrentUser,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     grade_id: int | None = None,
     search: str | None = None,
     status: str | None = Query(None, description="Filter: active, frozen, inactive"),
 ) -> StudentList:
-    """O'quvchilar ro'yxati."""
+    """O'quvchilar ro'yxati. Teacher faqat o'z sinflarini ko'radi."""
+    # Teachers can only see students in their assigned grades
+    allowed_grades: list[int] | None = None
+    if current_user.role == UserRole.TEACHER.value:
+        allowed_grades = await _teacher_grade_ids(db, current_user.id)
+        if grade_id is not None and grade_id not in allowed_grades:
+            return StudentList(data=[], count=0)
+
     students, total = await crud_users.get_students(
         db, skip=skip, limit=limit, grade_id=grade_id, search=search, status=status,
+        grade_ids=allowed_grades,
     )
     return StudentList(
         data=[StudentRead.model_validate(s) for s in students],
@@ -61,7 +82,14 @@ async def read_deleted_students(
 
 
 @router.get("/{student_id}", response_model=StudentRead)
-async def read_student(student_id: int, db: SessionDep) -> StudentRead:
+async def read_student(student_id: int, db: SessionDep, current_user: CurrentUser) -> StudentRead:
     """O'quvchini ID bo'yicha olish."""
     student = await _get_student_or_404(db, student_id)
+
+    # Teachers can only view students in their assigned grades
+    if current_user.role == UserRole.TEACHER.value:
+        allowed_grades = await _teacher_grade_ids(db, current_user.id)
+        if student.grade_id not in allowed_grades:
+            raise ForbiddenException("Bu o'quvchini ko'rish huquqi yo'q")
+
     return StudentRead.model_validate(student)

@@ -17,11 +17,17 @@ class TMSTokenResponse(BaseModel):
 
 @router.post("/embed-token", response_model=TMSTokenResponse)
 async def get_tms_embed_token(current_user: CurrentUser) -> TMSTokenResponse:
-    """Get a TMS embed token for the current teacher.
+    """Get a TMS embed token for the current teacher/admin.
 
     LMS backend calls TMS API with the teacher's document_id + shared API key,
     returns the token + embed URL for the frontend to use in an iframe.
     """
+    from app.core.exceptions import ForbiddenException
+    from app.models.user import UserRole
+
+    if current_user.role not in (UserRole.TEACHER.value, UserRole.ADMIN.value) and not current_user.is_superuser:
+        raise ForbiddenException("Faqat o'qituvchi yoki administrator uchun")
+
     if not settings.TMS_EMBED_API_KEY:
         raise HTTPException(status_code=503, detail="TMS integratsiyasi sozlanmagan")
 
