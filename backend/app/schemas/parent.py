@@ -4,8 +4,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 # --- Auth ---
+
 
 class ParentLoginRequest(BaseModel):
     phone: str = Field(min_length=9, max_length=20)
@@ -31,6 +31,7 @@ class ParentMeRead(BaseModel):
 
 # --- Child ---
 
+
 class ParentChildRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -46,6 +47,7 @@ class ParentChildRead(BaseModel):
 
 
 # --- Attendance ---
+
 
 class ChildAttendanceRecord(BaseModel):
     date: str
@@ -70,6 +72,7 @@ class AttendanceSummary(BaseModel):
 
 # --- Timetable ---
 
+
 class ChildTimetableEntry(BaseModel):
     day_of_week: int
     period_number: int
@@ -86,6 +89,7 @@ class ChildTimetableResponse(BaseModel):
 
 # --- Homework ---
 
+
 class ChildHomeworkItem(BaseModel):
     subject_name: str
     topic: str | None = None
@@ -100,6 +104,7 @@ class ChildHomeworkResponse(BaseModel):
 
 
 # --- Violations ---
+
 
 class ChildViolationItem(BaseModel):
     violation_type: str
@@ -124,6 +129,7 @@ class ChildDisciplineResponse(BaseModel):
 
 # --- Admin parent management ---
 
+
 class ParentCreate(BaseModel):
     phone: str = Field(min_length=9, max_length=20)
     password: str = Field(min_length=4)
@@ -132,11 +138,6 @@ class ParentCreate(BaseModel):
     @classmethod
     def normalize_phone(cls, v: str) -> str:
         return v.replace(" ", "").replace("-", "") if isinstance(v, str) else v
-
-
-class ParentChangePassword(BaseModel):
-    current_password: str = Field(min_length=1)
-    new_password: str = Field(min_length=4)
 
 
 class ParentRead(BaseModel):

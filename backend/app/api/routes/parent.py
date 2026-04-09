@@ -1,12 +1,7 @@
 """Parent portal API routes — read-only access to child data."""
 
-from fastapi import APIRouter, Query
-from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
-
 from app.api.deps import CurrentParent, SessionDep
 from app.core.exceptions import ForbiddenException
-from app.core.security import get_password_hash, verify_password
 from app.models.grade import Grade
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
@@ -28,10 +23,12 @@ from app.schemas.parent import (
     ChildTimetableResponse,
     ChildViolationItem,
     ChildYellowCardItem,
-    ParentChangePassword,
     ParentChildRead,
     ParentMeRead,
 )
+from fastapi import APIRouter, Query
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/parent", tags=["parent"])
 
@@ -85,29 +82,20 @@ async def get_parent_info(parent: CurrentParent, db: SessionDep) -> ParentMeRead
 
     child_reads = [
         ParentChildRead(
-            id=c.id, first_name=c.first_name, last_name=c.last_name,
-            full_name=c.full_name, photo_url=c.photo_url,
-            grade_id=c.grade_id, grade_display=grade_map.get(c.grade_id),
-            is_active=c.is_active, is_frozen=c.is_frozen,
+            id=c.id,
+            first_name=c.first_name,
+            last_name=c.last_name,
+            full_name=c.full_name,
+            photo_url=c.photo_url,
+            grade_id=c.grade_id,
+            grade_display=grade_map.get(c.grade_id),
+            is_active=c.is_active,
+            is_frozen=c.is_frozen,
         )
         for c in children
     ]
 
     return ParentMeRead(phone=parent.phone, name=name, children=child_reads)
-
-
-@router.put("/me/password", status_code=204)
-async def change_parent_password(
-    data: ParentChangePassword,
-    db: SessionDep,
-    parent: CurrentParent,
-) -> None:
-    """Ota-ona o'z parolini o'zgartirishi."""
-    if not verify_password(data.current_password, parent.hashed_password):
-        raise ForbiddenException("Joriy parol noto'g'ri.")
-
-    parent.hashed_password = get_password_hash(data.new_password)
-    await db.commit()
 
 
 @router.get("/children/{student_id}/attendance", response_model=ChildAttendanceResponse)
@@ -153,14 +141,16 @@ async def get_child_attendance(
     records = []
     summary = AttendanceSummary()
     for row in rows:
-        records.append(ChildAttendanceRecord(
-            date=str(row.session_date),
-            subject_name=row.subject_name,
-            period_number=row.period_number,
-            start_time=str(row.start_time),
-            end_time=str(row.end_time),
-            status=row.status,
-        ))
+        records.append(
+            ChildAttendanceRecord(
+                date=str(row.session_date),
+                subject_name=row.subject_name,
+                period_number=row.period_number,
+                start_time=str(row.start_time),
+                end_time=str(row.end_time),
+                status=row.status,
+            )
+        )
         summary.total += 1
         if row.status == "present":
             summary.present += 1
@@ -268,7 +258,9 @@ async def get_child_homework(
             subject_name=row.subject_name,
             topic=row.topic,
             homework=row.homework,
-            homework_deadline=str(row.homework_deadline) if row.homework_deadline else None,
+            homework_deadline=(
+                str(row.homework_deadline) if row.homework_deadline else None
+            ),
             plan_date=str(row.plan_date),
             teacher_name=f"{row.teacher_last} {row.teacher_first}",
         )
