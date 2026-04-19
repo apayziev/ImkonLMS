@@ -13,6 +13,7 @@ from .base import BaseModel
 class UserRole(str, Enum):
     ADMIN = "admin"
     TEACHER = "teacher"
+    ACADEMIC_HEAD = "academic_head"
     STUDENT = "student"
 
 
@@ -52,10 +53,18 @@ class User(BaseModel):
     # === Personal Info ===
     first_name: Mapped[str] = mapped_column(String(50), kw_only=True)
     last_name: Mapped[str] = mapped_column(String(50), kw_only=True)
-    middle_name: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, kw_only=True)
-    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
-    photo_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None, kw_only=True)
-    gender: Mapped[str | None] = mapped_column(String(10), nullable=True, default=None, kw_only=True)
+    middle_name: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, default=None, kw_only=True
+    )
+    birth_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None, kw_only=True
+    )
+    photo_url: Mapped[str | None] = mapped_column(
+        Text, nullable=True, default=None, kw_only=True
+    )
+    gender: Mapped[str | None] = mapped_column(
+        String(10), nullable=True, default=None, kw_only=True
+    )
 
     # === Role & Status ===
     role: Mapped[str] = mapped_column(
@@ -69,7 +78,12 @@ class User(BaseModel):
 
     # === Student-specific fields ===
     student_id: Mapped[str | None] = mapped_column(
-        String(20), unique=True, nullable=True, default=None, index=True, kw_only=True,
+        String(20),
+        unique=True,
+        nullable=True,
+        default=None,
+        index=True,
+        kw_only=True,
     )
     grade_id: Mapped[int | None] = mapped_column(
         ForeignKey("grade.id", ondelete="SET NULL"),
@@ -78,18 +92,38 @@ class User(BaseModel):
         index=True,
         kw_only=True,
     )
-    father_first_name: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, kw_only=True)
-    father_last_name: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, kw_only=True)
-    father_phone: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None, kw_only=True)
-    mother_first_name: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, kw_only=True)
-    mother_last_name: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, kw_only=True)
-    mother_phone: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None, kw_only=True)
-    address: Mapped[str | None] = mapped_column(Text, nullable=True, default=None, kw_only=True)
-    enrollment_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
-    withdrawal_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
+    father_first_name: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, default=None, kw_only=True
+    )
+    father_last_name: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, default=None, kw_only=True
+    )
+    father_phone: Mapped[str | None] = mapped_column(
+        String(20), nullable=True, default=None, kw_only=True
+    )
+    mother_first_name: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, default=None, kw_only=True
+    )
+    mother_last_name: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, default=None, kw_only=True
+    )
+    mother_phone: Mapped[str | None] = mapped_column(
+        String(20), nullable=True, default=None, kw_only=True
+    )
+    address: Mapped[str | None] = mapped_column(
+        Text, nullable=True, default=None, kw_only=True
+    )
+    enrollment_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None, kw_only=True
+    )
+    withdrawal_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None, kw_only=True
+    )
 
     # === Teacher-specific fields ===
-    subjects: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None, kw_only=True)
+    subjects: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True, default=None, kw_only=True
+    )
     teaching_grade_ids: Mapped[list | None] = mapped_column(
         JSONB,
         nullable=True,
@@ -107,10 +141,18 @@ class User(BaseModel):
 
     # === Freeze fields ===
     is_frozen: Mapped[bool] = mapped_column(default=False, index=True, kw_only=True)
-    frozen_at: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
-    frozen_reason: Mapped[str | None] = mapped_column(Text, nullable=True, default=None, kw_only=True)
-    departure_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
-    return_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None, kw_only=True)
+    frozen_at: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None, kw_only=True
+    )
+    frozen_reason: Mapped[str | None] = mapped_column(
+        Text, nullable=True, default=None, kw_only=True
+    )
+    departure_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None, kw_only=True
+    )
+    return_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None, kw_only=True
+    )
 
     # === Relationships ===
     grade: Mapped["Grade | None"] = relationship(
