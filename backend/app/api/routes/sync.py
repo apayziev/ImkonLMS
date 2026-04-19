@@ -6,10 +6,6 @@ from collections.abc import Callable
 from datetime import date, datetime
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.api.deps import SessionDep, SuperUser
 from app.core.config import settings
 from app.core.security import get_password_hash
@@ -19,6 +15,9 @@ from app.models.parent_auth import ParentAuth
 from app.models.subject import Subject
 from app.models.sync_log import SyncLog
 from app.models.user import User, UserRole
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +27,13 @@ SYNC_TIMEOUT = 30.0
 
 # Fields that need date string -> date object conversion
 _DATE_FIELDS = {
-    "birth_date", "enrollment_date", "withdrawal_date",
-    "frozen_at", "departure_date", "return_date", "deleted_at",
+    "birth_date",
+    "enrollment_date",
+    "withdrawal_date",
+    "frozen_at",
+    "departure_date",
+    "return_date",
+    "deleted_at",
 }
 
 
@@ -79,7 +83,9 @@ async def _fetch_payment_data(updated_after: datetime | None = None) -> dict:
         ) from e
 
 
-async def _sync_academic_years(db: SessionDep, payment_years: list[dict]) -> tuple[int, int, int]:
+async def _sync_academic_years(
+    db: SessionDep, payment_years: list[dict]
+) -> tuple[int, int, int]:
     """Upsert academic years by name. Returns (created, updated, deactivated)."""
     existing = (await db.execute(select(AcademicYear))).scalars().all()
     year_map: dict[str, AcademicYear] = {a.name: a for a in existing}
@@ -96,7 +102,13 @@ async def _sync_academic_years(db: SessionDep, payment_years: list[dict]) -> tup
         if name in year_map:
             ay = year_map[name]
             changed = False
-            for field in ("start_year", "end_year", "start_month", "end_month", "is_current"):
+            for field in (
+                "start_year",
+                "end_year",
+                "start_month",
+                "end_month",
+                "is_current",
+            ):
                 if pa.get(field) is not None and getattr(ay, field) != pa[field]:
                     setattr(ay, field, pa[field])
                     changed = True
@@ -130,10 +142,14 @@ async def _sync_academic_years(db: SessionDep, payment_years: list[dict]) -> tup
     return created, updated, deactivated
 
 
-async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int, int, dict[int, int]]:
+async def _sync_grades(
+    db: SessionDep, payment_grades: list[dict]
+) -> tuple[int, int, dict[int, int]]:
     """Upsert grades and return (created_count, deactivated_count, payment_id_to_lms_id_map)."""
     existing = (await db.execute(select(Grade))).scalars().all()
-    grade_map: dict[tuple[int, str], Grade] = {(g.level, g.section): g for g in existing}
+    grade_map: dict[tuple[int, str], Grade] = {
+        (g.level, g.section): g for g in existing
+    }
 
     created = 0
     payment_to_lms: dict[int, int] = {}
@@ -172,7 +188,9 @@ async def _sync_grades(db: SessionDep, payment_grades: list[dict]) -> tuple[int,
     return created, deactivated, payment_to_lms
 
 
-async def _sync_subjects(db: SessionDep, payment_subjects: list[dict]) -> tuple[int, int, int]:
+async def _sync_subjects(
+    db: SessionDep, payment_subjects: list[dict]
+) -> tuple[int, int, int]:
     """Upsert subjects by name and sync is_deleted status. Returns (created, updated, deactivated)."""
     existing = (await db.execute(select(Subject))).scalars().all()
     subject_map: dict[str, Subject] = {s.name: s for s in existing}
@@ -229,15 +247,18 @@ async def _sync_users(
     *,
     extra_fields_fn: Callable[[dict, dict], dict] | None = None,
     all_payment_document_ids: list[str] | None = None,
+    allowed_roles: list[UserRole] | None = None,
 ) -> tuple[int, int, int, list[str]]:
     """Generic user sync. Returns (created, updated, deactivated, errors).
 
     extra_fields_fn(record, grade_map) -> dict of additional fields for create/update.
+    allowed_roles: if set, sync role from PMS when it's one of these values.
     """
-    existing_result = await db.execute(
-        select(User).where(User.role == role.value)
-    )
-    user_map: dict[str, User] = {u.document_id: u for u in existing_result.scalars().all()}
+    query_roles = [r.value for r in allowed_roles] if allowed_roles else [role.value]
+    existing_result = await db.execute(select(User).where(User.role.in_(query_roles)))
+    user_map: dict[str, User] = {
+        u.document_id: u for u in existing_result.scalars().all()
+    }
 
     pms_base = settings.PAYMENT_API_URL.rstrip("/")
     created = updated = 0
@@ -265,6 +286,12 @@ async def _sync_users(
                     if getattr(existing, field, None) != val:
                         setattr(existing, field, val)
                         changed = True
+                # Sync role from PMS when allowed
+                if allowed_roles:
+                    pms_role = record.get("role", role.value)
+                    if pms_role in query_roles and existing.role != pms_role:
+                        existing.role = pms_role
+                        changed = True
                 if changed:
                     updated += 1
             else:
@@ -274,11 +301,18 @@ async def _sync_users(
                         user_data[f] = _build_field_value(f, record[f])
                 user_data.update(extra)
                 user_data["document_id"] = doc_id
-                user_data["role"] = role.value
+                # Use PMS role when allowed, otherwise default
+                if allowed_roles:
+                    pms_role = record.get("role", role.value)
+                    user_data["role"] = pms_role if pms_role in query_roles else role.value
+                else:
+                    user_data["role"] = role.value
                 if not user_data.get("hashed_password"):
                     loop = asyncio.get_running_loop()
                     user_data["hashed_password"] = await loop.run_in_executor(
-                        None, get_password_hash, doc_id,
+                        None,
+                        get_password_hash,
+                        doc_id,
                     )
                 new_user = User(**user_data)
                 db.add(new_user)
@@ -303,25 +337,53 @@ async def _sync_users(
 # ── Role-specific sync field configs ────────────────────────────────────────
 
 _STUDENT_SYNC_FIELDS = [
-    "first_name", "last_name", "middle_name", "birth_date", "gender",
-    "phone_number", "student_id", "photo_url",
-    "father_first_name", "father_last_name", "father_phone",
-    "mother_first_name", "mother_last_name", "mother_phone",
-    "address", "enrollment_date", "withdrawal_date",
-    "is_active", "is_frozen", "frozen_at", "frozen_reason",
-    "departure_date", "return_date", "is_deleted", "deleted_at",
+    "first_name",
+    "last_name",
+    "middle_name",
+    "birth_date",
+    "gender",
+    "phone_number",
+    "student_id",
+    "photo_url",
+    "father_first_name",
+    "father_last_name",
+    "father_phone",
+    "mother_first_name",
+    "mother_last_name",
+    "mother_phone",
+    "address",
+    "enrollment_date",
+    "withdrawal_date",
+    "is_active",
+    "is_frozen",
+    "frozen_at",
+    "frozen_reason",
+    "departure_date",
+    "return_date",
+    "is_deleted",
+    "deleted_at",
 ]
 
 _TEACHER_SYNC_FIELDS = [
-    "first_name", "last_name", "middle_name", "birth_date", "gender",
-    "phone_number", "photo_url", "is_active", "is_deleted", "subjects",
+    "first_name",
+    "last_name",
+    "middle_name",
+    "birth_date",
+    "gender",
+    "phone_number",
+    "photo_url",
+    "is_active",
+    "is_deleted",
+    "subjects",
     "hashed_password",
 ]
 
 
 def _student_extra_fields(record: dict, grade_map: dict[int, int]) -> dict:
     """Compute student-specific fields (grade_id)."""
-    lms_grade_id = grade_map.get(record.get("grade_id")) if record.get("grade_id") else None
+    lms_grade_id = (
+        grade_map.get(record.get("grade_id")) if record.get("grade_id") else None
+    )
     return {"grade_id": lms_grade_id}
 
 
@@ -331,7 +393,9 @@ def _teacher_extra_fields(record: dict, grade_map: dict[int, int]) -> dict:
     lms_ct = grade_map.get(payment_ct) if payment_ct else None
 
     payment_teaching = record.get("teaching_grade_ids") or []
-    lms_teaching = [grade_map[gid] for gid in payment_teaching if gid in grade_map] or None
+    lms_teaching = [
+        grade_map[gid] for gid in payment_teaching if gid in grade_map
+    ] or None
 
     return {"class_teacher_grade_id": lms_ct, "teaching_grade_ids": lms_teaching}
 
@@ -344,7 +408,10 @@ async def _sync_students(
 ) -> tuple[int, int, int, list[str]]:
     """Upsert students by document_id. Returns (created, updated, deactivated, errors)."""
     return await _sync_users(
-        db, UserRole.STUDENT, payment_students, grade_map,
+        db,
+        UserRole.STUDENT,
+        payment_students,
+        grade_map,
         _STUDENT_SYNC_FIELDS,
         extra_fields_fn=_student_extra_fields,
         all_payment_document_ids=all_payment_document_ids,
@@ -359,10 +426,14 @@ async def _sync_teachers(
 ) -> tuple[int, int, int, list[str]]:
     """Upsert teachers by document_id. Returns (created, updated, deactivated, errors)."""
     return await _sync_users(
-        db, UserRole.TEACHER, payment_teachers, grade_map,
+        db,
+        UserRole.TEACHER,
+        payment_teachers,
+        grade_map,
         _TEACHER_SYNC_FIELDS,
         extra_fields_fn=_teacher_extra_fields,
         all_payment_document_ids=all_payment_document_ids,
+        allowed_roles=[UserRole.TEACHER, UserRole.ACADEMIC_HEAD],
     )
 
 
@@ -377,11 +448,15 @@ async def _sync_parent_auth(db: AsyncSession) -> tuple[int, int]:
     existing_phones: set[str] = {row[0] for row in result.all()}
 
     # Get all active students with parent phones from LMS DB
-    students = (await db.execute(
-        select(User.document_id, User.father_phone, User.mother_phone)
-        .where(User.role == "student", User.is_active == True, User.is_deleted == False)  # noqa: E712
-        .where((User.father_phone.isnot(None)) | (User.mother_phone.isnot(None)))
-    )).all()
+    students = (
+        await db.execute(
+            select(User.document_id, User.father_phone, User.mother_phone)
+            .where(
+                User.role == "student", User.is_active == True, User.is_deleted == False
+            )  # noqa: E712
+            .where((User.father_phone.isnot(None)) | (User.mother_phone.isnot(None)))
+        )
+    ).all()
 
     created = 0
     loop = asyncio.get_running_loop()
@@ -394,11 +469,13 @@ async def _sync_parent_auth(db: AsyncSession) -> tuple[int, int]:
             password = doc_id if doc_id else phone[-4:]
             hashed = await loop.run_in_executor(None, get_password_hash, password)
 
-            db.add(ParentAuth(
-                phone=phone,
-                hashed_password=hashed,
-                is_active=True,
-            ))
+            db.add(
+                ParentAuth(
+                    phone=phone,
+                    hashed_password=hashed,
+                    is_active=True,
+                )
+            )
             existing_phones.add(phone)
             created += 1
 
@@ -425,7 +502,12 @@ async def _save_sync_log(
     triggered_by: str = "manual",
 ) -> None:
     """Save sync attempt to log."""
-    log = SyncLog(status=status, stats=stats, error_message=error_message, triggered_by=triggered_by)
+    log = SyncLog(
+        status=status,
+        stats=stats,
+        error_message=error_message,
+        triggered_by=triggered_by,
+    )
     db.add(log)
     await db.commit()
 
@@ -435,16 +517,30 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
     last_sync = await _get_last_successful_sync(db)
     data = await _fetch_payment_data(updated_after=last_sync)
 
-    academic_years_created, academic_years_updated, academic_years_deactivated = await _sync_academic_years(db, data.get("academic_years", []))
-    grades_created, grades_deactivated, grade_map = await _sync_grades(db, data.get("grades", []))
-    subjects_created, subjects_updated, subjects_deactivated = await _sync_subjects(db, data.get("subjects", []))
-    students_created, students_updated, students_deactivated, student_errors = await _sync_students(
-        db, data.get("students", []), grade_map,
-        all_payment_document_ids=data.get("all_student_document_ids"),
+    academic_years_created, academic_years_updated, academic_years_deactivated = (
+        await _sync_academic_years(db, data.get("academic_years", []))
     )
-    teachers_created, teachers_updated, teachers_deactivated, teacher_errors = await _sync_teachers(
-        db, data.get("teachers", []), grade_map,
-        all_payment_document_ids=data.get("all_teacher_document_ids"),
+    grades_created, grades_deactivated, grade_map = await _sync_grades(
+        db, data.get("grades", [])
+    )
+    subjects_created, subjects_updated, subjects_deactivated = await _sync_subjects(
+        db, data.get("subjects", [])
+    )
+    students_created, students_updated, students_deactivated, student_errors = (
+        await _sync_students(
+            db,
+            data.get("students", []),
+            grade_map,
+            all_payment_document_ids=data.get("all_student_document_ids"),
+        )
+    )
+    teachers_created, teachers_updated, teachers_deactivated, teacher_errors = (
+        await _sync_teachers(
+            db,
+            data.get("teachers", []),
+            grade_map,
+            all_payment_document_ids=data.get("all_teacher_document_ids"),
+        )
     )
 
     parents_created, _ = await _sync_parent_auth(db)
@@ -487,10 +583,19 @@ async def run_sync(db: AsyncSession, *, triggered_by: str = "manual") -> dict:
         "students=%d/%d/%d, teachers=%d/%d/%d",
         triggered_by,
         "incremental" if last_sync else "full",
-        academic_years_created, academic_years_updated, academic_years_deactivated,
-        grades_created, grades_deactivated, subjects_created, subjects_updated,
-        students_created, students_updated, students_deactivated,
-        teachers_created, teachers_updated, teachers_deactivated,
+        academic_years_created,
+        academic_years_updated,
+        academic_years_deactivated,
+        grades_created,
+        grades_deactivated,
+        subjects_created,
+        subjects_updated,
+        students_created,
+        students_updated,
+        students_deactivated,
+        teachers_created,
+        teachers_updated,
+        teachers_deactivated,
     )
 
     return result
