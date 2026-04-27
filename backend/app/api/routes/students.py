@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep, SuperUser
 from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.pagination import DEFAULT_LIMIT, LimitQuery, SkipQuery
 from app.crud.users import crud_users
 from app.models.schedule_entry import ScheduleEntry
 from app.models.user import User, UserRole
@@ -41,8 +42,8 @@ async def _get_student_or_404(db: SessionDep, student_id: int) -> User:
 async def read_students(
     db: SessionDep,
     current_user: CurrentUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    skip: SkipQuery = 0,
+    limit: LimitQuery = DEFAULT_LIMIT,
     grade_id: int | None = None,
     search: str | None = None,
     status: str | None = Query(None, description="Filter: active, frozen, inactive"),
@@ -69,8 +70,8 @@ async def read_students(
 async def read_deleted_students(
     db: SessionDep,
     current_user: SuperUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    skip: SkipQuery = 0,
+    limit: LimitQuery = DEFAULT_LIMIT,
     search: str | None = None,
 ) -> StudentList:
     """O'chirilgan o'quvchilar ro'yxati."""

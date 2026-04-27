@@ -2,7 +2,6 @@
 
 from collections import defaultdict
 from datetime import date, timedelta
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -11,6 +10,7 @@ from app.api.deps import SessionDep
 from app.core.enums import SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.core.formatting import format_time
+from app.core.uploads import MATERIALS_UPLOAD_DIR  # noqa: F401  (re-exported for routes)
 from app.models.lesson_material import LessonMaterial
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
@@ -23,8 +23,6 @@ from app.schemas.lessons import (
     SessionDetailRead,
     SessionStudentRead,
 )
-
-MATERIALS_UPLOAD_DIR = Path("uploads/materials")
 
 ENTRY_LOAD = [
     selectinload(ScheduleEntry.subject),

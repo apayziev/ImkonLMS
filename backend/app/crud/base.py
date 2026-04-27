@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,12 @@ ModelType = TypeVar("ModelType", bound=BaseModel)
 
 
 class BaseCRUD(Generic[ModelType]):
+    # Fields never writable via generic update() — managed by ORM/CRUD logic.
+    # Subclasses may extend (e.g. CRUDUser adds hashed_password, role, is_superuser).
+    PROTECTED_FIELDS: ClassVar[frozenset[str]] = frozenset({
+        "id", "created_at", "updated_at", "is_deleted", "deleted_at",
+    })
+
     def __init__(self, model: type[ModelType]):
         self.model = model
 
@@ -44,6 +50,8 @@ class BaseCRUD(Generic[ModelType]):
         update_data: dict[str, Any],
     ) -> ModelType:
         for field, value in update_data.items():
+            if field in self.PROTECTED_FIELDS or field.startswith("_"):
+                continue
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
         await db.commit()

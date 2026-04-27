@@ -11,6 +11,19 @@ from app.core.exceptions import BadRequestException
 
 MAX_FILE_SIZE = settings.MAX_FILE_SIZE_MB * 1024 * 1024
 
+UPLOADS_DIR = Path("uploads")
+MATERIALS_UPLOAD_DIR = UPLOADS_DIR / "materials"
+
+
+def resolve_stored_path(upload_dir: Path, file_url: str) -> Path:
+    """Resolve an absolute disk path for a stored file URL.
+
+    Uses Path.name to strip any directory components (defense against traversal),
+    then joins with the (resolved) upload_dir. Returns absolute path.
+    """
+    base = upload_dir.resolve()
+    return base / Path(file_url).name
+
 # Allowed extensions for lesson materials (documents, images, archives)
 ALLOWED_MATERIAL_EXTENSIONS = {
     ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",

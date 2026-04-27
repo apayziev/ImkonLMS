@@ -1,10 +1,11 @@
 """Admin routes for parent account management."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from sqlalchemy import func, literal_column, select, union_all
 
 from app.api.deps import SessionDep, SuperUser
 from app.core.exceptions import DuplicateValueException, NotFoundException
+from app.core.pagination import DEFAULT_LIMIT, LimitQuery, SkipQuery
 from app.core.security import get_password_hash
 from app.models.parent_auth import ParentAuth
 from app.models.user import User, UserRole
@@ -48,8 +49,8 @@ def _children_count_subquery():
 async def list_parents(
     db: SessionDep,
     _: SuperUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    skip: SkipQuery = 0,
+    limit: LimitQuery = DEFAULT_LIMIT,
     search: str | None = None,
 ) -> ParentListResponse:
     """Barcha ota-ona hisoblarini ko'rish."""

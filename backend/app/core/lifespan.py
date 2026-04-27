@@ -61,12 +61,12 @@ async def _auto_sync_loop() -> None:
             logger.info("Auto-sync stopped")
             return
         except Exception as e:
-            logger.error("Auto-sync failed: %s", e)
+            logger.exception("Auto-sync failed")
             try:
                 async with local_session() as db:
                     await _save_sync_log(db, status="failed", error_message=str(e)[:500], triggered_by="auto")
             except Exception:
-                logger.error("Failed to save sync error log", exc_info=True)
+                logger.exception("Failed to save sync error log")
 
         await asyncio.sleep(AUTO_SYNC_INTERVAL)
 
@@ -127,8 +127,8 @@ async def _auto_end_sessions_loop() -> None:
         except asyncio.CancelledError:
             logger.info("Auto-end sessions loop stopped")
             return
-        except Exception as e:
-            logger.error("Auto-end sessions loop error: %s", e)
+        except Exception:
+            logger.exception("Auto-end sessions loop error")
 
 
 @asynccontextmanager

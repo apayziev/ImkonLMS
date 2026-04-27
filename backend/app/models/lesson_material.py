@@ -1,10 +1,11 @@
 """Lesson material — files attached to a lesson plan by the teacher."""
 
 import logging
-from pathlib import Path
 
 from sqlalchemy import BigInteger, ForeignKey, String, Text, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.uploads import MATERIALS_UPLOAD_DIR, resolve_stored_path
 
 from .base import BaseModel
 
@@ -29,8 +30,8 @@ class LessonMaterial(BaseModel):
 def _cleanup_material_file(mapper, connection, target: LessonMaterial) -> None:  # noqa: ARG001
     """Remove material file from disk when DB row is deleted (including cascade)."""
     try:
-        file_path = Path(target.file_url.lstrip("/"))
+        file_path = resolve_stored_path(MATERIALS_UPLOAD_DIR, target.file_url)
         if file_path.exists():
             file_path.unlink()
     except Exception:
-        logger.warning("Failed to delete material file: %s", target.file_url)
+        logger.exception("Failed to delete material file: %s", target.file_url)

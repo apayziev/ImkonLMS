@@ -1,13 +1,11 @@
 """Lesson materials: upload and delete (attached to lesson plans)."""
 
-from pathlib import Path
-
 from fastapi import APIRouter, File, UploadFile
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.exceptions import NotFoundException
-from app.core.uploads import validate_and_save_file
+from app.core.uploads import resolve_stored_path, validate_and_save_file
 from app.models.lesson_material import LessonMaterial
 from app.schemas.lessons import LessonMaterialRead
 
@@ -71,8 +69,8 @@ async def delete_material(
         raise NotFoundException("Material topilmadi")
 
     # Delete file from disk
-    file_path = Path(material.file_url.lstrip("/")).resolve()
-    if file_path.is_relative_to(MATERIALS_UPLOAD_DIR.resolve()) and file_path.exists():
+    file_path = resolve_stored_path(MATERIALS_UPLOAD_DIR, material.file_url)
+    if file_path.exists():
         file_path.unlink()
 
     await db.delete(material)

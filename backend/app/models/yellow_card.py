@@ -12,9 +12,9 @@ class YellowCard(BaseModel):
     __tablename__ = "yellow_card"
 
     student_id: Mapped[int] = mapped_column(
-        ForeignKey("user.id", ondelete="CASCADE"),
+        ForeignKey("user.id", ondelete="RESTRICT"),
         index=True,
-        comment="Kartochka berilgan o'quvchi",
+        comment="Kartochka berilgan o'quvchi (RESTRICT: audit trail saqlanadi)",
         kw_only=True,
     )
     quarter_id: Mapped[int] = mapped_column(

@@ -1,8 +1,9 @@
 """Teacher routes — read-only (data synced from Payment)."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
 from app.api.deps import SessionDep
+from app.core.pagination import DEFAULT_LIMIT, LimitQuery, SkipQuery
 from app.crud.users import crud_users
 from app.schemas.teachers import TeacherList, TeacherRead
 
@@ -12,8 +13,8 @@ router = APIRouter(prefix="/teachers", tags=["teachers"])
 @router.get("/", response_model=TeacherList)
 async def read_teachers(
     db: SessionDep,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=200),
+    skip: SkipQuery = 0,
+    limit: LimitQuery = DEFAULT_LIMIT,
     search: str | None = None,
 ) -> TeacherList:
     """O'qituvchilar ro'yxati."""

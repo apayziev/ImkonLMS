@@ -19,6 +19,9 @@ class CryptSettings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # Set to ".imkonschool.uz" in prod to share refresh cookie across subdomains.
+    # Leave empty in local dev (cookie scoped to current host).
+    COOKIE_DOMAIN: str = ""
 
 
 class DatabaseSettings(BaseSettings):

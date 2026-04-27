@@ -14,9 +14,9 @@ class ViolationReport(BaseModel):
     __tablename__ = "violation_report"
 
     student_id: Mapped[int] = mapped_column(
-        ForeignKey("user.id", ondelete="CASCADE"),
+        ForeignKey("user.id", ondelete="RESTRICT"),
         index=True,
-        comment="Qoidabuzarlik qilgan o'quvchi",
+        comment="Qoidabuzarlik qilgan o'quvchi (RESTRICT: audit trail saqlanadi)",
         kw_only=True,
     )
     violation_type_id: Mapped[int] = mapped_column(

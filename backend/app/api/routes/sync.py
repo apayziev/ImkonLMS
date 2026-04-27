@@ -8,6 +8,7 @@ from datetime import date, datetime
 import httpx
 from app.api.deps import SessionDep, SuperUser
 from app.core.config import settings
+from app.core.logging_utils import mask_document_id
 from app.core.security import get_password_hash
 from app.models.academic_year import AcademicYear
 from app.models.grade import Grade
@@ -319,7 +320,7 @@ async def _sync_users(
                 user_map[doc_id] = new_user
                 created += 1
         except Exception as e:
-            logger.warning("Sync %s failed for %s: %s", role.value, doc_id, e)
+            logger.warning("Sync %s failed for %s: %s", role.value, mask_document_id(doc_id), e)
             errors.append(f"{doc_id}: {e}")
 
     # Detect hard-deleted users (no longer in Payment)

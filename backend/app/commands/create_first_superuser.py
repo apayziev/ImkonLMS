@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.db import async_get_db
+from app.core.logging_utils import mask_phone
 from app.core.security import get_password_hash
 from app.models.user import User, UserRole
 
@@ -40,7 +41,7 @@ async def create_first_superuser() -> None:
         )
         db.add(superuser)
         await db.commit()
-        logger.info("Superuser created: %s", phone_number)
+        logger.info("Superuser created: %s", mask_phone(phone_number))
 
 
 if __name__ == "__main__":

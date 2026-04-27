@@ -2,6 +2,7 @@
 
 from app.api.deps import CurrentParent, SessionDep
 from app.core.exceptions import ForbiddenException
+from app.core.pagination import DEFAULT_LIMIT, LimitQuery
 from app.models.grade import Grade
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
@@ -219,7 +220,7 @@ async def get_child_homework(
     student_id: int,
     parent: CurrentParent,
     db: SessionDep,
-    limit: int = Query(20, ge=1, le=100),
+    limit: LimitQuery = DEFAULT_LIMIT,
 ) -> ChildHomeworkResponse:
     """Farzandga berilgan uyga vazifalar."""
     child = await _verify_child(db, parent.phone, student_id)

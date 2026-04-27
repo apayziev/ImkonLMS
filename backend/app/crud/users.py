@@ -1,5 +1,7 @@
 """CRUD operations for User model."""
 
+from typing import ClassVar
+
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,6 +15,10 @@ _DUMMY_HASH = get_password_hash("dummy-password-for-timing-safety")
 
 
 class CRUDUser(BaseCRUD[User]):
+    # Sensitive fields — must be set via dedicated methods, not generic update().
+    PROTECTED_FIELDS: ClassVar[frozenset[str]] = BaseCRUD.PROTECTED_FIELDS | {
+        "hashed_password", "role", "is_superuser",
+    }
 
     @staticmethod
     def _apply_search(query, search: str | None, fields: list):
@@ -76,6 +82,8 @@ class CRUDUser(BaseCRUD[User]):
         if db_user is None:
             return None
         if db_user.role != UserRole.STUDENT.value:
+            return None
+        if db_user.is_frozen:
             return None
         return db_user
 

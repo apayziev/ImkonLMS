@@ -13,7 +13,16 @@ class Base(DeclarativeBase, MappedAsDataclass):
 
 DATABASE_URL = f"{settings.POSTGRES_ASYNC_PREFIX}{settings.POSTGRES_URI}"
 
-async_engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+async_engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    future=True,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_recycle=3600,
+    pool_pre_ping=True,
+)
 
 local_session = async_sessionmaker(bind=async_engine, class_=AsyncSession, expire_on_commit=False)
 

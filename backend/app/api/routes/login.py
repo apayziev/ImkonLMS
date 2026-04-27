@@ -18,6 +18,7 @@ from app.core.security import (
     verify_token,
 )
 from app.crud.users import crud_users
+from app.models.grade import Grade
 from app.models.parent_auth import ParentAuth
 from app.models.user import User, UserRole
 from app.schemas.parent import ParentChildRead, ParentLoginRequest, ParentMeRead, ParentTokenResponse
@@ -34,6 +35,7 @@ def _set_auth_cookie(response: Response, refresh_token: str) -> None:
         secure=any(o.startswith("https://") for o in settings.CORS_ORIGINS),
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        domain=settings.COOKIE_DOMAIN or None,
     )
 
 
@@ -112,6 +114,8 @@ async def login_student(
         raise UnauthorizedException("O'quvchi topilmadi yoki siz o'quvchi emassiz.")
     if not user.is_active:
         raise UnauthorizedException("Foydalanuvchi faol emas.")
+    if user.is_frozen:
+        raise UnauthorizedException("Hisob muzlatilgan.")
 
     return _create_token_response(response, user)
 
@@ -161,7 +165,6 @@ async def login_parent(
     grade_ids = {c.grade_id for c in children if c.grade_id}
     grade_map: dict[int, str] = {}
     if grade_ids:
-        from app.models.grade import Grade
         grade_result = await db.execute(select(Grade).where(Grade.id.in_(grade_ids)))
         grade_map = {g.id: g.display_name for g in grade_result.scalars().all()}
 
