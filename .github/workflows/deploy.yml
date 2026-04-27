@@ -65,6 +65,11 @@ jobs:
           # --wait blocks until healthchecks pass (no blind sleeps)
           ssh_run "cd $DEPLOY_PATH && $DC up -d --wait --wait-timeout 180 api frontend nginx"
 
+          # Force-recreate nginx so it re-binds the prod.conf inode rsync just
+          # rewrote. Without this, the container keeps the previous file's
+          # contents even though the bind mount path is up-to-date on disk.
+          ssh_run "cd $DEPLOY_PATH && $DC up -d --force-recreate --no-deps nginx"
+
           ssh_run "cd $DEPLOY_PATH && $DC ps"
           ssh_run "cd $DEPLOY_PATH && $DC logs --tail=30 api" || true
 
