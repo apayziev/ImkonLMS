@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime, time
 
 import anyio
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
@@ -26,7 +27,8 @@ AUTO_END_GRACE_MINUTES = 5  # end session 5 min after scheduled end_time
 
 async def check_database_connection() -> None:
     max_retries = 5
-    retry_delay = 2
+    base_delay = 1.0
+    max_delay = 30.0
     for attempt in range(1, max_retries + 1):
         try:
             async with engine.connect() as conn:
@@ -42,8 +44,9 @@ async def check_database_connection() -> None:
             if attempt == max_retries:
                 logging.error("Database connection failed after %s attempts: %s", max_retries, type(e).__name__)
                 raise
-            logging.warning("DB connection attempt %s failed. Retrying in %ss...", attempt, retry_delay)
-            await anyio.sleep(retry_delay)
+            delay = min(base_delay * 2 ** (attempt - 1), max_delay)
+            logging.warning("DB connection attempt %s failed. Retrying in %.1fs...", attempt, delay)
+            await anyio.sleep(delay)
 
 
 async def _auto_sync_loop() -> None:
@@ -131,6 +134,37 @@ async def _auto_end_sessions_loop() -> None:
             logger.exception("Auto-end sessions loop error")
 
 
+REFRESH_PURGE_INTERVAL = 6 * 60 * 60  # every 6h
+
+
+async def _refresh_token_purge_loop() -> None:
+    """Drop expired refresh-token rows so the table doesn't grow forever."""
+    from app.crud import refresh_tokens
+
+    while True:
+        await asyncio.sleep(REFRESH_PURGE_INTERVAL)
+        try:
+            async with local_session() as db:
+                purged = await refresh_tokens.purge_expired(db)
+                if purged:
+                    logger.info("Purged %d expired refresh tokens", purged)
+        except asyncio.CancelledError:
+            logger.info("Refresh-token purge loop stopped")
+            return
+        except Exception:
+            logger.exception("Refresh-token purge loop error")
+
+
+async def _cancel(task: asyncio.Task | None) -> None:
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     await check_database_connection()
@@ -140,21 +174,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         sync_task = asyncio.create_task(_auto_sync_loop())
 
     auto_end_task = asyncio.create_task(_auto_end_sessions_loop())
+    purge_task = asyncio.create_task(_refresh_token_purge_loop())
 
     yield
 
-    auto_end_task.cancel()
-    try:
-        await auto_end_task
-    except asyncio.CancelledError:
-        pass
-
-    if sync_task:
-        sync_task.cancel()
-        try:
-            await sync_task
-        except asyncio.CancelledError:
-            pass
+    await _cancel(auto_end_task)
+    await _cancel(purge_task)
+    await _cancel(sync_task)
 
 
 def create_application(router: APIRouter) -> FastAPI:
@@ -171,6 +197,9 @@ def create_application(router: APIRouter) -> FastAPI:
     application = FastAPI(lifespan=lifespan, **kwargs)
     application.include_router(router)
 
+    # CorrelationIdMiddleware first so the X-Request-ID is bound before CORS
+    # logs (and any later middleware) emit anything.
+    application.add_middleware(CorrelationIdMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,

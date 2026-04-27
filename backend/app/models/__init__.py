@@ -8,6 +8,7 @@ from .lesson_plan import LessonPlan
 from .lesson_session import LessonSession
 from .parent_auth import ParentAuth
 from .quarter import Quarter
+from .refresh_token import RefreshToken
 from .schedule_entry import ScheduleEntry
 from .school_settings import SchoolSettings
 from .session_attendance import SessionAttendance
@@ -26,6 +27,7 @@ __all__ = [
     "LessonPlan",
     "LessonSession",
     "ParentAuth",
+    "RefreshToken",
     "ScheduleEntry",
     "SchoolSettings",
     "SessionAttendance",

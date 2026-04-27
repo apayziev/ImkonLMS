@@ -1,8 +1,11 @@
 name: Deploy to Production
 
+# Triggered only after CI succeeds on main, or via manual dispatch.
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches: [main]
+    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -13,6 +16,8 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    # Block deploys when CI failed (workflow_run fires on success and failure).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     env:
       HOST: ${{ secrets.SERVER_HOST }}
       USER: ${{ secrets.SERVER_USER }}

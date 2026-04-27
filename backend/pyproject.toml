@@ -21,6 +21,7 @@ dependencies = [
     "filetype>=1.2.0",
     "sentry-sdk[fastapi]>=2.18.0",
     "structlog>=24.4.0",
+    "asgi-correlation-id>=4.3.4",
 ]
 
 [dependency-groups]

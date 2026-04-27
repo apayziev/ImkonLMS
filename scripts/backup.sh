@@ -28,9 +28,10 @@ if [ ! -s "$RAW_FILE" ]; then
     exit 1
 fi
 
-# Encrypt and discard plaintext dump.
-gpg --symmetric --batch --yes --cipher-algo AES256 \
-    --passphrase "$BACKUP_ENCRYPTION_KEY" \
+# Encrypt and discard plaintext dump. Pipe the passphrase via stdin (fd 0) so
+# it never appears in /proc/<pid>/cmdline.
+printf '%s' "$BACKUP_ENCRYPTION_KEY" | gpg --symmetric --batch --yes \
+    --cipher-algo AES256 --passphrase-fd 0 \
     --output "$BACKUP_FILE" "$RAW_FILE"
 rm -f "$RAW_FILE"
 

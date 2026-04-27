@@ -7,6 +7,7 @@ import logging
 
 import sentry_sdk
 import structlog
+from asgi_correlation_id.context import correlation_id
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
@@ -14,11 +15,20 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from .config import settings
 
 
+def _add_correlation_id(logger, method_name, event_dict):  # noqa: ARG001
+    """Inject the ASGI correlation_id (X-Request-ID) into every log record."""
+    cid = correlation_id.get()
+    if cid:
+        event_dict["request_id"] = cid
+    return event_dict
+
+
 def _configure_logging() -> None:
     level = logging.getLevelNamesMapping().get(settings.LOG_LEVEL.upper(), logging.INFO)
 
     shared_processors: list = [
         structlog.contextvars.merge_contextvars,
+        _add_correlation_id,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),

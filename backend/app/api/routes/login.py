@@ -1,5 +1,6 @@
 """Login routes for IMKON LMS."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -17,6 +18,8 @@ from app.core.security import (
     verify_password,
     verify_token,
 )
+from app.crud import refresh_tokens
+from app.crud.refresh_tokens import RefreshRotationError
 from app.crud.users import crud_users
 from app.models.grade import Grade
 from app.models.parent_auth import ParentAuth
@@ -39,11 +42,39 @@ def _set_auth_cookie(response: Response, refresh_token: str) -> None:
     )
 
 
-def _create_token_response(response: Response, user: User) -> TokenResponse:
-    access_token = create_access_token(data={"sub": user.document_id})
-    refresh_token = create_refresh_token(data={"sub": user.document_id})
-    _set_auth_cookie(response, refresh_token)
-    return TokenResponse(access_token=access_token, token_type="bearer", user=UserRead.model_validate(user))
+async def _issue_session(
+    db: AsyncSession,
+    response: Response,
+    *,
+    subject: str,
+    role: str | None,
+) -> str:
+    """Persist a fresh refresh-token family, set the cookie, return access token."""
+    issued = await refresh_tokens.issue(db, subject=subject, role=role)
+    refresh_payload: dict = {
+        "sub": subject,
+        "jti": str(issued.jti),
+        "fid": str(issued.family_id),
+    }
+    if role:
+        refresh_payload["role"] = role
+
+    access_payload: dict = {"sub": subject}
+    if role:
+        access_payload["role"] = role
+
+    refresh = create_refresh_token(data=refresh_payload)
+    _set_auth_cookie(response, refresh)
+    return create_access_token(data=access_payload)
+
+
+async def _create_token_response(
+    db: AsyncSession, response: Response, user: User,
+) -> TokenResponse:
+    access = await _issue_session(db, response, subject=user.document_id, role=user.role)
+    return TokenResponse(
+        access_token=access, token_type="bearer", user=UserRead.model_validate(user),
+    )
 
 
 @router.post("/", response_model=TokenResponse)
@@ -59,7 +90,7 @@ async def login(
     if not user.is_active:
         raise UnauthorizedException("Foydalanuvchi faol emas.")
 
-    return _create_token_response(response, user)
+    return await _create_token_response(db, response, user)
 
 
 @router.post("/access-token")
@@ -75,31 +106,51 @@ async def login_for_access_token(
     if not user.is_active:
         raise UnauthorizedException("Foydalanuvchi faol emas.")
 
-    access_token = create_access_token(data={"sub": user.document_id})
-    refresh_token = create_refresh_token(data={"sub": user.document_id})
-    _set_auth_cookie(response, refresh_token)
-    return {"access_token": access_token, "token_type": "bearer"}
+    access = await _issue_session(db, response, subject=user.document_id, role=user.role)
+    return {"access_token": access, "token_type": "bearer"}
 
 
 @router.post("/refresh")
 async def refresh_access_token(
     request: Request,
+    response: Response,
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> dict[str, str]:
-    """Token yangilash."""
+    """Rotate the refresh token (single-use) and mint a new access token."""
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise UnauthorizedException("Refresh token topilmadi.")
 
-    user_data = verify_token(refresh_token, TokenType.REFRESH)
-    if not user_data:
+    payload = verify_token(refresh_token, TokenType.REFRESH)
+    if not payload or not payload.get("jti"):
         raise UnauthorizedException("Yaroqsiz refresh token.")
 
-    # Preserve role in refreshed token
-    token_payload: dict = {"sub": user_data["document_id"]}
-    if user_data.get("role"):
-        token_payload["role"] = user_data["role"]
-    return {"access_token": create_access_token(data=token_payload), "token_type": "bearer"}
+    try:
+        jti = uuid.UUID(payload["jti"])
+    except (ValueError, TypeError) as e:
+        raise UnauthorizedException("Yaroqsiz refresh token.") from e
+
+    try:
+        rotated = await refresh_tokens.rotate(db, jti=jti)
+    except RefreshRotationError as e:
+        response.delete_cookie(key="refresh_token", domain=settings.COOKIE_DOMAIN or None)
+        raise UnauthorizedException("Yaroqsiz refresh token.") from e
+
+    refresh_payload: dict = {
+        "sub": rotated.subject,
+        "jti": str(rotated.new_jti),
+        "fid": str(rotated.family_id),
+    }
+    access_payload: dict = {"sub": rotated.subject}
+    if rotated.role:
+        refresh_payload["role"] = rotated.role
+        access_payload["role"] = rotated.role
+
+    _set_auth_cookie(response, create_refresh_token(data=refresh_payload))
+    return {
+        "access_token": create_access_token(data=access_payload),
+        "token_type": "bearer",
+    }
 
 
 @router.post("/student", response_model=TokenResponse)
@@ -117,7 +168,7 @@ async def login_student(
     if user.is_frozen:
         raise UnauthorizedException("Hisob muzlatilgan.")
 
-    return _create_token_response(response, user)
+    return await _create_token_response(db, response, user)
 
 
 @router.post("/parent", response_model=ParentTokenResponse)
@@ -157,9 +208,7 @@ async def login_parent(
             name = f"{child.mother_last_name or ''} {child.mother_first_name}".strip()
             break
 
-    access_token = create_access_token(data={"sub": parent.phone, "role": "parent"})
-    refresh_token = create_refresh_token(data={"sub": parent.phone, "role": "parent"})
-    _set_auth_cookie(response, refresh_token)
+    access_token = await _issue_session(db, response, subject=parent.phone, role="parent")
 
     # Batch load grades for all children (no N+1)
     grade_ids = {c.grade_id for c in children if c.grade_id}
