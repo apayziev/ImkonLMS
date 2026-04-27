@@ -1,9 +1,8 @@
 /**
  * Runtime schemas for auth-critical API responses.
  *
- * Why only auth: a silently-corrupted login or /me response means the user gets
- * stuck in a broken session. Catching shape drift loudly (parse → throw) here
- * is cheap insurance. Non-auth endpoints stay TS-typed only.
+ * TS types are derived via z.infer so the schema is the single source of truth —
+ * change a field once, both runtime parser and types update.
  */
 
 import { z } from "zod"
@@ -23,14 +22,16 @@ export const userReadSchema = z.object({
   teaching_grade_ids: z.array(z.number()).nullable(),
   age: z.number().nullable(),
 })
+export type UserRead = z.infer<typeof userReadSchema>
 
 export const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   token_type: z.string(),
   user: userReadSchema,
 })
+export type TokenResponse = z.infer<typeof tokenResponseSchema>
 
-const parentChildSchema = z.object({
+export const parentChildSchema = z.object({
   id: z.number(),
   first_name: z.string(),
   last_name: z.string(),
@@ -41,15 +42,18 @@ const parentChildSchema = z.object({
   is_active: z.boolean(),
   is_frozen: z.boolean(),
 })
+export type ParentChildRead = z.infer<typeof parentChildSchema>
 
 export const parentMeSchema = z.object({
   phone: z.string(),
   name: z.string(),
   children: z.array(parentChildSchema),
 })
+export type ParentMeRead = z.infer<typeof parentMeSchema>
 
 export const parentTokenResponseSchema = z.object({
   access_token: z.string().min(1),
   token_type: z.string(),
   parent: parentMeSchema,
 })
+export type ParentTokenResponse = z.infer<typeof parentTokenResponseSchema>

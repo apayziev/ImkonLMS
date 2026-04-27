@@ -2,12 +2,24 @@ import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 
 import { API, AUTH } from "@/config";
 import {
+  type ParentMeRead,
+  type ParentTokenResponse,
+  type TokenResponse,
+  type UserRead,
   parentMeSchema,
   parentTokenResponseSchema,
   tokenResponseSchema,
   userReadSchema,
 } from "@/lib/authSchemas";
 import { type TokenScope, tokenStore } from "@/lib/tokenStore";
+
+export type {
+  ParentChildRead,
+  ParentMeRead,
+  ParentTokenResponse,
+  TokenResponse,
+  UserRead,
+} from "@/lib/authSchemas";
 
 const validated = <T>(schema: { parse: (v: unknown) => T }) =>
   (res: AxiosResponse<unknown>): AxiosResponse<T> => ({
@@ -131,27 +143,7 @@ export type AttendanceStatus = "unmarked" | "present" | "late" | "absent";
 
 // --- API functions ---
 
-export interface UserRead {
-  id: number;
-  document_id: string;
-  first_name: string;
-  last_name: string;
-  full_name: string | null;
-  birth_date: string | null;
-  photo_url: string | null;
-  phone_number: string | null;
-  is_active: boolean;
-  is_superuser: boolean;
-  role: string;
-  teaching_grade_ids: number[] | null;
-  age: number | null;
-}
-
-export interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  user: UserRead;
-}
+// UserRead, TokenResponse — re-exported from authSchemas (z.infer-derived).
 
 export interface LoginRequest {
   document_id: string;
@@ -890,29 +882,7 @@ export const tmsApi = {
 
 // ────────────── Parent Portal ──────────────────────────────────────────
 
-export interface ParentChildRead {
-  id: number;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  photo_url: string | null;
-  grade_id: number | null;
-  grade_display: string | null;
-  is_active: boolean;
-  is_frozen: boolean;
-}
-
-export interface ParentMeRead {
-  phone: string;
-  name: string;
-  children: ParentChildRead[];
-}
-
-export interface ParentTokenResponse {
-  access_token: string;
-  token_type: string;
-  parent: ParentMeRead;
-}
+// ParentChildRead, ParentMeRead, ParentTokenResponse — re-exported from authSchemas.
 
 export interface ParentLoginRequest {
   phone: string;

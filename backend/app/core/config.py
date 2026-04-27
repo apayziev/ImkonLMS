@@ -31,6 +31,10 @@ class DatabaseSettings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "imkon_lms_db"
     POSTGRES_ASYNC_PREFIX: str = "postgresql+asyncpg://"
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 3600
 
     @computed_field
     @property

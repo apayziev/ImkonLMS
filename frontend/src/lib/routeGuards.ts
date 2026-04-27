@@ -1,10 +1,11 @@
-import { redirect } from "@tanstack/react-router"
 import type { QueryClient } from "@tanstack/react-query"
+import { redirect } from "@tanstack/react-router"
 
 import { type UserRead, usersApi } from "@/lib/api"
 
 const CURRENT_USER_KEY = ["currentUser"]
 const TEACHER_HOME = "/lessons"
+const DEFAULT_HOME = "/"
 
 const fetchCurrentUser = (queryClient: QueryClient) =>
   queryClient.ensureQueryData<UserRead>({
@@ -13,43 +14,25 @@ const fetchCurrentUser = (queryClient: QueryClient) =>
     staleTime: 5 * 60_000,
   })
 
-/**
- * `beforeLoad` guard that allows only admins/academic_head/superusers.
- * Teachers are bounced to /lessons. Anyone unauthenticated falls through to the
- * existing /_layout login redirect.
- */
-export const requireAdmin = async ({
-  context,
-}: {
-  context: { queryClient: QueryClient }
-}) => {
-  let user: UserRead
-  try {
-    user = await fetchCurrentUser(context.queryClient)
-  } catch {
-    return // /_layout beforeLoad already handles unauthenticated redirects.
-  }
-  if (user.role === "teacher") {
-    throw redirect({ to: TEACHER_HOME })
-  }
-}
+type GuardCtx = { context: { queryClient: QueryClient } }
 
 /**
- * `beforeLoad` guard that allows only teachers (and admins, who can view teacher
- * surfaces too). Students/parents land here by mistake → bounced home.
+ * `beforeLoad` factory — bounce users whose role isn't in `allowed`.
+ * Unauthenticated/fetch-failure cases fall through to the parent /_layout
+ * login redirect.
  */
-export const requireTeacherOrAdmin = async ({
-  context,
-}: {
-  context: { queryClient: QueryClient }
-}) => {
-  let user: UserRead
-  try {
-    user = await fetchCurrentUser(context.queryClient)
-  } catch {
-    return
+const requireRoles = (allowed: ReadonlyArray<string>, fallback = DEFAULT_HOME) =>
+  async ({ context }: GuardCtx) => {
+    const user = await fetchCurrentUser(context.queryClient).catch(() => null)
+    if (!user) return
+    if (!allowed.includes(user.role) && !user.is_superuser) {
+      throw redirect({ to: user.role === "teacher" ? TEACHER_HOME : fallback })
+    }
   }
-  if (user.role !== "teacher" && user.role !== "admin" && user.role !== "academic_head" && !user.is_superuser) {
-    throw redirect({ to: "/" })
-  }
-}
+
+export const requireAdmin = requireRoles(["admin", "academic_head"])
+export const requireTeacherOrAdmin = requireRoles([
+  "admin",
+  "academic_head",
+  "teacher",
+])
