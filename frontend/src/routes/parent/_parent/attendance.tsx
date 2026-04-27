@@ -71,7 +71,7 @@ function AttendancePage() {
           <p className="text-muted-foreground text-sm">Farzandingizning davomat tarixi</p>
         </div>
 
-        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {/* Date filter */}

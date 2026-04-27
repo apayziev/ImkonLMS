@@ -9,10 +9,9 @@ import {
   type ParentMeRead,
   parentApi,
 } from "@/lib/api"
+import { tokenStore } from "@/lib/tokenStore"
 
-export const isParentLoggedIn = () => {
-  return localStorage.getItem(AUTH.parentTokenKey) !== null
-}
+export const isParentLoggedIn = () => tokenStore.get("parent") !== null
 
 const useParentAuth = () => {
   const navigate = useNavigate()
@@ -31,7 +30,7 @@ const useParentAuth = () => {
   const loginMutation = useMutation({
     mutationFn: async (data: ParentLoginRequest) => {
       const { data: response } = await parentApi.login(data)
-      localStorage.setItem(AUTH.parentTokenKey, response.access_token)
+      tokenStore.set("parent", response.access_token)
       return response
     },
     onSuccess: () => {
@@ -45,7 +44,7 @@ const useParentAuth = () => {
   })
 
   const logout = () => {
-    localStorage.removeItem(AUTH.parentTokenKey)
+    tokenStore.clear("parent")
     queryClient.removeQueries({ queryKey: ["parentUser"] })
     navigate({ to: AUTH.parentLoginPath })
   }

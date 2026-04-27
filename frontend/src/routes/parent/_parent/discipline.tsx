@@ -40,7 +40,7 @@ function DisciplinePage() {
           <p className="text-muted-foreground text-sm">Qoidabuzarliklar va ogohlantirishlar</p>
         </div>
 
-        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (

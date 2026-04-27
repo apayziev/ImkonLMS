@@ -19,6 +19,8 @@ dependencies = [
     "gunicorn>=23.0.0",
     "httpx>=0.28.0",
     "filetype>=1.2.0",
+    "sentry-sdk[fastapi]>=2.18.0",
+    "structlog>=24.4.0",
 ]
 
 [dependency-groups]
@@ -42,12 +44,31 @@ packages = ["app"]
 
 [tool.ruff]
 target-version = "py313"
-line-length = 120
+line-length = 130
 fix = true
 
 [tool.ruff.lint]
 select = ["F", "E", "W", "C", "UP", "I"]
-ignore = ["E402", "UP006", "UP007", "E741"]
+ignore = [
+    "E402",   # module-level import not at top (used in some test/conftest cases)
+    "E741",   # ambiguous variable name (l, I, O) — false positives in math/grading code
+    "UP006",  # use builtin generics — kept for SQLAlchemy/Pydantic compat
+    "UP007",  # X | Y union — same reason
+    "UP040",  # use StrEnum — UserRole/SessionStatus deliberately use str+Enum mixin
+    "UP042",  # str+Enum mixin — kept for SQLAlchemy String column compat
+    "UP046",  # generic class type-param syntax — Pydantic Generics still need explicit form
+    "UP047",  # generic function type-param syntax — same
+    "C901",   # function-too-complex — sync/stats are intentionally large pipelines
+]
+
+[tool.ruff.lint.per-file-ignores]
+# SQLAlchemy Mapped["X"] forward refs resolved at class-registry time.
+"app/models/*.py" = ["F821"]
+# Models package re-exports types for Alembic autogenerate.
+"app/models/__init__.py" = ["F401"]
+# Sync logic uses dynamic dict patterns and long schema declarations.
+"app/api/routes/sync.py" = ["F821"]
+"app/migrations/versions/*.py" = ["E501", "W291"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

@@ -9,7 +9,8 @@ Revises: q8r9s0t1u2v3
 Create Date: 2026-04-27 00:00:00.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 from alembic import op
 

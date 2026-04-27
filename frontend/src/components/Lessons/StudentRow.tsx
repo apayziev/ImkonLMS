@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import type { AxiosError } from "axios"
 import { Check, Clock, Eye, Flag, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -76,9 +77,9 @@ export function StudentRow({
         },
       )
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ detail?: string }>) => {
       setSaveStatus("error")
-      const msg = error?.response?.data?.detail ?? "Saqlashda xatolik"
+      const msg = error.response?.data?.detail ?? "Saqlashda xatolik"
       toast.error(msg)
     },
   })

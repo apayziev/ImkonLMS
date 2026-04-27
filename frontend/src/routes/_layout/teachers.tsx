@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { requireAdmin } from "@/lib/routeGuards"
 import { GraduationCap, Users } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -17,6 +18,7 @@ import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 import { formatDate } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/teachers")({
+  beforeLoad: requireAdmin,
   component: TeachersPage,
   head: () => ({
     meta: [{ title: "O'qituvchilar - IMKON LMS" }],

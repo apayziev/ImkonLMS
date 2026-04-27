@@ -1,5 +1,9 @@
 """Parent portal API routes — read-only access to child data."""
 
+from fastapi import APIRouter, Query
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
+
 from app.api.deps import CurrentParent, SessionDep
 from app.core.exceptions import ForbiddenException
 from app.core.pagination import DEFAULT_LIMIT, LimitQuery
@@ -27,9 +31,6 @@ from app.schemas.parent import (
     ParentChildRead,
     ParentMeRead,
 )
-from fastapi import APIRouter, Query
-from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/parent", tags=["parent"])
 

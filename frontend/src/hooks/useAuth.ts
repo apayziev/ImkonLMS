@@ -10,10 +10,9 @@ import {
   logoutApi,
   usersApi,
 } from "@/lib/api"
+import { tokenStore } from "@/lib/tokenStore"
 
-export const isLoggedIn = () => {
-  return localStorage.getItem(AUTH.tokenKey) !== null
-}
+export const isLoggedIn = () => tokenStore.get("admin") !== null
 
 const useAuth = () => {
   const navigate = useNavigate()
@@ -29,34 +28,39 @@ const useAuth = () => {
     staleTime: 5 * 60_000,
   })
 
-  const createLoginMutation = <T,>(
-    loginFn: (data: T) => Promise<{ data: { access_token: string } }>,
-    errorMsg: string,
-  ) =>
-    useMutation({
-      mutationFn: async (data: T) => {
-        const { data: response } = await loginFn(data)
-        localStorage.setItem(AUTH.tokenKey, response.access_token)
-        return response
-      },
-      onSuccess: () => {
-        navigate({ to: "/" })
-      },
-      onError: (error: AxiosError<{ detail?: string }>) => {
-        toast.error("Xatolik yuz berdi!", {
-          description: error.response?.data?.detail || errorMsg,
-        })
-      },
-    })
+  const onLoginError =
+    (fallback: string) => (error: AxiosError<{ detail?: string }>) => {
+      toast.error("Xatolik yuz berdi!", {
+        description: error.response?.data?.detail || fallback,
+      })
+    }
 
-  const loginMutation = createLoginMutation(
-    loginApi.login,
-    "Tizimga kirish muvaffaqiyatsiz",
-  )
-  const loginStudentMutation = createLoginMutation(
-    loginApi.loginStudent,
-    "O'quvchi kirishda xatolik",
-  )
+  const persistTokenAndNavigate = async <T,>(
+    loginFn: (data: T) => Promise<{ data: { access_token: string } }>,
+    data: T,
+  ) => {
+    const { data: response } = await loginFn(data)
+    tokenStore.set("admin", response.access_token)
+    return response
+  }
+
+  const loginMutation = useMutation({
+    mutationFn: (data: Parameters<typeof loginApi.login>[0]) =>
+      persistTokenAndNavigate(loginApi.login, data),
+    onSuccess: () => {
+      navigate({ to: "/" })
+    },
+    onError: onLoginError("Tizimga kirish muvaffaqiyatsiz"),
+  })
+
+  const loginStudentMutation = useMutation({
+    mutationFn: (data: Parameters<typeof loginApi.loginStudent>[0]) =>
+      persistTokenAndNavigate(loginApi.loginStudent, data),
+    onSuccess: () => {
+      navigate({ to: "/" })
+    },
+    onError: onLoginError("O'quvchi kirishda xatolik"),
+  })
 
   const logout = async () => {
     try {
@@ -64,7 +68,7 @@ const useAuth = () => {
     } catch {
       // Ignore logout errors
     }
-    localStorage.removeItem(AUTH.tokenKey)
+    tokenStore.clear("admin")
     queryClient.removeQueries({ queryKey: ["currentUser"] })
     queryClient.clear()
     navigate({ to: AUTH.loginPath })

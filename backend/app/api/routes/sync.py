@@ -6,6 +6,10 @@ from collections.abc import Callable
 from datetime import date, datetime
 
 import httpx
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import SessionDep, SuperUser
 from app.core.config import settings
 from app.core.logging_utils import mask_document_id
@@ -16,9 +20,6 @@ from app.models.parent_auth import ParentAuth
 from app.models.subject import Subject
 from app.models.sync_log import SyncLog
 from app.models.user import User, UserRole
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -453,8 +454,10 @@ async def _sync_parent_auth(db: AsyncSession) -> tuple[int, int]:
         await db.execute(
             select(User.document_id, User.father_phone, User.mother_phone)
             .where(
-                User.role == "student", User.is_active == True, User.is_deleted == False
-            )  # noqa: E712
+                User.role == "student",
+                User.is_active == True,  # noqa: E712
+                User.is_deleted == False,  # noqa: E712
+            )
             .where((User.father_phone.isnot(None)) | (User.mother_phone.isnot(None)))
         )
     ).all()

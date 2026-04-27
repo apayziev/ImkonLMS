@@ -28,7 +28,7 @@ function LessonPlanPage() {
   const search = useSearch({ from: "/_layout/lesson-plan" })
   const navigate = useNavigate()
 
-  const planDate = search.date ? new Date(search.date + "T12:00:00") : new Date()
+  const planDate = search.date ? new Date(`${search.date}T12:00:00`) : new Date()
 
   const editing: EditingTarget | null = search.planId && search.entryId && search.entryDate
     ? { type: "existing", planId: search.planId, scheduleEntryId: search.entryId, date: search.entryDate }

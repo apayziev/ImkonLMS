@@ -55,7 +55,7 @@ function Layout() {
     if (isTeacher && !TEACHER_ALLOWED.some((r) => r === "/" ? currentPath === "/" : currentPath.startsWith(r))) {
       navigate({ to: "/lessons" })
     }
-  }, [user, currentPath, isTeacher, navigate])
+  }, [user, currentPath, isTeacher, navigate, TEACHER_ALLOWED.some])
 
   const syncMutation = useMutation({
     mutationFn: () => syncApi.runSync(),

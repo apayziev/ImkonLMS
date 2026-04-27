@@ -6,9 +6,7 @@ export const API = {
 } as const
 
 export const AUTH = {
-  tokenKey: "access_token",
   loginPath: "/login",
-  parentTokenKey: "parent_token",
   get parentLoginPath() {
     return isParentDomain() ? "/login" : "/parent/login"
   },

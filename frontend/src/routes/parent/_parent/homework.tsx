@@ -43,7 +43,7 @@ function HomeworkPage() {
           <p className="text-muted-foreground text-sm">Farzandingizga berilgan vazifalar</p>
         </div>
 
-        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (

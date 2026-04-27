@@ -407,7 +407,7 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
           </thead>
           <tbody>
             {[...grouped.entries()].map(([dateStr, sessions]) => {
-              const d = new Date(dateStr + "T00:00:00")
+              const d = new Date(`${dateStr}T00:00:00`)
               const isToday = dateStr === todayStr
               const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
               const sorted = sessions.sort((a, b) => a.period_number - b.period_number)

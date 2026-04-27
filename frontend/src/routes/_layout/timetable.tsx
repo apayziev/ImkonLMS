@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import type { AxiosError } from "axios"
 import { CalendarDays, ChevronDown, Info, Loader2, Settings, Trash2 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Fragment, type ReactNode, useMemo, useState } from "react"
@@ -23,8 +24,10 @@ import {
 import { EntryDialog } from "@/components/timetable/entry-dialog"
 import { DAY_NAMES, buildGrid, getBreakAfter, getBreakBefore, getBreakInfo, type EntryDialogState } from "@/components/timetable/helpers"
 import { SettingsSection } from "@/components/timetable/settings-section"
+import { requireAdmin } from "@/lib/routeGuards"
 
 export const Route = createFileRoute("/_layout/timetable")({
+  beforeLoad: requireAdmin,
   component: TimetablePage,
   head: () => ({
     meta: [{ title: "Dars jadvali - IMKON LMS" }],
@@ -142,7 +145,8 @@ function TimetablePage() {
       toast.success("Dars qo'shildi")
       setEntryDialog(null)
     },
-    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
+    onError: (err: AxiosError<{ detail?: string }>) =>
+      toast.error(err.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
   })
 
   const updateEntryMutation = useMutation({
@@ -153,7 +157,8 @@ function TimetablePage() {
       toast.success("Dars yangilandi")
       setEntryDialog(null)
     },
-    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
+    onError: (err: AxiosError<{ detail?: string }>) =>
+      toast.error(err.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
   })
 
   const deleteEntryMutation = useMutation({
@@ -513,12 +518,18 @@ function ScheduleCell({
   onClick?: () => void
 }) {
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: keyboard support added via role/tabIndex/onKeyDown
     <div
       className={`min-h-[60px] rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all bg-primary/5 border border-primary/15 ${
-        onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer" : ""
+        onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring" : ""
       }`}
       onClick={onClick}
-      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick()
+        }
+      } : undefined}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
     >

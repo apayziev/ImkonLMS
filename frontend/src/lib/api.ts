@@ -1,122 +1,125 @@
-import axios from "axios";
+import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 
 import { API, AUTH } from "@/config";
+import {
+  parentMeSchema,
+  parentTokenResponseSchema,
+  tokenResponseSchema,
+  userReadSchema,
+} from "@/lib/authSchemas";
+import { type TokenScope, tokenStore } from "@/lib/tokenStore";
 
-const api = axios.create({
-  baseURL: API.baseUrl,
-  timeout: API.timeout,
-});
+const validated = <T>(schema: { parse: (v: unknown) => T }) =>
+  (res: AxiosResponse<unknown>): AxiosResponse<T> => ({
+    ...res,
+    data: schema.parse(res.data),
+  });
 
-// Attach token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(AUTH.tokenKey);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+const REFRESH_URL = "/api/v1/login/refresh";
 
-// Token refresh state
-let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
+const refreshState: Record<TokenScope, Promise<string | null> | null> = {
+  admin: null,
+  parent: null,
+};
 
-const refreshAccessToken = async (): Promise<string | null> => {
-  if (isRefreshing && refreshPromise) return refreshPromise;
+/**
+ * Mint a fresh access token from the httpOnly refresh cookie. Idempotent across
+ * concurrent calls — all callers share the same in-flight promise per scope.
+ */
+export const silentRefresh = async (
+  scope: TokenScope = "admin",
+): Promise<string | null> => {
+  if (refreshState[scope]) return refreshState[scope]
 
-  isRefreshing = true;
-  refreshPromise = (async () => {
+  refreshState[scope] = (async () => {
     try {
-      const { data } = await axios.post("/api/v1/login/refresh", null, {
+      const { data } = await axios.post(REFRESH_URL, null, {
         withCredentials: true,
       });
-      const newToken: string = data.access_token;
+      const newToken: string | undefined = data?.access_token;
       if (newToken) {
-        localStorage.setItem(AUTH.tokenKey, newToken);
+        tokenStore.set(scope, newToken);
         return newToken;
       }
       return null;
     } catch {
       return null;
     } finally {
-      isRefreshing = false;
-      refreshPromise = null;
+      refreshState[scope] = null;
     }
   })();
 
-  return refreshPromise;
+  return refreshState[scope];
 };
 
-// Handle 401 errors — try refresh, then redirect
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    const isUnauthorized = error.response?.status === 401;
-    const isLoginEndpoint =
-      originalRequest?.url?.includes("/login/") ||
-      originalRequest?.url?.endsWith("/login");
-    const isOnLoginPage = window.location.pathname === AUTH.loginPath;
+const buildAuthClient = (
+  scope: TokenScope,
+  loginPathGetter: () => string,
+): AxiosInstance => {
+  const instance = axios.create({
+    baseURL: API.baseUrl,
+    timeout: API.timeout,
+    withCredentials: true,
+  });
 
-    if (
-      isUnauthorized &&
-      !isLoginEndpoint &&
-      !isOnLoginPage &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-      const newToken = await refreshAccessToken();
+  instance.interceptors.request.use((config) => {
+    const token = tokenStore.get(scope);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
 
-      if (newToken) {
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      const isUnauthorized = error.response?.status === 401;
+      const isLoginEndpoint =
+        originalRequest?.url?.includes("/login/") ||
+        originalRequest?.url?.endsWith("/login");
+      const isOnLoginPage = window.location.pathname === loginPathGetter();
+
+      if (
+        isUnauthorized &&
+        !isLoginEndpoint &&
+        !isOnLoginPage &&
+        !originalRequest._retry
+      ) {
+        originalRequest._retry = true;
+        const newToken = await silentRefresh(scope);
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return instance(originalRequest);
+        }
+        tokenStore.clear(scope);
+        window.location.href = loginPathGetter();
       }
 
-      localStorage.removeItem(AUTH.tokenKey);
-      window.location.href = AUTH.loginPath;
-    }
+      return Promise.reject(error);
+    },
+  );
 
-    return Promise.reject(error);
-  },
+  return instance;
+};
+
+const api = buildAuthClient("admin", () => AUTH.loginPath);
+const parentAxiosInstance = buildAuthClient(
+  "parent",
+  () => AUTH.parentLoginPath,
 );
 
 export default api;
-
-// --- Parent API client (uses parent_token) ---
-
-const parentAxiosInstance = axios.create({
-  baseURL: API.baseUrl,
-  timeout: API.timeout,
-});
-
-parentAxiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem(AUTH.parentTokenKey);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-parentAxiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const isUnauthorized = error.response?.status === 401;
-    const isLoginEndpoint = error.config?.url?.includes("/login/");
-    const isOnParentLogin = window.location.pathname === AUTH.parentLoginPath;
-
-    if (isUnauthorized && !isLoginEndpoint && !isOnParentLogin) {
-      localStorage.removeItem(AUTH.parentTokenKey);
-      window.location.href = AUTH.parentLoginPath;
-    }
-    return Promise.reject(error);
-  },
-);
 
 // Serialize params with array support (entry_id=1&entry_id=2)
 const arrayParamsSerializer = (params: Record<string, unknown>) => {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(params)) {
-    if (Array.isArray(v)) v.forEach((item) => parts.push(`${k}=${item}`));
-    else parts.push(`${k}=${v}`);
+    if (Array.isArray(v)) {
+      for (const item of v) parts.push(`${k}=${item}`);
+    } else {
+      parts.push(`${k}=${v}`);
+    }
   }
   return parts.join("&");
 };
@@ -161,14 +164,14 @@ export interface StudentLoginRequest {
 
 export const loginApi = {
   login: (data: LoginRequest) =>
-    api.post<TokenResponse>("/api/v1/login/", data),
+    api.post<unknown>("/api/v1/login/", data).then(validated<TokenResponse>(tokenResponseSchema)),
 
   loginStudent: (data: StudentLoginRequest) =>
-    api.post<TokenResponse>("/api/v1/login/student", data),
+    api.post<unknown>("/api/v1/login/student", data).then(validated<TokenResponse>(tokenResponseSchema)),
 };
 
 export const usersApi = {
-  me: () => api.get<UserRead>("/api/v1/users/me"),
+  me: () => api.get<unknown>("/api/v1/users/me").then(validated<UserRead>(userReadSchema)),
 };
 
 export const logoutApi = {
@@ -994,9 +997,14 @@ export const syncApi = {
 
 export const parentApi = {
   login: (data: ParentLoginRequest) =>
-    api.post<ParentTokenResponse>("/api/v1/login/parent", data),
+    api
+      .post<unknown>("/api/v1/login/parent", data)
+      .then(validated<ParentTokenResponse>(parentTokenResponseSchema)),
 
-  me: () => parentAxiosInstance.get<ParentMeRead>("/api/v1/parent/me"),
+  me: () =>
+    parentAxiosInstance
+      .get<unknown>("/api/v1/parent/me")
+      .then(validated<ParentMeRead>(parentMeSchema)),
 
   attendance: (
     studentId: number,

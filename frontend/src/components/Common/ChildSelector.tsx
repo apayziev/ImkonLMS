@@ -2,7 +2,7 @@ import type { ParentChildRead } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ChildSelectorProps {
-  children: ParentChildRead[]
+  items: ParentChildRead[]
   selectedChildId: number
   onSelect: (id: number) => void
   showGrade?: boolean
@@ -10,13 +10,13 @@ interface ChildSelectorProps {
 }
 
 export function ChildSelector({
-  children,
+  items,
   selectedChildId,
   onSelect,
   showGrade = false,
   className = "w-full sm:w-60",
 }: ChildSelectorProps) {
-  if (children.length <= 1) return null
+  if (items.length <= 1) return null
 
   return (
     <Select
@@ -27,7 +27,7 @@ export function ChildSelector({
         <SelectValue placeholder="Farzandni tanlang" />
       </SelectTrigger>
       <SelectContent>
-        {children.map((child) => (
+        {items.map((child) => (
           <SelectItem key={child.id} value={String(child.id)}>
             {child.full_name}
             {showGrade && ` — ${child.grade_display || "Sinf belgilanmagan"}`}

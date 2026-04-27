@@ -17,7 +17,7 @@ class AppSettings(BaseSettings):
 class CryptSettings(BaseSettings):
     SECRET_KEY: SecretStr
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # Set to ".imkonschool.uz" in prod to share refresh cookie across subdomains.
     # Leave empty in local dev (cookie scoped to current host).
@@ -75,6 +75,13 @@ class TMSSettings(BaseSettings):
     TMS_ORIGIN: str = "https://tms.imkonschool.uz"
 
 
+class ObservabilitySettings(BaseSettings):
+    SENTRY_DSN: str = ""  # Empty = Sentry disabled (e.g. local dev)
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+    LOG_LEVEL: str = "INFO"
+    LOG_JSON: bool = False  # True in prod for structured logs
+
+
 class CORSSettings(BaseSettings):
     CORS_ORIGINS_STR: str = "http://localhost:5173"
     CORS_METHODS: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
@@ -96,6 +103,7 @@ class Settings(
     SyncSettings,
     UploadSettings,
     TMSSettings,
+    ObservabilitySettings,
 ):
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

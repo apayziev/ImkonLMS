@@ -7,6 +7,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .api import router
 from .core.lifespan import create_application
+from .core.observability import init_observability
+
+init_observability()
 
 logger = logging.getLogger(__name__)
 

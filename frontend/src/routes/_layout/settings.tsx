@@ -36,8 +36,10 @@ import {
   getViolationTypesQueryOptions,
   queryKeys,
 } from "@/hooks/useQueryOptions"
+import { requireAdmin } from "@/lib/routeGuards"
 
 export const Route = createFileRoute("/_layout/settings")({
+  beforeLoad: requireAdmin,
   component: SettingsPage,
   head: () => ({
     meta: [{ title: "Sozlamalar - IMKON LMS" }],
@@ -537,5 +539,5 @@ function SettingsPage() {
 function formatDate(dateStr: string): string {
   const UZ_MONTHS = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"]
   const [, m, d] = dateStr.split("-")
-  return `${parseInt(d)}-${UZ_MONTHS[parseInt(m) - 1]}`
+  return `${parseInt(d, 10)}-${UZ_MONTHS[parseInt(m, 10) - 1]}`
 }

@@ -252,21 +252,30 @@ function DayLessons({
             const { isInProgress, isCompleted, hasPlan } = lessonStatusFlags(lesson)
             const hasContent = lesson.plan_filled_count > 0
 
+            const handleSelect = () => {
+              if (lesson.plan_id) {
+                onSessionOpen(lesson, ds)
+              } else {
+                onNewPlan(lesson, ds)
+              }
+            }
             return (
               <div
                 key={`${ds}-${lesson.schedule_entry_id}`}
+                role="button"
+                tabIndex={0}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
+                  "flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring",
                   isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
                   isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
                   hasPlan && !isInProgress && !isCompleted && "border-[var(--imkon-purple)]/20 bg-[var(--imkon-purple)]/3",
                   !hasPlan && !isInProgress && !isCompleted && "border-border hover:bg-muted/20",
                 )}
-                onClick={() => {
-                  if (lesson.plan_id) {
-                    onSessionOpen(lesson, ds)
-                  } else {
-                    onNewPlan(lesson, ds)
+                onClick={handleSelect}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    handleSelect()
                   }
                 }}
               >

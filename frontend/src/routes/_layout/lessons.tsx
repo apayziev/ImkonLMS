@@ -46,11 +46,11 @@ function generateLessonDates(
   holidays: string[],
 ): { ds: string; entryId: number }[] {
   const holidaySet = new Set(holidays)
-  const endDate = new Date(end + "T00:00:00")
+  const endDate = new Date(`${end}T00:00:00`)
   const result: { ds: string; entryId: number }[] = []
   for (const { id, dow } of scheduleEntries) {
     const jsDow = dow === 7 ? 0 : dow
-    const cur = new Date(start + "T00:00:00")
+    const cur = new Date(`${start}T00:00:00`)
     while (cur <= endDate) {
       if (cur.getDay() === jsDow) {
         const ds = toDateStr(cur)
@@ -123,14 +123,14 @@ function LessonsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Dars jadvali</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8" aria-label="Oldingi hafta">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </Button>
           <span className="text-sm font-semibold min-w-[130px] text-center">
             {formatWeekRange(weekDays)}
           </span>
-          <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8" aria-label="Keyingi hafta">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </Button>
         </div>
       </div>
@@ -201,7 +201,7 @@ function QuarterDatesView({
     const match = allIndexed.find((c) => c.ds === clickedDs && c.entryId === clickedEntryId)
     if (match) setSelectedCard(match)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allIndexed.length, clickedEntryId, clickedDs])
+  }, [allIndexed.length, clickedEntryId, clickedDs, allIndexed.find])
 
   const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
   const visibleGroups = expanded ? allIndexed : weekGroups
@@ -239,7 +239,7 @@ function QuarterDatesView({
         {visibleGroups.map(({ ds, lessonNumber, entryId }) => {
           const isToday = ds === today
           const isPast = ds < today
-          const date = new Date(ds + "T00:00:00")
+          const date = new Date(`${ds}T00:00:00`)
           const isSelected = selectedCard?.ds === ds && selectedCard?.entryId === entryId
           const sessionStatus = sessionStatusMap.get(`${entryId}-${ds}`)
           const isCompleted = sessionStatus === "completed"

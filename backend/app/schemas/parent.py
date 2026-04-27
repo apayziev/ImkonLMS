@@ -1,6 +1,6 @@
 """Schemas for parent portal."""
 
-from datetime import date, datetime
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 

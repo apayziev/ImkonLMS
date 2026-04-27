@@ -13,7 +13,7 @@ from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.quarter import Quarter
 from app.models.schedule_entry import ScheduleEntry
-from app.schemas.lessons import SessionStatusItem, SessionStatusesResponse, TodayLessonRead, TodayLessonsResponse
+from app.schemas.lessons import SessionStatusesResponse, SessionStatusItem, TodayLessonRead, TodayLessonsResponse
 
 from ._helpers import ENTRY_LOAD, _calc_lesson_numbers, _plan_filled_count, _require_teacher
 

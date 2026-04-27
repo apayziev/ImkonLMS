@@ -204,7 +204,7 @@ async def create_violation_report(
     if not quarter:
         raise NotFoundException("Aktiv chorak topilmadi")
 
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
     occurred = datetime.fromisoformat(body.occurred_at) if body.occurred_at else datetime.now(UTC)
 
     report = ViolationReport(

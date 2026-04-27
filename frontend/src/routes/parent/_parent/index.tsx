@@ -43,7 +43,7 @@ function ParentDashboard() {
         </p>
       </div>
 
-      <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} showGrade className="w-full sm:w-72" />
+      <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} showGrade className="w-full sm:w-72" />
 
       {selectedChild && <ChildOverview child={selectedChild} />}
     </div>

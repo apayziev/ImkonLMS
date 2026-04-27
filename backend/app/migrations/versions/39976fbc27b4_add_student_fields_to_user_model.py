@@ -5,7 +5,8 @@ Revises: 7fa0be26d7eb
 Create Date: 2026-03-22 11:36:12.905162
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op

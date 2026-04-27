@@ -1,32 +1,53 @@
 #!/bin/sh
-# Daily database backup script
-# Keeps last 7 days of backups, sends to Telegram if configured
+# Daily database backup script.
+# Encrypts with gpg symmetric (PII safety), 30-day retention, Telegram upload.
+#
+# Restore:  gpg --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" \
+#               imkon_lms_YYYYMMDD.sql.gz.gpg | gunzip | psql ...
 
 set -e
 
 BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/imkon_lms_${DATE}.sql.gz"
+RAW_FILE="$BACKUP_DIR/imkon_lms_${DATE}.sql.gz"
+BACKUP_FILE="$RAW_FILE.gpg"
+RETENTION_DAYS=30
 
 echo "$(date): Starting backup..."
 
-pg_dump -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" | gzip > "$BACKUP_FILE"
+if [ -z "${BACKUP_ENCRYPTION_KEY:-}" ]; then
+    echo "$(date): ERROR - BACKUP_ENCRYPTION_KEY env not set" >&2
+    exit 1
+fi
+
+pg_dump -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" | gzip > "$RAW_FILE"
+
+if [ ! -s "$RAW_FILE" ]; then
+    echo "$(date): ERROR - Raw dump is empty!"
+    rm -f "$RAW_FILE"
+    exit 1
+fi
+
+# Encrypt and discard plaintext dump.
+gpg --symmetric --batch --yes --cipher-algo AES256 \
+    --passphrase "$BACKUP_ENCRYPTION_KEY" \
+    --output "$BACKUP_FILE" "$RAW_FILE"
+rm -f "$RAW_FILE"
 
 if [ ! -s "$BACKUP_FILE" ]; then
-    echo "$(date): ERROR - Backup file is empty!"
-    rm -f "$BACKUP_FILE"
+    echo "$(date): ERROR - Encrypted backup is empty!" >&2
     exit 1
 fi
 
 SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
 echo "$(date): Backup created: $BACKUP_FILE ($SIZE)"
 
-# Remove backups older than 7 days
-find "$BACKUP_DIR" -name "imkon_lms_*.sql.gz" -mtime +7 -delete
+# Retention cleanup.
+find "$BACKUP_DIR" -name "imkon_lms_*.sql.gz.gpg" -mtime +$RETENTION_DAYS -delete
+find "$BACKUP_DIR" -name "imkon_lms_*.sql.gz" -mtime +1 -delete  # legacy/orphan plaintext
 
-# Send to Telegram if configured
-if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
-    CAPTION="💾 Imkon LMS Backup
+if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+    CAPTION="💾 Imkon LMS Backup (encrypted)
 📅 $DATE
 📦 Size: $SIZE"
 
@@ -39,4 +60,4 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
 fi
 
 echo "Current backups:"
-ls -lh "$BACKUP_DIR"/imkon_lms_*.sql.gz 2>/dev/null || echo "None"
+ls -lh "$BACKUP_DIR"/imkon_lms_*.sql.gz.gpg 2>/dev/null || echo "None"

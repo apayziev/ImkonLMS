@@ -63,7 +63,7 @@ function TimetablePage() {
           <p className="text-muted-foreground text-sm">Haftalik dars jadvali</p>
         </div>
 
-        <ChildSelector children={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
       </div>
 
       {isLoading ? (

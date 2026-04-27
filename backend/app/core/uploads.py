@@ -61,13 +61,31 @@ _EXT_MIME_MAP: dict[str, set[str]] = {
 }
 
 
+_CHUNK_SIZE = 1024 * 1024  # 1MB streaming chunks
+
+_OVERSIZE_MSG = "Fayl hajmi {mb}MB dan oshmasligi kerak"
+_TYPE_MISMATCH_MSG = "Fayl tarkibi va kengaytmasi mos kelmaydi. Iltimos, to'g'ri fayl yuklang."
+
+
+def _validate_magic(header: bytes, ext: str) -> None:
+    expected = _EXT_MIME_MAP.get(ext)
+    if not expected:
+        return
+    kind = filetype.guess(header)
+    if (kind.mime if kind else None) not in expected:
+        raise BadRequestException(_TYPE_MISMATCH_MSG)
+
+
 async def validate_and_save_file(
     file: UploadFile,
     upload_dir: Path,
     *,
     filename_prefix: str = "",
 ) -> tuple[str, str, int]:
-    """Validate and save any uploaded file.
+    """Validate and stream-save an uploaded file.
+
+    Streams to disk in chunks (no full file in RAM). Validates magic bytes
+    on the first chunk and aborts early if the type doesn't match.
 
     Returns (relative_url, original_filename, file_size_bytes).
     """
@@ -80,26 +98,31 @@ async def validate_and_save_file(
             f"{', '.join(sorted(ALLOWED_MATERIAL_EXTENSIONS))}"
         )
 
-    contents = await file.read()
-
-    if len(contents) > MAX_FILE_SIZE:
-        raise BadRequestException(f"Fayl hajmi {settings.MAX_FILE_SIZE_MB}MB dan oshmasligi kerak")
-
-    # Magic bytes validation — ensure file content matches the declared extension
-    expected_mimes = _EXT_MIME_MAP.get(ext)
-    if expected_mimes:
-        kind = filetype.guess(contents)
-        detected_mime = kind.mime if kind else None
-        if detected_mime not in expected_mimes:
-            raise BadRequestException(
-                "Fayl tarkibi va kengaytmasi mos kelmaydi. "
-                "Iltimos, to'g'ri fayl yuklang."
-            )
-
-    filename = f"{filename_prefix}{uuid.uuid4().hex[:12]}{ext}"
+    # Pre-check via Content-Length when available (cheap; rejects oversize uploads early).
+    if file.size is not None and file.size > MAX_FILE_SIZE:
+        raise BadRequestException(_OVERSIZE_MSG.format(mb=settings.MAX_FILE_SIZE_MB))
 
     upload_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{filename_prefix}{uuid.uuid4().hex[:12]}{ext}"
     file_path = upload_dir / filename
-    file_path.write_bytes(contents)
 
-    return f"/uploads/{upload_dir.name}/{filename}", original_name, len(contents)
+    written = 0
+    magic_checked = False
+    try:
+        with file_path.open("wb") as out:
+            while chunk := await file.read(_CHUNK_SIZE):
+                if not magic_checked:
+                    _validate_magic(chunk[:512], ext)
+                    magic_checked = True
+                written += len(chunk)
+                if written > MAX_FILE_SIZE:
+                    raise BadRequestException(
+                        _OVERSIZE_MSG.format(mb=settings.MAX_FILE_SIZE_MB)
+                    )
+                out.write(chunk)
+    except Exception:
+        if file_path.exists():
+            file_path.unlink()
+        raise
+
+    return f"/uploads/{upload_dir.name}/{filename}", original_name, written

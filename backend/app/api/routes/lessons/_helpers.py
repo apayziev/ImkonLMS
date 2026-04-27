@@ -11,7 +11,6 @@ from app.core.enums import SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.core.formatting import format_time
 from app.core.uploads import MATERIALS_UPLOAD_DIR  # noqa: F401  (re-exported for routes)
-from app.models.lesson_material import LessonMaterial
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry

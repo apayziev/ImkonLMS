@@ -26,7 +26,7 @@ const STATUS_CELL: Record<AttendanceStatus, { icon: ReactNode; bg: string }> = {
 }
 
 function formatShortDate(ds: string): string {
-  const d = new Date(ds + "T00:00:00")
+  const d = new Date(`${ds}T00:00:00`)
   const day = d.getDate()
   const months = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"]
   return `${day} ${months[d.getMonth()]}`

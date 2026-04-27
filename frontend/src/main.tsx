@@ -4,6 +4,8 @@ import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 
 import { Toaster } from "@/components/ui/sonner"
+import { silentRefresh } from "@/lib/api"
+import { isParentDomain } from "@/lib/subdomain"
 import { routeTree } from "./routeTree.gen"
 import "./index.css"
 
@@ -41,11 +43,19 @@ if (!rootElement) {
   throw new Error("Root element not found.")
 }
 
-ReactDOM.createRoot(rootElement).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster closeButton visibleToasts={3} />
-    </QueryClientProvider>
-  </StrictMode>,
-)
+const bootstrap = async () => {
+  // Mint a fresh access token from the httpOnly refresh cookie before rendering,
+  // so initial queries fire with auth instead of bouncing through 401.
+  await silentRefresh(isParentDomain() ? "parent" : "admin")
+
+  ReactDOM.createRoot(rootElement).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <Toaster closeButton visibleToasts={3} />
+      </QueryClientProvider>
+    </StrictMode>,
+  )
+}
+
+bootstrap()

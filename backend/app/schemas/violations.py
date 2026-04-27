@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel
 
-
 # === ViolationType ===
 
 class ViolationTypeCreate(BaseModel):

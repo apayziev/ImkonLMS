@@ -3,8 +3,10 @@ import { Activity } from "lucide-react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AttendanceTab, TeacherStatsTab } from "@/components/Monitoring"
+import { requireAdmin } from "@/lib/routeGuards"
 
 export const Route = createFileRoute("/_layout/monitoring")({
+  beforeLoad: requireAdmin,
   component: MonitoringPage,
   head: () => ({
     meta: [{ title: "Monitoring - IMKON LMS" }],

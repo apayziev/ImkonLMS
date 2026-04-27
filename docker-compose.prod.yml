@@ -61,11 +61,11 @@ services:
       dockerfile: Dockerfile
     restart: always
     expose:
-      - "80"
+      - "8080"
     depends_on:
       - api
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -122,6 +122,7 @@ services:
       PGHOST: db
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
     volumes:
       - ./backups:/backups
       - ./scripts/backup.sh:/backup.sh:ro
@@ -131,10 +132,10 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache curl
-        # Export env vars for cron - single-quote values to handle special chars in password
+        apk add --no-cache curl gnupg
+        # Export env vars for cron - single-quote values to handle special chars
         : > /etc/environment
-        for var in PGUSER PGPASSWORD PGDATABASE PGHOST TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+        for var in PGUSER PGPASSWORD PGDATABASE PGHOST TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID BACKUP_ENCRYPTION_KEY; do
           printf "export %s='%s'\n" "$$var" "$$(printenv $$var)" >> /etc/environment
         done
         echo "0 3 * * * . /etc/environment; /backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
