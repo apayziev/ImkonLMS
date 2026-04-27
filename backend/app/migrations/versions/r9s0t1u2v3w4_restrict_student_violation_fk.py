@@ -4,8 +4,8 @@ Switch CASCADE to RESTRICT so accidental hard-delete of a student with
 discipline history fails loudly instead of silently destroying the audit
 trail. Soft-delete (is_deleted=True) is unaffected.
 
-Revision ID: m4n5o6p7q8r9
-Revises: l3m4n5o6p7q8
+Revision ID: r9s0t1u2v3w4
+Revises: q8r9s0t1u2v3
 Create Date: 2026-04-27 00:00:00.000000
 
 """
@@ -13,8 +13,8 @@ from typing import Sequence, Union
 
 from alembic import op
 
-revision: str = "m4n5o6p7q8r9"
-down_revision: Union[str, None] = "l3m4n5o6p7q8"
+revision: str = "r9s0t1u2v3w4"
+down_revision: Union[str, None] = "q8r9s0t1u2v3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
