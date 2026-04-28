@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { SessionView } from "@/components/Lessons"
 import { AttendanceHistoryView } from "@/components/Lessons/AttendanceHistoryView"
+import { toDateString as toDateStr, todayStr } from "@/components/Lessons/formatters"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,16 +19,10 @@ import {
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { lessonsApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
 
 const UZ_MONTHS_SHORT = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
-
-function toDateStr(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, "0")
-  const day = String(d.getDate()).padStart(2, "0")
-  return `${y}-${m}-${day}`
-}
 
 function formatWeekRange(days: Date[]): string {
   if (days.length === 0) return ""
@@ -166,7 +161,7 @@ function QuarterDatesView({
   const { data: currentQuarter, isLoading: quarterLoading } = useQuery(getCurrentQuarterQueryOptions())
 
   const isLoading = quarterLoading || !currentYear
-  const today = toDateStr(new Date())
+  const today = todayStr()
   // Use workingDays-aware week range (matches timetable's week display)
   const weekStart = weekDays.length > 0 ? toDateStr(weekDays[0]) : ""
   const weekEnd = weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
@@ -386,9 +381,8 @@ function DayAttendanceView({
       queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "session-statuses" })
       setActiveSessionId(response.data.id)
     },
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(msg ?? "Darsni boshlashda xatolik")
+    onError: (error) => {
+      toast.error(getErrorDetail(error, "Darsni boshlashda xatolik"))
     },
   })
 

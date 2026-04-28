@@ -5,11 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
+from app.api.routes._shared import get_quarter_for_session, require_teacher_or_admin
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.lesson_session import LessonSession
-from app.models.quarter import Quarter
 from app.models.session_attendance import SessionAttendance
-from app.models.user import UserRole
 from app.models.yellow_card import YellowCard
 from app.schemas.yellow_cards import YellowCardCreate, YellowCardRead, YellowCardSessionSummary
 
@@ -26,17 +25,6 @@ def _card_to_read(card: YellowCard) -> YellowCardRead:
     )
 
 
-async def _get_quarter_for_session(db: SessionDep, session: LessonSession) -> Quarter | None:
-    result = await db.execute(
-        select(Quarter).where(
-            Quarter.start_date <= session.session_date,
-            Quarter.end_date >= session.session_date,
-            Quarter.is_deleted == False,  # noqa: E712
-        )
-    )
-    return result.scalar_one_or_none()
-
-
 @router.get("/session/{session_id}", response_model=YellowCardSessionSummary)
 async def get_session_yellow_cards(
     session_id: int,
@@ -51,7 +39,7 @@ async def get_session_yellow_cards(
     if not session:
         raise NotFoundException("Sessiya topilmadi")
 
-    quarter = await _get_quarter_for_session(db, session)
+    quarter = await get_quarter_for_session(db, session)
     if not quarter:
         return YellowCardSessionSummary(limit=2, by_student={})
 
@@ -92,8 +80,7 @@ async def issue_yellow_card(
     current_user: CurrentUser,
 ) -> YellowCardRead:
     """O'quvchiga sariq kartochka berish (o'qituvchi)."""
-    if current_user.role not in (UserRole.TEACHER.value, UserRole.ADMIN.value) and not current_user.is_superuser:
-        raise ForbiddenException("Faqat o'qituvchi yoki admin uchun.")
+    require_teacher_or_admin(current_user)
 
     session = (await db.execute(
         select(LessonSession)
@@ -102,7 +89,7 @@ async def issue_yellow_card(
     if not session:
         raise NotFoundException("Sessiya topilmadi")
 
-    quarter = await _get_quarter_for_session(db, session)
+    quarter = await get_quarter_for_session(db, session)
     if not quarter:
         raise NotFoundException("Bu sessiya uchun chorak topilmadi")
 

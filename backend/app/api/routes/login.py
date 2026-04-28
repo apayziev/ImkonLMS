@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.routes._shared import resolve_parent_name
 from app.core.config import settings
 from app.core.db import async_get_db
 from app.core.exceptions import UnauthorizedException
@@ -196,17 +197,8 @@ async def login_parent(
             (User.father_phone == parent.phone) | (User.mother_phone == parent.phone),
         )
     )
-    children = children_result.scalars().all()
-
-    # Determine parent name from first child's data
-    name = parent.phone
-    for child in children:
-        if child.father_phone == parent.phone and child.father_first_name:
-            name = f"{child.father_last_name or ''} {child.father_first_name}".strip()
-            break
-        if child.mother_phone == parent.phone and child.mother_first_name:
-            name = f"{child.mother_last_name or ''} {child.mother_first_name}".strip()
-            break
+    children = list(children_result.scalars().all())
+    name = resolve_parent_name(parent.phone, children)
 
     access_token = await _issue_session(db, response, subject=parent.phone, role="parent")
 

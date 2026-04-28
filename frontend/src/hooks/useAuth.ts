@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import type { AxiosError } from "axios"
 import { toast } from "sonner"
 
 import { AUTH } from "@/config"
@@ -10,6 +9,7 @@ import {
   logoutApi,
   usersApi,
 } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import { tokenStore } from "@/lib/tokenStore"
 
 export const isLoggedIn = () => tokenStore.get("admin") !== null
@@ -28,12 +28,11 @@ const useAuth = () => {
     staleTime: 5 * 60_000,
   })
 
-  const onLoginError =
-    (fallback: string) => (error: AxiosError<{ detail?: string }>) => {
-      toast.error("Xatolik yuz berdi!", {
-        description: error.response?.data?.detail || fallback,
-      })
-    }
+  const onLoginError = (fallback: string) => (error: unknown) => {
+    toast.error("Xatolik yuz berdi!", {
+      description: getErrorDetail(error, fallback),
+    })
+  }
 
   const persistTokenAndNavigate = async <T,>(
     loginFn: (data: T) => Promise<{ data: { access_token: string } }>,

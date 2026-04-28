@@ -12,6 +12,14 @@ export function toDateString(d: Date) {
 
 export const todayStr = () => toDateString(new Date())
 
+export function formatTime(dt: string) {
+  return new Date(dt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+}
+
+export function durationMin(start: string, end: string) {
+  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+}
+
 export function SaveStatusIndicator({ status, className }: { status: SaveStatus; className?: string }) {
   return (
     <span

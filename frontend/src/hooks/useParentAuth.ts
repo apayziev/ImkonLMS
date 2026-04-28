@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import type { AxiosError } from "axios"
 import { toast } from "sonner"
 
 import { AUTH } from "@/config"
@@ -9,6 +8,7 @@ import {
   type ParentMeRead,
   parentApi,
 } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import { tokenStore } from "@/lib/tokenStore"
 
 export const isParentLoggedIn = () => tokenStore.get("parent") !== null
@@ -36,9 +36,9 @@ const useParentAuth = () => {
     onSuccess: () => {
       navigate({ to: "/parent" })
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
+    onError: (error) => {
       toast.error("Xatolik!", {
-        description: error.response?.data?.detail || "Tizimga kirish muvaffaqiyatsiz",
+        description: getErrorDetail(error, "Tizimga kirish muvaffaqiyatsiz"),
       })
     },
   })

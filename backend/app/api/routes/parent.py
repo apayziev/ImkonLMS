@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentParent, SessionDep
+from app.api.routes._shared import resolve_parent_name
 from app.core.exceptions import ForbiddenException
 from app.core.pagination import DEFAULT_LIMIT, LimitQuery
 from app.models.grade import Grade
@@ -66,15 +67,7 @@ async def _verify_child(db, parent_phone: str, student_id: int) -> User:
 async def get_parent_info(parent: CurrentParent, db: SessionDep) -> ParentMeRead:
     """Ota-ona ma'lumotlari va farzandlar ro'yxati."""
     children = await _get_children(db, parent.phone)
-
-    name = parent.phone
-    for child in children:
-        if child.father_phone == parent.phone and child.father_first_name:
-            name = f"{child.father_last_name or ''} {child.father_first_name}".strip()
-            break
-        if child.mother_phone == parent.phone and child.mother_first_name:
-            name = f"{child.mother_last_name or ''} {child.mother_first_name}".strip()
-            break
+    name = resolve_parent_name(parent.phone, children)
 
     grade_ids = {c.grade_id for c in children if c.grade_id}
     grade_map: dict[int, str] = {}

@@ -8,12 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
+from app.api.routes._shared import require_admin
 from app.core.enums import SessionStatus
-from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.exceptions import NotFoundException
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
-from app.models.user import User, UserRole
+from app.models.user import User
 
 from ._helpers import PLAN_TOTAL_FIELDS, _plan_filled_count
 
@@ -94,7 +95,7 @@ def _count_expected_lessons(
         while cur <= end_date:
             if cur.weekday() == py_dow and cur not in holiday_set:
                 total += 1
-            cur = cur.replace(day=cur.day) if False else _next_day(cur)
+            cur = _next_day(cur)
     return total
 
 
@@ -115,8 +116,7 @@ async def get_teacher_stats(
     end_date: str,
 ) -> TeacherStatsResponse:
     """O'qituvchilar monitoring statistikasi."""
-    if current_user.role != UserRole.ADMIN.value and not current_user.is_superuser:
-        raise ForbiddenException("Faqat admin uchun")
+    require_admin(current_user)
 
     sd = date.fromisoformat(start_date)
     ed = date.fromisoformat(end_date)
@@ -288,8 +288,7 @@ async def get_teacher_detail(
     end_date: str,
 ) -> TeacherDetailResponse:
     """O'qituvchining tanlangan davrdagi barcha darslari batafsil."""
-    if current_user.role != UserRole.ADMIN.value and not current_user.is_superuser:
-        raise ForbiddenException("Faqat admin uchun")
+    require_admin(current_user)
 
     sd = date.fromisoformat(start_date)
     ed = date.fromisoformat(end_date)
@@ -376,7 +375,7 @@ async def get_teacher_detail(
                 s = session_map.get((entry.id, cur))
                 p = plan_map.get((entry.id, cur))
 
-                status = s.status if s else ("not_created" if not p else "not_created")
+                status = s.status if s else ("planned" if p else "not_created")
                 result_sessions.append(TeacherSessionDetail(
                     session_id=s.id if s else 0,
                     session_date=cur,

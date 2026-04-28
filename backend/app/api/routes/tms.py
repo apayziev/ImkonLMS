@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.api.deps import CurrentUser
+from app.api.routes._shared import require_teacher_or_admin
 from app.core.config import settings
 
 router = APIRouter(prefix="/tms", tags=["tms"])
@@ -22,11 +23,7 @@ async def get_tms_embed_token(current_user: CurrentUser) -> TMSTokenResponse:
     LMS backend calls TMS API with the teacher's document_id + shared API key,
     returns the token + embed URL for the frontend to use in an iframe.
     """
-    from app.core.exceptions import ForbiddenException
-    from app.models.user import UserRole
-
-    if current_user.role not in (UserRole.TEACHER.value, UserRole.ADMIN.value) and not current_user.is_superuser:
-        raise ForbiddenException("Faqat o'qituvchi yoki administrator uchun")
+    require_teacher_or_admin(current_user)
 
     if not settings.TMS_EMBED_API_KEY:
         raise HTTPException(status_code=503, detail="TMS integratsiyasi sozlanmagan")

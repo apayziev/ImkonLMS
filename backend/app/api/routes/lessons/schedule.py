@@ -7,11 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
+from app.api.routes._shared import get_quarter_by_date
 from app.core.config import today_local
 from app.core.formatting import format_time
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
-from app.models.quarter import Quarter
 from app.models.schedule_entry import ScheduleEntry
 from app.schemas.lessons import SessionStatusesResponse, SessionStatusItem, TodayLessonRead, TodayLessonsResponse
 
@@ -128,14 +128,7 @@ async def get_today_lessons(
 
     # Calculate lesson numbers within the current quarter
     if entries:
-        quarter_result = await db.execute(
-            select(Quarter).where(
-                Quarter.start_date <= today,
-                Quarter.end_date >= today,
-                Quarter.is_deleted == False,  # noqa: E712
-            )
-        )
-        quarter = quarter_result.scalar_one_or_none()
+        quarter = await get_quarter_by_date(db, today)
         if quarter:
             # Get ALL schedule entries for this teacher in current academic year
             all_entries_result = await db.execute(

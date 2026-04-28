@@ -28,7 +28,7 @@ import {
   getTeacherDetailQueryOptions,
 } from "@/hooks/useQueryOptions"
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
-import { toDateString } from "@/components/Lessons/formatters"
+import { durationMin, formatTime, toDateString, todayStr } from "@/components/Lessons/formatters"
 import { useMemo, useState } from "react"
 import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES, PLAN_TOTAL_FIELDS, RESOURCE_TYPES, ASSESSMENT_METHODS, BLOOM_LEVELS } from "@/components/Lessons/constants"
 
@@ -301,15 +301,9 @@ function TeacherRow({ teacher: t, index, onClick }: { teacher: TeacherStatRead; 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   completed: { label: "Tugallangan", className: "bg-[var(--imkon-teal)]/10 text-[var(--imkon-teal)]" },
   in_progress: { label: "Davom etmoqda", className: "bg-amber-500/10 text-amber-600" },
+  planned: { label: "Rejalashtirilgan", className: "bg-[var(--imkon-purple)]/10 text-[var(--imkon-purple)]" },
   not_started: { label: "Boshlanmagan", className: "bg-muted text-muted-foreground" },
-}
-
-function formatTime(dt: string) {
-  return new Date(dt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
-}
-
-function durationMin(start: string, end: string) {
-  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+  not_created: { label: "Reja yo'q", className: "bg-muted text-muted-foreground" },
 }
 
 function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: number; startDate: string; endDate: string }) {
@@ -368,8 +362,7 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
     grouped.set(s.session_date, arr)
   }
 
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+  const todayDateStr = todayStr()
 
   return (
     <div className="space-y-3">
@@ -408,7 +401,7 @@ function TeacherDetailView({ teacherId, startDate, endDate }: { teacherId: numbe
           <tbody>
             {[...grouped.entries()].map(([dateStr, sessions]) => {
               const d = new Date(`${dateStr}T00:00:00`)
-              const isToday = dateStr === todayStr
+              const isToday = dateStr === todayDateStr
               const dayName = UZ_WEEKDAYS_FULL[d.getDay()]
               const sorted = sessions.sort((a, b) => a.period_number - b.period_number)
               const midIdx = Math.floor((sorted.length - 1) / 2)
@@ -439,8 +432,7 @@ function SessionTableRow({ session: s, dateLabel, isToday, isLastInGroup }: {
   isLastInGroup: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
-  const effectiveStatus = s.status === "completed" ? "completed" : s.status === "in_progress" ? "in_progress" : "not_started"
-  const statusCfg = STATUS_LABELS[effectiveStatus]
+  const statusCfg = STATUS_LABELS[s.status] ?? STATUS_LABELS.not_started
   const hasContent = s.plan_filled_count > 0
   const dur = s.started_at && s.ended_at ? durationMin(s.started_at, s.ended_at) : null
 

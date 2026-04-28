@@ -5,11 +5,15 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, SessionDep
+from app.api.routes._shared import (
+    get_quarter_by_date,
+    get_quarter_for_session,
+    require_admin,
+    require_teacher_or_admin,
+)
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.lesson_session import LessonSession
-from app.models.quarter import Quarter
 from app.models.session_attendance import SessionAttendance
-from app.models.user import UserRole
 from app.models.violation_report import ViolationReport
 from app.models.violation_type import ViolationType
 from app.schemas.violations import (
@@ -49,22 +53,6 @@ def _report_to_read(r: ViolationReport) -> ViolationReportRead:
     )
 
 
-def _require_admin(user: CurrentUser) -> None:
-    if user.role != UserRole.ADMIN.value and not user.is_superuser:
-        raise ForbiddenException("Faqat admin uchun.")
-
-
-async def _get_quarter_for_session(db: SessionDep, session: LessonSession) -> Quarter | None:
-    result = await db.execute(
-        select(Quarter).where(
-            Quarter.start_date <= session.session_date,
-            Quarter.end_date >= session.session_date,
-            Quarter.is_deleted == False,  # noqa: E712
-        )
-    )
-    return result.scalar_one_or_none()
-
-
 # ═══════════════════════════════════════════════════════════════
 # ViolationType CRUD (admin only)
 # ═══════════════════════════════════════════════════════════════
@@ -91,7 +79,7 @@ async def create_violation_type(
     current_user: CurrentUser,
 ) -> ViolationTypeRead:
     """Yangi qoidabuzarlik turi yaratish (admin)."""
-    _require_admin(current_user)
+    require_admin(current_user)
     vt = ViolationType(
         name=body.name,
         description=body.description,
@@ -111,7 +99,7 @@ async def update_violation_type(
     current_user: CurrentUser,
 ) -> ViolationTypeRead:
     """Qoidabuzarlik turini tahrirlash (admin)."""
-    _require_admin(current_user)
+    require_admin(current_user)
     vt = (await db.execute(
         select(ViolationType).where(
             ViolationType.id == type_id,
@@ -140,7 +128,7 @@ async def delete_violation_type(
     current_user: CurrentUser,
 ) -> None:
     """Qoidabuzarlik turini o'chirish (admin, soft delete)."""
-    _require_admin(current_user)
+    require_admin(current_user)
     vt = (await db.execute(
         select(ViolationType).where(
             ViolationType.id == type_id,
@@ -164,8 +152,7 @@ async def create_violation_report(
     current_user: CurrentUser,
 ) -> ViolationReportRead:
     """Qoidabuzarlik haqida xabar berish (o'qituvchi)."""
-    if current_user.role not in (UserRole.TEACHER.value, UserRole.ADMIN.value) and not current_user.is_superuser:
-        raise ForbiddenException("Faqat o'qituvchi yoki admin uchun.")
+    require_teacher_or_admin(current_user)
 
     # Validate violation type
     vt = (await db.execute(
@@ -188,18 +175,10 @@ async def create_violation_report(
         )).scalar_one_or_none()
         if not session:
             raise NotFoundException("Sessiya topilmadi")
-        quarter = await _get_quarter_for_session(db, session)
+        quarter = await get_quarter_for_session(db, session)
     else:
-        # Find current quarter
         from app.core.config import today_local
-        today = today_local()
-        quarter = (await db.execute(
-            select(Quarter).where(
-                Quarter.start_date <= today,
-                Quarter.end_date >= today,
-                Quarter.is_deleted == False,  # noqa: E712
-            )
-        )).scalar_one_or_none()
+        quarter = await get_quarter_by_date(db, today_local())
 
     if not quarter:
         raise NotFoundException("Aktiv chorak topilmadi")
@@ -251,7 +230,7 @@ async def get_session_violations(
     if not student_ids:
         return ViolationSessionSummary(by_student={})
 
-    quarter = await _get_quarter_for_session(db, session)
+    quarter = await get_quarter_for_session(db, session)
     if not quarter:
         return ViolationSessionSummary(by_student={})
 

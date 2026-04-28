@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import type { AxiosError } from "axios"
 import { CalendarDays, ChevronDown, Info, Loader2, Settings, Trash2 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Fragment, type ReactNode, useMemo, useState } from "react"
@@ -8,6 +7,7 @@ import { toast } from "sonner"
 
 import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import useAuth from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -145,8 +145,8 @@ function TimetablePage() {
       toast.success("Dars qo'shildi")
       setEntryDialog(null)
     },
-    onError: (err: AxiosError<{ detail?: string }>) =>
-      toast.error(err.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
+    onError: (err) =>
+      toast.error(getErrorDetail(err, "Bu vaqtda sinf yoki o'qituvchi band")),
   })
 
   const updateEntryMutation = useMutation({
@@ -157,8 +157,8 @@ function TimetablePage() {
       toast.success("Dars yangilandi")
       setEntryDialog(null)
     },
-    onError: (err: AxiosError<{ detail?: string }>) =>
-      toast.error(err.response?.data?.detail ?? "Bu vaqtda sinf yoki o'qituvchi band"),
+    onError: (err) =>
+      toast.error(getErrorDetail(err, "Bu vaqtda sinf yoki o'qituvchi band")),
   })
 
   const deleteEntryMutation = useMutation({

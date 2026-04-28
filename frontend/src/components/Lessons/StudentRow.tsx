@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import type { AxiosError } from "axios"
 import { Check, Clock, Eye, Flag, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type { AttendanceStatus, SessionDetailRead, SessionStudentRead, ViolationReportRead, YellowCardRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { queryKeys } from "@/hooks/useQueryOptions"
@@ -77,10 +77,9 @@ export function StudentRow({
         },
       )
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
+    onError: (error) => {
       setSaveStatus("error")
-      const msg = error.response?.data?.detail ?? "Saqlashda xatolik"
-      toast.error(msg)
+      toast.error(getErrorDetail(error, "Saqlashda xatolik"))
     },
   })
 

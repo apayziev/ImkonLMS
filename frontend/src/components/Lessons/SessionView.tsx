@@ -14,6 +14,7 @@ import { toast } from "sonner"
 
 import type { SessionStudentRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -62,9 +63,8 @@ export function SessionView({
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
       queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "lessons-for-date" || q.queryKey[0] === "session-statuses" })
     },
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(msg ?? "Darsni tugatishda xatolik")
+    onError: (error) => {
+      toast.error(getErrorDetail(error, "Darsni tugatishda xatolik"))
     },
   })
 
