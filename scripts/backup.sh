@@ -45,7 +45,8 @@ echo "$(date): Backup created: $BACKUP_FILE ($SIZE)"
 
 # Retention cleanup.
 find "$BACKUP_DIR" -name "imkon_lms_*.sql.gz.gpg" -mtime +$RETENTION_DAYS -delete
-find "$BACKUP_DIR" -name "imkon_lms_*.sql.gz" -mtime +1 -delete  # legacy/orphan plaintext
+# Use -mmin to avoid POSIX -mtime day-rounding (which only catches files >48h).
+find "$BACKUP_DIR" -name "imkon_lms_*.sql.gz" -mmin +1440 -delete  # legacy/orphan plaintext
 
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
     CAPTION="💾 Imkon LMS Backup (encrypted)
