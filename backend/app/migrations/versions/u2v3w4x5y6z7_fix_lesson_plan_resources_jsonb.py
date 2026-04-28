@@ -36,7 +36,7 @@ def upgrade() -> None:
                 RETURN NULL;
             END IF;
             RETURN t::jsonb;
-        EXCEPTION WHEN OTHERS THEN
+        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch THEN
             RETURN NULL;
         END;
         $$ LANGUAGE plpgsql IMMUTABLE;
