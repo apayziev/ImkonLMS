@@ -23,45 +23,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Idempotent: an earlier deploy converted the column to jsonb before
-    # crashing in the USING expression, but alembic_version was never bumped
-    # because the migration step itself raised. Skip if already converted —
-    # the work is done.
+    # Idempotent: an earlier deploy may have converted the column to jsonb
+    # before crashing in the USING expression — alembic_version stayed put
+    # because the migration step itself raised.
     bind = op.get_bind()
     current_type = bind.execute(
         sa.text(
             "SELECT data_type FROM information_schema.columns "
             "WHERE table_schema = current_schema() "
-            "AND table_name = 'lesson_plan' "
-            "AND column_name = 'resources'"
+            "AND table_name = 'lesson_plan' AND column_name = 'resources'"
         )
     ).scalar()
     if current_type == "jsonb":
         return
 
-    # Some legacy rows held unparseable text in the TEXT column (whitespace-only
-    # strings, truncated objects). Use a plpgsql helper that catches any cast
-    # failure and falls back to NULL — a hard ::jsonb cast would abort the
-    # whole migration on the first bad row.
+    # Postgres 16 IS JSON predicate filters unparseable rows (whitespace-only,
+    # truncated objects) without per-row exception handling.
     op.execute(
-        """
-        CREATE OR REPLACE FUNCTION pg_temp.safe_to_jsonb(t text)
-        RETURNS jsonb AS $$
-        BEGIN
-            IF t IS NULL OR btrim(t) = '' THEN
-                RETURN NULL;
-            END IF;
-            RETURN t::jsonb;
-        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch THEN
-            RETURN NULL;
-        END;
-        $$ LANGUAGE plpgsql IMMUTABLE;
-        """
-    )
-    op.execute(
-        "ALTER TABLE lesson_plan "
-        "ALTER COLUMN resources TYPE jsonb "
-        "USING pg_temp.safe_to_jsonb(resources)"
+        "ALTER TABLE lesson_plan ALTER COLUMN resources TYPE jsonb "
+        "USING CASE WHEN resources IS JSON THEN resources::jsonb ELSE NULL END"
     )
 
 
