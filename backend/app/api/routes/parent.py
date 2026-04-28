@@ -1,8 +1,7 @@
 """Parent portal API routes — read-only access to child data."""
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 
 from app.api.deps import CurrentParent, SessionDep
 from app.api.routes._shared import resolve_parent_name
@@ -16,17 +15,14 @@ from app.models.session_attendance import SessionAttendance
 from app.models.subject import Subject
 from app.models.time_slot import TimeSlot
 from app.models.user import User, UserRole
-from app.models.violation_report import ViolationReport
 from app.schemas.parent import (
     AttendanceSummary,
     ChildAttendanceRecord,
     ChildAttendanceResponse,
-    ChildDisciplineResponse,
     ChildHomeworkItem,
     ChildHomeworkResponse,
     ChildTimetableEntry,
     ChildTimetableResponse,
-    ChildViolationItem,
     ParentChildRead,
     ParentMeRead,
 )
@@ -261,53 +257,3 @@ async def get_child_homework(
     ]
 
     return ChildHomeworkResponse(items=items)
-
-
-@router.get("/children/{student_id}/discipline", response_model=ChildDisciplineResponse)
-async def get_child_discipline(
-    student_id: int,
-    parent: CurrentParent,
-    db: SessionDep,
-    start_date: str | None = Query(None),
-    end_date: str | None = Query(None),
-) -> ChildDisciplineResponse:
-    """Farzandning intizom holati — qoidabuzarliklar va ballar."""
-    await _verify_child(db, parent.phone, student_id)
-
-    # Violations
-    v_query = (
-        select(ViolationReport)
-        .options(
-            selectinload(ViolationReport.violation_type),
-            selectinload(ViolationReport.reported_by),
-        )
-        .where(
-            ViolationReport.student_id == student_id,
-            ViolationReport.is_deleted == False,  # noqa: E712
-        )
-        .order_by(ViolationReport.occurred_at.desc())
-    )
-    if start_date:
-        v_query = v_query.where(func.date(ViolationReport.occurred_at) >= start_date)
-    if end_date:
-        v_query = v_query.where(func.date(ViolationReport.occurred_at) <= end_date)
-
-    v_result = await db.execute(v_query)
-    violations = v_result.scalars().all()
-
-    total_points = sum(v.violation_type.points for v in violations)
-
-    return ChildDisciplineResponse(
-        violations=[
-            ChildViolationItem(
-                violation_type=v.violation_type.name,
-                points=v.violation_type.points,
-                note=v.note,
-                location=v.location,
-                occurred_at=v.occurred_at.isoformat(),
-                reported_by=v.reported_by.full_name,
-            )
-            for v in violations
-        ],
-        total_violation_points=total_points,
-    )

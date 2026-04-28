@@ -7,7 +7,6 @@ import {
   Clock,
   ClipboardList,
   GraduationCap,
-  Shield,
   XCircle,
 } from "lucide-react"
 
@@ -69,15 +68,6 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
     },
   })
 
-  // Fetch discipline
-  const { data: discipline } = useQuery({
-    queryKey: ["parent-discipline", child.id],
-    queryFn: async () => {
-      const { data } = await parentApi.discipline(child.id)
-      return data
-    },
-  })
-
   const summary = attendance?.summary
 
   return (
@@ -109,7 +99,7 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
       </Card>
 
       {/* Stats grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Link to="/parent/attendance" className="block">
           <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader className="pb-2">
@@ -148,22 +138,6 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-red-600">{summary?.absent ?? 0}</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/parent/discipline" className="block">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1.5">
-                <Shield className="size-4 text-orange-600" />
-                Qoidabuzarlik
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-orange-600">
-                {discipline?.total_violation_points ?? 0} ball
-              </p>
             </CardContent>
           </Card>
         </Link>

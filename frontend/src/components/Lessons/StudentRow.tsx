@@ -1,16 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Clock, Eye, Flag, Loader2, TriangleAlert, X } from "lucide-react"
+import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { AttendanceStatus, SessionDetailRead, SessionStudentRead, ViolationReportRead } from "@/lib/api"
+import type { AttendanceStatus, SessionDetailRead, SessionStudentRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS } from "./constants"
-import { ViolationReportDialog } from "./ViolationReportDialog"
 import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
 const ATTENDANCE_ICONS = {
@@ -25,21 +24,18 @@ export function StudentRow({
   sessionId,
   disabled,
   isLate = false,
-  violations = [],
 }: {
   student: SessionStudentRead
   index: number
   sessionId: number
   disabled: boolean
   isLate?: boolean
-  violations?: ViolationReportRead[]
 }) {
   const queryClient = useQueryClient()
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [photoOpen, setPhotoOpen] = useState(false)
-  const [violationDialogOpen, setViolationDialogOpen] = useState(false)
 
   useEffect(() => {
     return () => clearTimeout(saveTimerRef.current)
@@ -174,31 +170,6 @@ export function StudentRow({
             </button>
           ))}
         </div>
-      </td>
-
-      {/* Violation Report Flag */}
-      <td className="py-3 px-3 text-center">
-        <button
-          type="button"
-          onClick={() => setViolationDialogOpen(true)}
-          title="Qoidabuzarlik haqida xabar berish"
-          className="relative inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-        >
-          <Flag className="h-4 w-4 text-red-500 fill-red-500" />
-          {violations.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold rounded-full h-3.5 min-w-3.5 px-0.5 flex items-center justify-center">
-              {violations.length}
-            </span>
-          )}
-        </button>
-        <ViolationReportDialog
-          student={student}
-          sessionId={sessionId}
-          disabled={disabled}
-          violations={violations}
-          open={violationDialogOpen}
-          onOpenChange={setViolationDialogOpen}
-        />
       </td>
     </tr>
   )
