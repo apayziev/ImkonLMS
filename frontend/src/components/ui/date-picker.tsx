@@ -10,20 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-
-// Uzbek month names for display
-const UZ_MONTHS = [
-  "yanvar", "fevral", "mart", "aprel", "may", "iyun",
-  "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr"
-]
-
-function formatDateUz(date: Date): string {
-  const day = date.getDate()
-  const month = UZ_MONTHS[date.getMonth()]
-  const year = date.getFullYear()
-  return `${day}-${month} ${year}`
-}
+import { cn, formatDateUz } from "@/lib/utils"
 
 function formatLocalDate(date: Date): string {
   const y = date.getFullYear()

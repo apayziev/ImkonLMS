@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { formatDate, getInitials } from "@/lib/utils"
 import { getPhotoUrl } from "./studentSchema"
 
 interface StudentDetailDrawerProps {
@@ -27,15 +28,6 @@ export function StudentDetailDrawer({
   gradeName,
 }: StudentDetailDrawerProps) {
   if (!student) return null
-
-  const formatDate = (date: string | null) => {
-    if (!date) return "—"
-    const d = new Date(date)
-    const day = String(d.getDate()).padStart(2, "0")
-    const month = String(d.getMonth() + 1).padStart(2, "0")
-    const year = d.getFullYear()
-    return `${day}.${month}.${year}`
-  }
 
   const getStatusBadge = () => {
     if (student.is_frozen) {
@@ -61,12 +53,7 @@ export function StudentDetailDrawer({
             <Avatar className="h-20 w-20">
               <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
               <AvatarFallback className="bg-[#6720FF] text-white text-2xl">
-                {student.full_name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)}
+                {getInitials(student.full_name)}
               </AvatarFallback>
             </Avatar>
             <div>

@@ -23,9 +23,11 @@ __all__ = [
     "AcademicYear",
     "BaseModel",
     "Grade",
+    "LessonMaterial",
     "LessonPlan",
     "LessonSession",
     "ParentAuth",
+    "Quarter",
     "RefreshToken",
     "ScheduleEntry",
     "SchoolSettings",
@@ -38,4 +40,3 @@ __all__ = [
     "ViolationReport",
     "ViolationType",
 ]
-

@@ -134,7 +134,7 @@ def _plan_filled_count(plan: LessonPlan) -> int:
 PLAN_TOTAL_FIELDS = 8
 
 
-def _count_weekday_between(start: date, end: date, day_of_week: int, holidays: set[date]) -> int:
+def count_weekday_between(start: date, end: date, day_of_week: int, holidays: set[date]) -> int:
     """Count occurrences of day_of_week (1=Mon..7=Sun) between start and end inclusive, excluding holidays."""
     if start > end:
         return 0
@@ -182,7 +182,7 @@ def _calc_lesson_numbers(
         yesterday = target_date - timedelta(days=1)
         count = 0
         for e in group_sorted:
-            count += _count_weekday_between(quarter_start, yesterday, e.day_of_week, holidays)
+            count += count_weekday_between(quarter_start, yesterday, e.day_of_week, holidays)
 
         # On target_date, count entries with period <= this entry's period (same day_of_week only)
         if target_date not in holidays:
@@ -196,7 +196,7 @@ def _calc_lesson_numbers(
         # Total lessons in the whole quarter
         total = 0
         for e in group_sorted:
-            total += _count_weekday_between(quarter_start, quarter_end, e.day_of_week, holidays)
+            total += count_weekday_between(quarter_start, quarter_end, e.day_of_week, holidays)
 
         result[entry.id] = (count, total)
 

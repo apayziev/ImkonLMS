@@ -62,9 +62,5 @@ async def update_quarter(
 
 @router.delete("/{quarter_id}", status_code=204)
 async def delete_quarter(quarter_id: int, db: SessionDep, _: SuperUser) -> None:
-    quarter = await crud_quarters.get(db, id=quarter_id, is_deleted=False)
-    if not quarter:
-        raise NotFoundException("Chorak topilmadi")
-    deleted = await crud_quarters.delete(db, id=quarter_id, is_deleted=False)
-    if not deleted:
+    if not await crud_quarters.delete(db, id=quarter_id, is_deleted=False):
         raise NotFoundException("Chorak topilmadi")

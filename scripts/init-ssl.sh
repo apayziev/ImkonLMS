@@ -59,4 +59,4 @@ echo "4/4 Barcha servicelar HTTPS bilan ishga tushirilmoqda..."
 docker compose -f docker-compose.prod.yml up -d --build
 
 echo ""
-echo "=== Tayyor! https://$DOMAIN ===" 
+echo "=== Tayyor! https://$DOMAIN ==="

@@ -15,4 +15,3 @@ router.include_router(sessions_router)
 router.include_router(attendance_router)
 router.include_router(materials_router)
 router.include_router(stats_router)
-

@@ -1,7 +1,7 @@
 """initial_user_model
 
 Revision ID: 20dfa332b74a
-Revises: 
+Revises:
 Create Date: 2026-03-21 21:21:33.330437
 
 """

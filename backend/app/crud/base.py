@@ -75,7 +75,7 @@ class BaseCRUD(Generic[ModelType]):
         if options:
             data_q = data_q.options(*options)
         if order_by is not None:
-            data_q = data_q.order_by(*(order_by if isinstance(order_by, (list, tuple)) else [order_by]))
+            data_q = data_q.order_by(*(order_by if isinstance(order_by, list | tuple) else [order_by]))
         data_q = data_q.offset(offset).limit(limit)
         rows = (await db.execute(data_q)).scalars().all()
         return list(rows), total
@@ -109,5 +109,3 @@ class BaseCRUD(Generic[ModelType]):
         await db.commit()
         await db.refresh(record)
         return True
-
-

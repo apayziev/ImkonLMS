@@ -37,6 +37,7 @@ import {
   queryKeys,
 } from "@/hooks/useQueryOptions"
 import { requireAdmin } from "@/lib/routeGuards"
+import { formatDateShortUz } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/settings")({
   beforeLoad: requireAdmin,
@@ -261,7 +262,7 @@ function SettingsPage() {
                             )}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatDate(q.start_date)} – {formatDate(q.end_date)}
+                            {formatDateShortUz(q.start_date)} – {formatDateShortUz(q.end_date)}
                           </p>
                         </div>
                       </div>
@@ -423,7 +424,7 @@ function SettingsPage() {
                 <div className="space-y-1">
                   {form.holidays.map((h) => (
                     <div key={h} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
-                      <span>{formatDate(h)}</span>
+                      <span>{formatDateShortUz(h)}</span>
                       <Button
                         type="button"
                         variant="ghost"
@@ -518,10 +519,4 @@ function SettingsPage() {
       </Dialog>
     </div>
   )
-}
-
-function formatDate(dateStr: string): string {
-  const UZ_MONTHS = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"]
-  const [, m, d] = dateStr.split("-")
-  return `${parseInt(d, 10)}-${UZ_MONTHS[parseInt(m, 10) - 1]}`
 }

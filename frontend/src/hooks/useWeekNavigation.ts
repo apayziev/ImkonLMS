@@ -11,7 +11,7 @@ export function getEffectiveWeekDate(): Date {
   return today
 }
 
-function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
+export function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
   const day = baseDate.getDay() // 0=Sun
   const monday = new Date(baseDate)
   monday.setDate(baseDate.getDate() - ((day + 6) % 7))

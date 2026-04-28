@@ -30,7 +30,9 @@ import {
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { durationMin, formatTime, toDateString, todayStr } from "@/components/Lessons/formatters"
 import { useMemo, useState } from "react"
-import { UZ_WEEKDAYS_FULL, UZ_MONTHS, LESSON_TYPES, PLAN_TOTAL_FIELDS, RESOURCE_TYPES, ASSESSMENT_METHODS, BLOOM_LEVELS } from "@/components/Lessons/constants"
+import { LESSON_TYPES, PLAN_TOTAL_FIELDS, RESOURCE_TYPES, ASSESSMENT_METHODS, BLOOM_LEVELS } from "@/components/Lessons/constants"
+import { UZ_MONTHS, UZ_WEEKDAYS_FULL } from "@/lib/locale"
+import { getInitials } from "@/lib/utils"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -83,7 +85,7 @@ export function TeacherStatsTab() {
             <Avatar className="h-8 w-8">
               <AvatarImage src={selectedTeacher.photo_url ?? undefined} />
               <AvatarFallback className="text-xs font-bold">
-                {selectedTeacher.teacher_name.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                {getInitials(selectedTeacher.teacher_name)}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -233,7 +235,7 @@ function TeacherRow({ teacher: t, index, onClick }: { teacher: TeacherStatRead; 
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={t.photo_url ?? undefined} />
             <AvatarFallback className="text-xs font-bold">
-              {t.teacher_name.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+              {getInitials(t.teacher_name)}
             </AvatarFallback>
           </Avatar>
           <span className="font-medium truncate">{t.teacher_name}</span>
