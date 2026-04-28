@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
-import { formatDate } from "@/lib/utils"
+import { formatDate, getInitials } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/teachers")({
   beforeLoad: requireAdmin,
@@ -165,12 +165,7 @@ function TeachersPage() {
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={getPhotoUrl(teacher.photo_url)} alt={teacher.full_name} />
                         <AvatarFallback className="bg-[#6720FF] text-white text-sm">
-                          {teacher.full_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
+                          {getInitials(teacher.full_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div>

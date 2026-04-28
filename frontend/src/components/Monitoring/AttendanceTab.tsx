@@ -9,7 +9,8 @@ import {
 import { useState } from "react"
 
 import type { AttendanceSessionRead, AttendanceStudentRead, GradeRead } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { cn, formatDateShortUz, getInitials } from "@/lib/utils"
+import { getWeekDays } from "@/hooks/useWeekNavigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
 import {
@@ -32,21 +33,11 @@ import {
   getGradesQueryOptions,
   getSchoolSettingsQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { ATTENDANCE_OPTIONS, UZ_WEEKDAYS_SHORT, UZ_MONTHS } from "@/components/Lessons/constants"
+import { ATTENDANCE_OPTIONS } from "@/components/Lessons/constants"
 import { toDateString } from "@/components/Lessons/formatters"
+import { UZ_MONTHS, UZ_WEEKDAYS_SHORT } from "@/lib/locale"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
-  const day = baseDate.getDay()
-  const monday = new Date(baseDate)
-  monday.setDate(baseDate.getDate() - ((day + 6) % 7))
-  return workingDays.map((wd) => {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + (wd === 7 ? 6 : wd - 1))
-    return d
-  })
-}
 
 const STATUS_CONFIG = Object.fromEntries(
   [
@@ -235,8 +226,7 @@ function UnifiedAttendanceTable({
   const titleSubject = subjects.length === 1 ? subjects[0] : "Darslar"
   const titleTeacher = teachers.length === 1 ? teachers[0] : ""
 
-  const dateObj = new Date(date)
-  const formattedDate = `${dateObj.getDate()}-${UZ_MONTHS[dateObj.getMonth()].toLowerCase()}`
+  const formattedDate = formatDateShortUz(date)
 
   if (students.length === 0) {
     return (
@@ -316,7 +306,7 @@ function UnifiedAttendanceTable({
                     <Avatar className="h-7 w-7 shrink-0">
                       <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
                       <AvatarFallback className="text-xs">
-                        {student.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                        {getInitials(student.full_name)}
                       </AvatarFallback>
                     </Avatar>
                     <span className="font-medium truncate">{student.full_name}</span>

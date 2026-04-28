@@ -1,14 +1,4 @@
-export const UZ_WEEKDAYS_SHORT = ["Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha"]
-
-export const UZ_WEEKDAYS_FULL = [
-  "Yakshanba", "Dushanba", "Seshanba", "Chorshanba",
-  "Payshanba", "Juma", "Shanba",
-]
-
-export const UZ_MONTHS = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-]
+export { UZ_MONTHS, UZ_WEEKDAYS_FULL, UZ_WEEKDAYS_SHORT } from "@/lib/locale"
 
 export const LESSON_TYPES = [
   { value: "new_topic", label: "Yangi mavzu" },

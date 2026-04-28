@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
-import { formatDate } from "@/lib/utils"
+import { formatDate, getInitials } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
   component: StudentsPage,
@@ -233,12 +233,7 @@ function StudentsPage() {
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
                         <AvatarFallback className="bg-[#6720FF] text-white text-sm">
-                          {student.full_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
+                          {getInitials(student.full_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div>

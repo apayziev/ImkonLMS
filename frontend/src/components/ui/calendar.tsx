@@ -13,16 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { UZ_MONTHS, UZ_WEEKDAYS_SHORT_MON_FIRST as UZ_WEEKDAYS_SHORT } from "@/lib/locale"
 import { cn } from "@/lib/utils"
-
-// Uzbek month names
-const UZ_MONTHS = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr"
-]
-
-// Uzbek day names (short) - starting from Monday
-const UZ_WEEKDAYS_SHORT = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"]
 
 export type CalendarProps = ComponentProps<typeof DayPicker> & {
   fromYear?: number

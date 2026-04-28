@@ -20,9 +20,8 @@ import {
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
+import { UZ_MONTHS_SHORT } from "@/lib/locale"
 import { cn } from "@/lib/utils"
-
-const UZ_MONTHS_SHORT = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
 
 function formatWeekRange(days: Date[]): string {
   if (days.length === 0) return ""
