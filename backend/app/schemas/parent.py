@@ -103,23 +103,6 @@ class ChildHomeworkResponse(BaseModel):
     items: list[ChildHomeworkItem]
 
 
-# --- Violations ---
-
-
-class ChildViolationItem(BaseModel):
-    violation_type: str
-    points: int
-    note: str | None = None
-    location: str | None = None
-    occurred_at: str
-    reported_by: str
-
-
-class ChildDisciplineResponse(BaseModel):
-    violations: list[ChildViolationItem]
-    total_violation_points: int = 0
-
-
 # --- Admin parent management ---
 
 

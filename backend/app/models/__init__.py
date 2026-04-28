@@ -16,8 +16,6 @@ from .subject import Subject
 from .sync_log import SyncLog
 from .time_slot import TimeSlot
 from .user import User, UserRole
-from .violation_report import ViolationReport
-from .violation_type import ViolationType
 
 __all__ = [
     "AcademicYear",
@@ -37,6 +35,4 @@ __all__ = [
     "TimeSlot",
     "User",
     "UserRole",
-    "ViolationReport",
-    "ViolationType",
 ]

@@ -3,7 +3,6 @@ import {
     CalendarDays,
     ClipboardList,
     Home,
-    Shield,
 } from "lucide-react";
 
 import { Logo } from "@/components/Common/Logo";
@@ -21,7 +20,6 @@ const parentMenuItems: Item[] = [
   { icon: ClipboardList, title: "Davomat", path: "/parent/attendance" },
   { icon: CalendarDays, title: "Dars jadvali", path: "/parent/timetable" },
   { icon: BookOpen, title: "Uyga vazifa", path: "/parent/homework" },
-  { icon: Shield, title: "Intizom", path: "/parent/discipline" },
 ];
 
 export function ParentSidebar() {
