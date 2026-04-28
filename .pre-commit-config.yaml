@@ -1,0 +1,42 @@
+# Pre-commit hooks — run `uv run pre-commit install` once to enable.
+# Manually: `uv run pre-commit run -a`
+
+repos:
+  # ─── Generic file hygiene ──────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$  # markdown uses trailing whitespace for line breaks
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # ─── Backend: ruff lint ───────────────────────────────────────────────
+  # ruff-format is intentionally NOT enabled — the codebase has not been
+  # ruff-formatted yet, so adding it would touch 60+ files in a noisy
+  # commit. Run `uv run ruff format .` once and commit separately when
+  # ready to adopt it.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+      - id: ruff
+        files: ^backend/
+        args: [--fix]
+
+  # ─── Frontend: biome lint ─────────────────────────────────────────────
+  # Run from frontend/ so biome.json is treated as the root config.
+  # Requires `npm ci` once; the hook reuses node_modules/.bin/biome.
+  - repo: local
+    hooks:
+      - id: biome-frontend
+        name: biome (frontend)
+        language: system
+        entry: bash -c 'cd frontend && npx biome lint --no-errors-on-unmatched --files-ignore-unknown=true ./'
+        files: ^frontend/.+\.(ts|tsx|js|jsx|json)$
+        pass_filenames: false

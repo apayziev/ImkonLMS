@@ -26,13 +26,26 @@ docker compose up -d
 
 ```
 backend/
-├── app/
-│   ├── main.py           # FastAPI application
-│   ├── api/              # Routes & dependencies
-│   ├── core/             # Config, DB, security, exceptions
-│   ├── crud/             # Database operations
-│   ├── models/           # SQLAlchemy models
-│   ├── schemas/          # Pydantic schemas
-│   └── migrations/       # Alembic migrations
-└── tests/
+└── app/
+    ├── main.py           # FastAPI application
+    ├── api/              # Routes & dependencies
+    ├── core/             # Config, DB, security, exceptions
+    ├── crud/             # Database operations
+    ├── models/           # SQLAlchemy models
+    ├── schemas/          # Pydantic schemas
+    └── migrations/       # Alembic migrations
+
+frontend/
+└── src/
+    ├── routes/           # TanStack Router file-based routes
+    ├── components/       # Feature + ui components
+    ├── hooks/            # Reusable hooks
+    └── lib/              # API client, utils, locale
+```
+
+## Pre-commit hooks
+
+```bash
+uv run pre-commit install   # one-time, sets up the git hook
+uv run pre-commit run -a    # run on all files manually
 ```
