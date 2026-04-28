@@ -23,6 +23,22 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Idempotent: an earlier deploy converted the column to jsonb before
+    # crashing in the USING expression, but alembic_version was never bumped
+    # because the migration step itself raised. Skip if already converted —
+    # the work is done.
+    bind = op.get_bind()
+    current_type = bind.execute(
+        sa.text(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_schema = current_schema() "
+            "AND table_name = 'lesson_plan' "
+            "AND column_name = 'resources'"
+        )
+    ).scalar()
+    if current_type == "jsonb":
+        return
+
     # Some legacy rows held unparseable text in the TEXT column (whitespace-only
     # strings, truncated objects). Use a plpgsql helper that catches any cast
     # failure and falls back to NULL — a hard ::jsonb cast would abort the
