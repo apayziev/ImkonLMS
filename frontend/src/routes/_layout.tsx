@@ -36,6 +36,8 @@ const BG_PATTERN_STYLE = {
   backgroundRepeat: "no-repeat",
 } as const
 
+const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"] as const
+
 function Layout() {
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { user } = useAuth()
@@ -47,7 +49,6 @@ function Layout() {
   // Teacher subdomain: non-teacher → stays on admin home (different subdomain is just cosmetic for admin)
   // Teacher user (any subdomain): block admin-only routes
   const isTeacher = user?.role === "teacher"
-  const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"]
 
   useEffect(() => {
     if (!user) return
@@ -55,7 +56,7 @@ function Layout() {
     if (isTeacher && !TEACHER_ALLOWED.some((r) => r === "/" ? currentPath === "/" : currentPath.startsWith(r))) {
       navigate({ to: "/lessons" })
     }
-  }, [user, currentPath, isTeacher, navigate, TEACHER_ALLOWED.some])
+  }, [user, currentPath, isTeacher, navigate])
 
   const syncMutation = useMutation({
     mutationFn: () => syncApi.runSync(),

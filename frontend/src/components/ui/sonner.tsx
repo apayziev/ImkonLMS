@@ -26,10 +26,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast: "group-[.toaster]:border-border group-[.toaster]:shadow-lg",
           title: "!text-base !font-semibold",
           description: "!text-sm",
-          success: "!bg-[#00A27D] !text-white !border-[#0D735B]",
-          error: "!bg-[#FF3B47] !text-white !border-[#4B0924]",
-          warning: "!bg-[#6720FF] !text-white !border-[#321A94]",
-          info: "!bg-[#321A94] !text-white !border-[#4B0924]",
+          success: "!bg-[var(--imkon-teal)] !text-white !border-[var(--imkon-teal-dark)]",
+          error: "!bg-[var(--imkon-red)] !text-white !border-[var(--imkon-maroon)]",
+          warning: "!bg-[var(--imkon-purple)] !text-white !border-[var(--imkon-purple-dark)]",
+          info: "!bg-[var(--imkon-purple-dark)] !text-white !border-[var(--imkon-maroon)]",
         },
       }}
       style={

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Play } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { SessionView } from "@/components/Lessons"
@@ -165,16 +165,18 @@ function QuarterDatesView({
   const weekStart = weekDays.length > 0 ? toDateStr(weekDays[0]) : ""
   const weekEnd = weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
 
-  const allDates = currentQuarter && scheduleEntries.length > 0
-    ? generateLessonDates(
+  const allIndexed = useMemo(
+    () => {
+      if (!currentQuarter || scheduleEntries.length === 0) return []
+      return generateLessonDates(
         currentQuarter.start_date,
         currentQuarter.end_date,
         scheduleEntries,
         currentQuarter.holidays,
-      )
-    : []
-
-  const allIndexed = allDates.map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
+      ).map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
+    },
+    [currentQuarter, scheduleEntries],
+  )
 
   const entryIds = scheduleEntries.map((e) => e.id)
   const { data: statusesData } = useQuery(
@@ -194,8 +196,7 @@ function QuarterDatesView({
     if (allIndexed.length === 0) return
     const match = allIndexed.find((c) => c.ds === clickedDs && c.entryId === clickedEntryId)
     if (match) setSelectedCard(match)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allIndexed.length, clickedEntryId, clickedDs, allIndexed.find])
+  }, [allIndexed, clickedEntryId, clickedDs])
 
   const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
   const visibleGroups = expanded ? allIndexed : weekGroups
@@ -222,7 +223,7 @@ function QuarterDatesView({
     <div className="space-y-4">
       <div className="flex items-baseline gap-2 flex-wrap">
         <h2 className="text-lg font-semibold">{grade} · {subject}</h2>
-        <span className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allDates.length} ta dars</span>
+        <span className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allIndexed.length} ta dars</span>
       </div>
 
       <div className={cn(
@@ -303,7 +304,7 @@ function QuarterDatesView({
           ) : (
             <>
               <ChevronDown className="h-4 w-4" />
-              Barcha {allDates.length} ta darsni ko'rish
+              Barcha {allIndexed.length} ta darsni ko'rish
             </>
           )}
         </button>
