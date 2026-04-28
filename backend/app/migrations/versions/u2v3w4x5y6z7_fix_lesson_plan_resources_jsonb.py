@@ -23,12 +23,29 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Empty strings would fail ::jsonb cast; coerce them to NULL first.
+    # Some legacy rows held unparseable text in the TEXT column (whitespace-only
+    # strings, truncated objects). Use a plpgsql helper that catches any cast
+    # failure and falls back to NULL — a hard ::jsonb cast would abort the
+    # whole migration on the first bad row.
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION pg_temp.safe_to_jsonb(t text)
+        RETURNS jsonb AS $$
+        BEGIN
+            IF t IS NULL OR btrim(t) = '' THEN
+                RETURN NULL;
+            END IF;
+            RETURN t::jsonb;
+        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch THEN
+            RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql IMMUTABLE;
+        """
+    )
     op.execute(
         "ALTER TABLE lesson_plan "
         "ALTER COLUMN resources TYPE jsonb "
-        "USING CASE WHEN resources IS NULL OR resources = '' "
-        "THEN NULL ELSE resources::jsonb END"
+        "USING pg_temp.safe_to_jsonb(resources)"
     )
 
 
