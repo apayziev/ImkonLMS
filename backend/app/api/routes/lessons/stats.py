@@ -15,7 +15,7 @@ from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
 from app.models.user import User
 
-from ._helpers import PLAN_TOTAL_FIELDS, _plan_filled_count
+from ._helpers import PLAN_TOTAL_FIELDS, _plan_filled_count, count_weekday_between
 
 router = APIRouter()
 
@@ -85,17 +85,10 @@ def _count_expected_lessons(
 ) -> int:
     """Count how many lessons teacher should have had in date range."""
     holiday_set = _parse_holidays(holidays)
-    total = 0
-    for entry in schedule_entries:
-        js_dow = entry.day_of_week
-        # Convert ISO dow (1=Mon) to Python weekday (0=Mon)
-        py_dow = js_dow - 1 if js_dow < 7 else 6
-        cur = start_date
-        while cur <= end_date:
-            if cur.weekday() == py_dow and cur not in holiday_set:
-                total += 1
-            cur = _next_day(cur)
-    return total
+    return sum(
+        count_weekday_between(start_date, end_date, e.day_of_week, holiday_set)
+        for e in schedule_entries
+    )
 
 
 def _next_day(d: date) -> date:

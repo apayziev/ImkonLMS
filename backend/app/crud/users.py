@@ -1,5 +1,6 @@
 """CRUD operations for User model."""
 
+from functools import cache
 from typing import ClassVar
 
 from sqlalchemy import or_, select
@@ -11,7 +12,15 @@ from app.models.user import User, UserRole
 
 from .base import BaseCRUD
 
-_DUMMY_HASH = get_password_hash("dummy-password-for-timing-safety")
+
+@cache
+def _dummy_hash() -> str:
+    """Constant-time bcrypt comparison target for missing users.
+
+    Lazily computed on first auth attempt so each gunicorn worker doesn't pay
+    the ~100ms bcrypt cost at import time.
+    """
+    return get_password_hash("dummy-password-for-timing-safety")
 
 
 class CRUDUser(BaseCRUD[User]):
@@ -65,7 +74,7 @@ class CRUDUser(BaseCRUD[User]):
         if not user:
             user = await self.get_by_document_id(db, document_id=username)
 
-        hashed = user.hashed_password if user and user.hashed_password else _DUMMY_HASH
+        hashed = user.hashed_password if user and user.hashed_password else _dummy_hash()
         if not verify_password(password, hashed):
             return None
         if not user:
