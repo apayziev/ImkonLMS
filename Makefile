@@ -57,3 +57,7 @@ ssl-init: ## Get SSL certificate for the first time
 .PHONY: ssl-renew
 ssl-renew: ## Manually renew SSL certificate
 	$(COMPOSE) -f docker-compose.prod.yml run --rm certbot renew
+
+.PHONY: backup
+backup: ## Manually trigger encrypted DB backup (uploads to Telegram if configured)
+	$(COMPOSE) -f docker-compose.prod.yml exec db-backup /backup.sh

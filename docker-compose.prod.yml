@@ -115,7 +115,7 @@ services:
       - certbot_certs:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
-  # Daily database backup at 3:00 AM
+  # Daily database backup at 03:00 Asia/Tashkent (off-peak)
   db-backup:
     image: postgres:16-alpine
     restart: always
@@ -127,6 +127,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      TZ: Asia/Tashkent
     volumes:
       - ./backups:/backups
       - ./scripts/backup.sh:/backup.sh:ro
@@ -136,14 +137,19 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache curl gnupg
+        # tzdata is needed for the TZ env var to actually shift cron's clock
+        apk add --no-cache curl gnupg tzdata
+        cp /usr/share/zoneinfo/Asia/Tashkent /etc/localtime
+        echo "Asia/Tashkent" > /etc/timezone
         # Export env vars for cron - single-quote values to handle special chars
         : > /etc/environment
-        for var in PGUSER PGPASSWORD PGDATABASE PGHOST TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID BACKUP_ENCRYPTION_KEY; do
+        for var in PGUSER PGPASSWORD PGDATABASE PGHOST TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID BACKUP_ENCRYPTION_KEY TZ; do
           printf "export %s='%s'\n" "$$var" "$$(printenv $$var)" >> /etc/environment
         done
+        # Cron time is interpreted in Asia/Tashkent (3 AM local = off-peak).
         echo "0 3 * * * . /etc/environment; /backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
-        /backup.sh
+        # Backup runs only on cron schedule. Container restarts/deploys do NOT
+        # trigger a backup — use `make backup` for manual on-demand snapshots.
         crond -f -l 2
 
 volumes:
