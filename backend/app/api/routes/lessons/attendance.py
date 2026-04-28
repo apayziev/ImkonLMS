@@ -61,7 +61,6 @@ async def update_attendance(
     attendance, student = row
 
     attendance.status = body.status
-    attendance.grade = None
     attendance.marked_at = None if body.status == AttendanceStatus.UNMARKED else datetime.now(UTC)
 
     await db.commit()

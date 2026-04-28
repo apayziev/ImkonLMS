@@ -167,23 +167,21 @@ async def get_teacher_stats(
     )
     all_plans = plans_q.scalars().all()
 
-    # Group sessions by teacher (via schedule_entry)
+    # Group sessions/plans by teacher via a flat entry_id -> teacher_id map
+    # (O(E + S + P) instead of O(T * E * (S + P))).
+    entry_to_teacher: dict[int, int] = {e.id: e.teacher_id for e in all_entries}
+
     teacher_sessions: dict[int, list[LessonSession]] = {tid: [] for tid in teacher_entries}
     for session in all_sessions:
-        if session.schedule_entry_id:
-            for tid, entries in teacher_entries.items():
-                if any(e.id == session.schedule_entry_id for e in entries):
-                    teacher_sessions[tid].append(session)
-                    break
+        tid = entry_to_teacher.get(session.schedule_entry_id) if session.schedule_entry_id else None
+        if tid is not None and tid in teacher_sessions:
+            teacher_sessions[tid].append(session)
 
-    # Group plans by teacher
     teacher_plans: dict[int, list[LessonPlan]] = {tid: [] for tid in teacher_entries}
     for plan in all_plans:
-        if plan.schedule_entry_id:
-            for tid, entries in teacher_entries.items():
-                if any(e.id == plan.schedule_entry_id for e in entries):
-                    teacher_plans[tid].append(plan)
-                    break
+        tid = entry_to_teacher.get(plan.schedule_entry_id) if plan.schedule_entry_id else None
+        if tid is not None and tid in teacher_plans:
+            teacher_plans[tid].append(plan)
 
     # Build stats
     # Get holidays from current quarter (if any)
@@ -397,11 +395,14 @@ async def get_teacher_detail(
     # Sort by date asc, then period
     result_sessions.sort(key=lambda r: (r.session_date.toordinal(), r.period_number))
 
-    # Number lessons per grade (e.g. 8A's 18th lesson, 7A's 17th lesson)
-    grade_counters: dict[str, int] = {}
+    # Number lessons per (grade, subject) so a teacher's stats match what's
+    # shown elsewhere (e.g. /lessons page uses _calc_lesson_numbers grouped
+    # by grade+subject too).
+    gs_counters: dict[tuple[str, str], int] = {}
     for s in result_sessions:
-        grade_counters[s.grade_display] = grade_counters.get(s.grade_display, 0) + 1
-        s.lesson_number = grade_counters[s.grade_display]
+        key = (s.grade_display, s.subject_name)
+        gs_counters[key] = gs_counters.get(key, 0) + 1
+        s.lesson_number = gs_counters[key]
 
     return TeacherDetailResponse(
         teacher_id=teacher_id,
