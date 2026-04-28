@@ -9,6 +9,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.models import *  # noqa: F403
 
@@ -23,6 +24,47 @@ AUTO_SYNC_INITIAL_DELAY = 60  # 1 minute after startup
 
 AUTO_END_INTERVAL = 60  # check every 1 minute
 AUTO_END_GRACE_MINUTES = 5  # end session 5 min after scheduled end_time
+
+# Leader election via Postgres session-level advisory lock. Only one worker
+# (across the whole gunicorn fleet) acquires this lock and runs background
+# loops. Others skip the loops. Lock auto-releases when the connection drops.
+_LEADER_LOCK_ID = 0xA51C100C70000
+_leader_conn: AsyncConnection | None = None
+
+
+async def _acquire_leadership() -> bool:
+    """Try to become the background-task leader. Holds a dedicated DB conn on success."""
+    global _leader_conn
+    conn = await engine.connect()
+    try:
+        result = await conn.execute(
+            text("SELECT pg_try_advisory_lock(:id)"), {"id": _LEADER_LOCK_ID}
+        )
+        if result.scalar() is True:
+            _leader_conn = conn
+            return True
+    except Exception:
+        await conn.close()
+        raise
+    await conn.close()
+    return False
+
+
+async def _release_leadership() -> None:
+    global _leader_conn
+    if _leader_conn is None:
+        return
+    try:
+        await _leader_conn.execute(
+            text("SELECT pg_advisory_unlock(:id)"), {"id": _LEADER_LOCK_ID}
+        )
+    except Exception:
+        logger.exception("Failed to release leader advisory lock")
+    finally:
+        try:
+            await _leader_conn.close()
+        finally:
+            _leader_conn = None
 
 
 async def check_database_connection() -> None:
@@ -170,17 +212,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     await check_database_connection()
 
     sync_task = None
-    if settings.PAYMENT_SYNC_API_KEY:
-        sync_task = asyncio.create_task(_auto_sync_loop())
+    auto_end_task = None
+    purge_task = None
 
-    auto_end_task = asyncio.create_task(_auto_end_sessions_loop())
-    purge_task = asyncio.create_task(_refresh_token_purge_loop())
+    is_leader = await _acquire_leadership()
+    if is_leader:
+        logger.info("Background-task leader acquired; starting loops.")
+        if settings.PAYMENT_SYNC_API_KEY:
+            sync_task = asyncio.create_task(_auto_sync_loop())
+        auto_end_task = asyncio.create_task(_auto_end_sessions_loop())
+        purge_task = asyncio.create_task(_refresh_token_purge_loop())
+    else:
+        logger.info("Another worker holds the background-task leader lock; loops skipped.")
 
     yield
 
     await _cancel(auto_end_task)
     await _cancel(purge_task)
     await _cancel(sync_task)
+    await _release_leadership()
 
 
 def create_application(router: APIRouter) -> FastAPI:

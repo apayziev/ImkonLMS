@@ -4,8 +4,8 @@ from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, SessionDep
-from app.api.routes._shared import get_quarter_for_session, require_teacher_or_admin
+from app.api.deps import CurrentUser, SessionDep, TeacherOrAdminUser
+from app.api.routes._shared import get_quarter_by_date
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.lesson_session import LessonSession
 from app.models.session_attendance import SessionAttendance
@@ -39,7 +39,7 @@ async def get_session_yellow_cards(
     if not session:
         raise NotFoundException("Sessiya topilmadi")
 
-    quarter = await get_quarter_for_session(db, session)
+    quarter = await get_quarter_by_date(db, session.session_date)
     if not quarter:
         return YellowCardSessionSummary(limit=2, by_student={})
 
@@ -77,11 +77,9 @@ async def get_session_yellow_cards(
 async def issue_yellow_card(
     body: YellowCardCreate,
     db: SessionDep,
-    current_user: CurrentUser,
+    current_user: TeacherOrAdminUser,
 ) -> YellowCardRead:
     """O'quvchiga sariq kartochka berish (o'qituvchi)."""
-    require_teacher_or_admin(current_user)
-
     session = (await db.execute(
         select(LessonSession)
         .where(LessonSession.id == body.session_id, LessonSession.is_deleted == False)  # noqa: E712
@@ -89,7 +87,7 @@ async def issue_yellow_card(
     if not session:
         raise NotFoundException("Sessiya topilmadi")
 
-    quarter = await get_quarter_for_session(db, session)
+    quarter = await get_quarter_by_date(db, session.session_date)
     if not quarter:
         raise NotFoundException("Bu sessiya uchun chorak topilmadi")
 

@@ -1,16 +1,14 @@
 """Violation routes — qoidabuzarlik turlari va xabarlari."""
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, SessionDep
-from app.api.routes._shared import (
-    get_quarter_by_date,
-    get_quarter_for_session,
-    require_admin,
-    require_teacher_or_admin,
-)
+from app.api.deps import AdminUser, CurrentUser, SessionDep, TeacherOrAdminUser
+from app.api.routes._shared import get_quarter_by_date
+from app.core.config import today_local
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.lesson_session import LessonSession
 from app.models.session_attendance import SessionAttendance
@@ -60,7 +58,7 @@ def _report_to_read(r: ViolationReport) -> ViolationReportRead:
 @router.get("/types", response_model=list[ViolationTypeRead])
 async def list_violation_types(
     db: SessionDep,
-    current_user: CurrentUser,
+    _: CurrentUser,
     active_only: bool = True,
 ) -> list[ViolationTypeRead]:
     """Barcha qoidabuzarlik turlarini olish."""
@@ -76,10 +74,9 @@ async def list_violation_types(
 async def create_violation_type(
     body: ViolationTypeCreate,
     db: SessionDep,
-    current_user: CurrentUser,
+    _: AdminUser,
 ) -> ViolationTypeRead:
     """Yangi qoidabuzarlik turi yaratish (admin)."""
-    require_admin(current_user)
     vt = ViolationType(
         name=body.name,
         description=body.description,
@@ -96,10 +93,9 @@ async def update_violation_type(
     type_id: int,
     body: ViolationTypeUpdate,
     db: SessionDep,
-    current_user: CurrentUser,
+    _: AdminUser,
 ) -> ViolationTypeRead:
     """Qoidabuzarlik turini tahrirlash (admin)."""
-    require_admin(current_user)
     vt = (await db.execute(
         select(ViolationType).where(
             ViolationType.id == type_id,
@@ -125,10 +121,9 @@ async def update_violation_type(
 async def delete_violation_type(
     type_id: int,
     db: SessionDep,
-    current_user: CurrentUser,
+    _: AdminUser,
 ) -> None:
     """Qoidabuzarlik turini o'chirish (admin, soft delete)."""
-    require_admin(current_user)
     vt = (await db.execute(
         select(ViolationType).where(
             ViolationType.id == type_id,
@@ -149,12 +144,9 @@ async def delete_violation_type(
 async def create_violation_report(
     body: ViolationReportCreate,
     db: SessionDep,
-    current_user: CurrentUser,
+    current_user: TeacherOrAdminUser,
 ) -> ViolationReportRead:
     """Qoidabuzarlik haqida xabar berish (o'qituvchi)."""
-    require_teacher_or_admin(current_user)
-
-    # Validate violation type
     vt = (await db.execute(
         select(ViolationType).where(
             ViolationType.id == body.violation_type_id,
@@ -165,7 +157,6 @@ async def create_violation_report(
     if not vt:
         raise NotFoundException("Qoidabuzarlik turi topilmadi")
 
-    # Determine quarter
     if body.session_id:
         session = (await db.execute(
             select(LessonSession).where(
@@ -175,15 +166,13 @@ async def create_violation_report(
         )).scalar_one_or_none()
         if not session:
             raise NotFoundException("Sessiya topilmadi")
-        quarter = await get_quarter_for_session(db, session)
+        quarter = await get_quarter_by_date(db, session.session_date)
     else:
-        from app.core.config import today_local
         quarter = await get_quarter_by_date(db, today_local())
 
     if not quarter:
         raise NotFoundException("Aktiv chorak topilmadi")
 
-    from datetime import UTC, datetime
     occurred = datetime.fromisoformat(body.occurred_at) if body.occurred_at else datetime.now(UTC)
 
     report = ViolationReport(
@@ -206,7 +195,7 @@ async def create_violation_report(
 async def get_session_violations(
     session_id: int,
     db: SessionDep,
-    current_user: CurrentUser,
+    _: CurrentUser,
 ) -> ViolationSessionSummary:
     """Sessiya bo'yicha qoidabuzarlik xabarlari."""
     session = (await db.execute(
@@ -218,7 +207,6 @@ async def get_session_violations(
     if not session:
         raise NotFoundException("Sessiya topilmadi")
 
-    # Get student IDs from this session
     student_ids = [
         row[0] for row in (await db.execute(
             select(SessionAttendance.student_id).where(
@@ -230,11 +218,10 @@ async def get_session_violations(
     if not student_ids:
         return ViolationSessionSummary(by_student={})
 
-    quarter = await get_quarter_for_session(db, session)
+    quarter = await get_quarter_by_date(db, session.session_date)
     if not quarter:
         return ViolationSessionSummary(by_student={})
 
-    # Get all violation reports for these students in this quarter
     reports = (await db.execute(
         select(ViolationReport)
         .options(

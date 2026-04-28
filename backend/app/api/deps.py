@@ -9,7 +9,7 @@ from app.core.exceptions import ForbiddenException, UnauthorizedException
 from app.core.security import TokenType, oauth2_scheme, verify_token
 from app.crud.users import crud_users
 from app.models.parent_auth import ParentAuth
-from app.models.user import User
+from app.models.user import User, UserRole
 
 SessionDep = Annotated[AsyncSession, Depends(async_get_db)]
 
@@ -41,6 +41,24 @@ async def get_current_superuser(current_user: CurrentUser) -> User:
 
 
 SuperUser = Annotated[User, Depends(get_current_superuser)]
+
+
+async def get_current_admin(current_user: CurrentUser) -> User:
+    if current_user.role != UserRole.ADMIN.value and not current_user.is_superuser:
+        raise ForbiddenException("Faqat admin uchun.")
+    return current_user
+
+
+AdminUser = Annotated[User, Depends(get_current_admin)]
+
+
+async def get_current_teacher_or_admin(current_user: CurrentUser) -> User:
+    if current_user.role not in (UserRole.TEACHER.value, UserRole.ADMIN.value) and not current_user.is_superuser:
+        raise ForbiddenException("Faqat o'qituvchi yoki admin uchun.")
+    return current_user
+
+
+TeacherOrAdminUser = Annotated[User, Depends(get_current_teacher_or_admin)]
 
 
 async def get_current_parent(token: Annotated[str, Depends(oauth2_scheme)], db: SessionDep) -> ParentAuth:

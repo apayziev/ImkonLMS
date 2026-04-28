@@ -12,6 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.refresh_token import RefreshToken
 
+# Grace window for the previous refresh token after rotation. If the same jti is
+# presented again within this window (e.g. simultaneous tabs racing to refresh),
+# we return the existing successor instead of treating it as replay. Standard
+# OWASP-recommended mitigation against false-positive lockouts.
+ROTATION_GRACE = timedelta(seconds=30)
+
 
 @dataclass(slots=True)
 class IssuedRefresh:
@@ -54,7 +60,10 @@ async def rotate(db: AsyncSession, *, jti: uuid.UUID) -> RotationResult:
     """Mark the presented jti used and mint a successor in the same family.
 
     Raises RefreshRotationError on any failure mode (unknown / replay / expired).
-    On replay (presented jti was already used), nukes the entire family.
+    Within ROTATION_GRACE of a successful rotation, the same jti can be presented
+    again (e.g. multi-tab race) and will receive the existing successor instead
+    of triggering family revocation. Outside that window, replay nukes the
+    entire family.
     """
     row = (await db.execute(
         select(RefreshToken)
@@ -68,7 +77,28 @@ async def rotate(db: AsyncSession, *, jti: uuid.UUID) -> RotationResult:
     now = datetime.now(UTC)
 
     if row.used_at is not None:
-        # Replay — kill the whole family.
+        # Grace window: if rotated very recently, return the existing successor
+        # rather than revoking. Same client refreshing twice (multi-tab) is
+        # benign; only treat as replay outside the window.
+        if (now - row.used_at) <= ROTATION_GRACE:
+            successor = (await db.execute(
+                select(RefreshToken)
+                .where(
+                    RefreshToken.family_id == row.family_id,
+                    RefreshToken.used_at.is_(None),
+                    RefreshToken.expires_at > now,
+                )
+                .order_by(RefreshToken.created_at.desc())
+                .limit(1)
+            )).scalar_one_or_none()
+            if successor is not None:
+                return RotationResult(
+                    new_jti=successor.jti,
+                    family_id=row.family_id,
+                    subject=row.subject,
+                    role=row.role,
+                )
+        # Real replay — kill the whole family.
         await db.execute(
             delete(RefreshToken).where(RefreshToken.family_id == row.family_id)
         )

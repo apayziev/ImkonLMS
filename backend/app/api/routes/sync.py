@@ -310,12 +310,18 @@ async def _sync_users(
                 else:
                     user_data["role"] = role.value
                 if not user_data.get("hashed_password"):
-                    loop = asyncio.get_running_loop()
-                    user_data["hashed_password"] = await loop.run_in_executor(
-                        None,
-                        get_password_hash,
-                        doc_id,
-                    )
+                    if role == UserRole.STUDENT:
+                        # Students authenticate passwordless via document_id;
+                        # skip the (slow) bcrypt entirely. ~100 ms per student
+                        # × thousands at first sync = minutes saved.
+                        user_data["hashed_password"] = None
+                    else:
+                        loop = asyncio.get_running_loop()
+                        user_data["hashed_password"] = await loop.run_in_executor(
+                            None,
+                            get_password_hash,
+                            doc_id,
+                        )
                 new_user = User(**user_data)
                 db.add(new_user)
                 user_map[doc_id] = new_user

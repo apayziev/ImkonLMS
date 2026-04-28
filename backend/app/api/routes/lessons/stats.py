@@ -7,8 +7,7 @@ from pydantic import BaseModel as PydanticBase
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, SessionDep
-from app.api.routes._shared import require_admin
+from app.api.deps import AdminUser, SessionDep
 from app.core.enums import SessionStatus
 from app.core.exceptions import NotFoundException
 from app.models.lesson_plan import LessonPlan
@@ -111,13 +110,11 @@ ON_TIME_TOLERANCE_MINUTES = 5  # ±5 daqiqa
 @router.get("/teacher-stats", response_model=TeacherStatsResponse)
 async def get_teacher_stats(
     db: SessionDep,
-    current_user: CurrentUser,
+    _: AdminUser,
     start_date: str,
     end_date: str,
 ) -> TeacherStatsResponse:
     """O'qituvchilar monitoring statistikasi."""
-    require_admin(current_user)
-
     sd = date.fromisoformat(start_date)
     ed = date.fromisoformat(end_date)
 
@@ -283,13 +280,11 @@ def _parse_holidays(holidays: list | None) -> set[date]:
 async def get_teacher_detail(
     teacher_id: int,
     db: SessionDep,
-    current_user: CurrentUser,
+    _: AdminUser,
     start_date: str,
     end_date: str,
 ) -> TeacherDetailResponse:
     """O'qituvchining tanlangan davrdagi barcha darslari batafsil."""
-    require_admin(current_user)
-
     sd = date.fromisoformat(start_date)
     ed = date.fromisoformat(end_date)
 

@@ -19,8 +19,8 @@ import { PasswordInput } from "@/components/ui/password-input"
 const loginSchema = z.object({
   phone: z
     .string()
-    .min(9, { message: "Telefon raqamni kiriting" })
-    .regex(/^[\d+ ]+$/, { message: "Faqat raqamlar kiriting" }),
+    .min(5, { message: "Telefon yoki hujjat raqamini kiriting" })
+    .regex(/^[A-Za-z0-9+\- ]+$/, { message: "Faqat raqam yoki hujjat raqami" }),
   password: z
     .string()
     .min(1, { message: "Parol kiritilishi shart" }),
@@ -28,8 +28,13 @@ const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>
 
+const isPhoneInput = (value: string) => /^[\d+ ]*$/.test(value)
+
 const formatPhone = (value: string) => {
+  // Document IDs (alphanumeric like "ADMIN000") pass through uppercased
+  if (!isPhoneInput(value)) return value.toUpperCase()
   const digits = value.replace(/\D/g, "")
+  if (digits.length === 0) return ""
   if (digits.length <= 3) return `+${digits}`
   if (digits.length <= 5) return `+${digits.slice(0, 3)} ${digits.slice(3)}`
   if (digits.length <= 8) return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`
@@ -79,14 +84,14 @@ export function LoginForm({ isPending, onSubmit }: LoginFormProps) {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Telefon raqam</FormLabel>
+                  <FormLabel className="text-sm font-medium">Telefon yoki hujjat raqami</FormLabel>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <FormControl>
                       <Input
-                        type="tel"
-                        placeholder="+998 90 123 45 67"
-                        autoComplete="tel"
+                        type="text"
+                        placeholder="+998 90 123 45 67 yoki ADMIN000"
+                        autoComplete="username"
                         className="pl-12 h-12"
                         autoFocus
                         {...field}
