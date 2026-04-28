@@ -9,7 +9,12 @@ export function cn(...inputs: ClassValue[]) {
 
 function toDate(date: string | Date | null | undefined): Date | null {
   if (!date) return null
-  const d = typeof date === "string" ? new Date(date) : date
+  // YYYY-MM-DD: parse as local date — `new Date("2026-04-28")` is UTC midnight
+  // per ECMA-262, which displays as the previous day in zones west of UTC.
+  const d =
+    typeof date === "string"
+      ? /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00`) : new Date(date)
+      : date
   return Number.isNaN(d.getTime()) ? null : d
 }
 

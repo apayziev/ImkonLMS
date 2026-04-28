@@ -63,6 +63,12 @@
   font-display: swap;
 }
 
+/* Pin `dark:*` utilities to a `.dark` class on the tree (never auto-activated
+   by the user's OS preference). The `.dark { ... }` block was removed; this
+   variant just keeps the existing `dark:*` classes scattered in components
+   inert until/unless someone toggles `<html class="dark">` deliberately. */
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
