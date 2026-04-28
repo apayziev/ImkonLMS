@@ -21,7 +21,6 @@ from .timetable import router as timetable_router
 from .tms import router as tms_router
 from .users import router as users_router
 from .violations import router as violations_router
-from .yellow_cards import router as yellow_cards_router
 
 router = APIRouter(prefix="/v1")
 
@@ -42,7 +41,6 @@ router.include_router(lessons_router, dependencies=[Depends(get_current_user)])
 router.include_router(quarters_router, dependencies=[Depends(get_current_user)])
 router.include_router(sync_router, dependencies=[Depends(get_current_user)])
 router.include_router(violations_router, dependencies=[Depends(get_current_user)])
-router.include_router(yellow_cards_router, dependencies=[Depends(get_current_user)])
 router.include_router(tms_router, dependencies=[Depends(get_current_user)])
 router.include_router(parents_router, dependencies=[Depends(get_current_user)])
 

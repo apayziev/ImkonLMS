@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getLessonSessionQueryOptions, getViolationReportsQueryOptions, getYellowCardsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
+import { getLessonSessionQueryOptions, getViolationReportsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { StudentRow } from "./StudentRow"
 import { ATTENDANCE_OPTIONS } from "./constants"
@@ -47,9 +47,6 @@ export function SessionView({
   const queryClient = useQueryClient()
   const { data: session, isLoading } = useQuery(
     getLessonSessionQueryOptions(sessionId),
-  )
-  const { data: yellowCardData } = useQuery(
-    getYellowCardsQueryOptions(sessionId),
   )
   const { data: violationData } = useQuery(
     getViolationReportsQueryOptions(sessionId),
@@ -156,7 +153,6 @@ export function SessionView({
             <th className="w-10 py-3 px-4 text-left font-medium">#</th>
             <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
             <th className="py-3 px-3 text-center font-medium">Davomat</th>
-            <th className="py-3 px-3 text-center font-medium">Ogohlantirish</th>
             <th className="py-3 px-3 text-center font-medium">Qoidabuzarlik haqida xabar berish</th>
           </tr>
         </thead>
@@ -169,8 +165,6 @@ export function SessionView({
               sessionId={sessionId}
               disabled={isCompleted}
               isLate={showLateWarning && student.status === "unmarked"}
-              yellowCards={yellowCardData?.by_student[student.student_id] ?? []}
-              yellowCardLimit={yellowCardData?.limit ?? 2}
               violations={violationData?.by_student[student.student_id] ?? []}
             />
           ))}

@@ -3,14 +3,13 @@ import { Check, Clock, Eye, Flag, Loader2, TriangleAlert, X } from "lucide-react
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { AttendanceStatus, SessionDetailRead, SessionStudentRead, ViolationReportRead, YellowCardRead } from "@/lib/api"
+import type { AttendanceStatus, SessionDetailRead, SessionStudentRead, ViolationReportRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS } from "./constants"
-import { YellowCardDialog } from "./YellowCardDialog"
 import { ViolationReportDialog } from "./ViolationReportDialog"
 import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
@@ -26,8 +25,6 @@ export function StudentRow({
   sessionId,
   disabled,
   isLate = false,
-  yellowCards = [],
-  yellowCardLimit = 2,
   violations = [],
 }: {
   student: SessionStudentRead
@@ -35,8 +32,6 @@ export function StudentRow({
   sessionId: number
   disabled: boolean
   isLate?: boolean
-  yellowCards?: YellowCardRead[]
-  yellowCardLimit?: number
   violations?: ViolationReportRead[]
 }) {
   const queryClient = useQueryClient()
@@ -44,7 +39,6 @@ export function StudentRow({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [photoOpen, setPhotoOpen] = useState(false)
-  const [cardDialogOpen, setCardDialogOpen] = useState(false)
   const [violationDialogOpen, setViolationDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -82,9 +76,6 @@ export function StudentRow({
       toast.error(getErrorDetail(error, "Saqlashda xatolik"))
     },
   })
-
-  const cardCount = yellowCards.length
-  const isOverLimit = cardCount >= yellowCardLimit
 
   const handleStatusChange = (newStatus: AttendanceStatus) => {
     if (disabled) return
@@ -151,6 +142,14 @@ export function StudentRow({
             )}
           </div>
         </div>
+        {student.photo_url && (
+          <PhotoZoomDialog
+            photoUrl={student.photo_url}
+            fullName={student.full_name}
+            open={photoOpen}
+            onOpenChange={setPhotoOpen}
+          />
+        )}
       </td>
 
       {/* Attendance Buttons */}
@@ -175,43 +174,6 @@ export function StudentRow({
             </button>
           ))}
         </div>
-      </td>
-
-      {/* Yellow Card Badge */}
-      <td className="py-3 px-3 text-center">
-        <button
-          type="button"
-          onClick={() => setCardDialogOpen(true)}
-          title="Sariq kartochkalar"
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all select-none",
-            isOverLimit
-              ? "bg-red-500 text-white"
-              : "bg-amber-400 text-white hover:bg-amber-500",
-          )}
-        >
-          <span className="h-3 w-2.5 rounded-[2px] shrink-0 bg-white/30" />
-          <span>Ogohlantirish {cardCount}/{yellowCardLimit}</span>
-        </button>
-
-        {/* Dialogs (rendered via portal) */}
-        <YellowCardDialog
-          student={student}
-          sessionId={sessionId}
-          disabled={disabled}
-          yellowCards={yellowCards}
-          yellowCardLimit={yellowCardLimit}
-          open={cardDialogOpen}
-          onOpenChange={setCardDialogOpen}
-        />
-        {student.photo_url && (
-          <PhotoZoomDialog
-            photoUrl={student.photo_url}
-            fullName={student.full_name}
-            open={photoOpen}
-            onOpenChange={setPhotoOpen}
-          />
-        )}
       </td>
 
       {/* Violation Report Flag */}

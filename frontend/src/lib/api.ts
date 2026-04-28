@@ -744,7 +744,6 @@ export interface QuarterRead {
   start_date: string;
   end_date: string;
   holidays: string[];
-  yellow_card_limit: number;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -775,34 +774,6 @@ export const quartersApi = {
     data: Partial<Omit<QuarterCreate, "academic_year_id">>,
   ) => api.patch<QuarterRead>(`/api/v1/quarters/${id}`, data),
   delete: (id: number) => api.delete(`/api/v1/quarters/${id}`),
-};
-
-// ─── Yellow Cards (Sariq Kartochkalar) ─────────────────────────────────────
-
-export interface YellowCardRead {
-  id: number;
-  student_id: number;
-  reason: string | null;
-  created_at: string;
-  issued_by_name: string;
-}
-
-export interface YellowCardSessionSummary {
-  limit: number;
-  by_student: Record<number, YellowCardRead[]>;
-}
-
-export const yellowCardsApi = {
-  getBySession: (sessionId: number) =>
-    api.get<YellowCardSessionSummary>(
-      `/api/v1/yellow-cards/session/${sessionId}`,
-    ),
-  issue: (data: {
-    student_id: number;
-    session_id: number;
-    reason?: string | null;
-  }) => api.post<YellowCardRead>("/api/v1/yellow-cards/", data),
-  remove: (cardId: number) => api.delete(`/api/v1/yellow-cards/${cardId}`),
 };
 
 // ─── Violations (Qoidabuzarlik) ─────────────────────────────────────────────
@@ -946,15 +917,8 @@ export interface ChildViolationItem {
   reported_by: string;
 }
 
-export interface ChildYellowCardItem {
-  reason: string | null;
-  issued_by: string;
-  created_at: string;
-}
-
 export interface ChildDisciplineResponse {
   violations: ChildViolationItem[];
-  yellow_cards: ChildYellowCardItem[];
   total_violation_points: number;
 }
 

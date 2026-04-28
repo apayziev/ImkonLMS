@@ -115,15 +115,8 @@ class ChildViolationItem(BaseModel):
     reported_by: str
 
 
-class ChildYellowCardItem(BaseModel):
-    reason: str | None = None
-    issued_by: str
-    created_at: str
-
-
 class ChildDisciplineResponse(BaseModel):
     violations: list[ChildViolationItem]
-    yellow_cards: list[ChildYellowCardItem]
     total_violation_points: int = 0
 
 

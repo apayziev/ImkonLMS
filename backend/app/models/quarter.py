@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, SmallInteger, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, SmallInteger, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -44,13 +44,6 @@ class Quarter(BaseModel):
         default=list,
         server_default="{}",
         comment="Dam kunlari (public holidays) ro'yxati",
-        kw_only=True,
-    )
-    yellow_card_limit: Mapped[int] = mapped_column(
-        Integer,
-        default=2,
-        server_default="2",
-        comment="Bir chorakda bir o'quvchiga berilishi mumkin bo'lgan sariq kartochkalar soni",
         kw_only=True,
     )
 

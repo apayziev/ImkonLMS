@@ -18,7 +18,6 @@ from .time_slot import TimeSlot
 from .user import User, UserRole
 from .violation_report import ViolationReport
 from .violation_type import ViolationType
-from .yellow_card import YellowCard
 
 __all__ = [
     "AcademicYear",
@@ -38,6 +37,5 @@ __all__ = [
     "UserRole",
     "ViolationReport",
     "ViolationType",
-    "YellowCard",
 ]
 

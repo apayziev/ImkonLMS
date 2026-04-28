@@ -17,7 +17,6 @@ from app.models.subject import Subject
 from app.models.time_slot import TimeSlot
 from app.models.user import User, UserRole
 from app.models.violation_report import ViolationReport
-from app.models.yellow_card import YellowCard
 from app.schemas.parent import (
     AttendanceSummary,
     ChildAttendanceRecord,
@@ -28,7 +27,6 @@ from app.schemas.parent import (
     ChildTimetableEntry,
     ChildTimetableResponse,
     ChildViolationItem,
-    ChildYellowCardItem,
     ParentChildRead,
     ParentMeRead,
 )
@@ -273,7 +271,7 @@ async def get_child_discipline(
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
 ) -> ChildDisciplineResponse:
-    """Farzandning intizom holati — qoidabuzarliklar va sariq kartochkalar."""
+    """Farzandning intizom holati — qoidabuzarliklar va ballar."""
     await _verify_child(db, parent.phone, student_id)
 
     # Violations
@@ -297,19 +295,6 @@ async def get_child_discipline(
     v_result = await db.execute(v_query)
     violations = v_result.scalars().all()
 
-    # Yellow cards
-    yc_query = (
-        select(YellowCard)
-        .options(selectinload(YellowCard.issued_by))
-        .where(
-            YellowCard.student_id == student_id,
-            YellowCard.is_deleted == False,  # noqa: E712
-        )
-        .order_by(YellowCard.created_at.desc())
-    )
-    yc_result = await db.execute(yc_query)
-    yellow_cards = yc_result.scalars().all()
-
     total_points = sum(v.violation_type.points for v in violations)
 
     return ChildDisciplineResponse(
@@ -323,14 +308,6 @@ async def get_child_discipline(
                 reported_by=v.reported_by.full_name,
             )
             for v in violations
-        ],
-        yellow_cards=[
-            ChildYellowCardItem(
-                reason=yc.reason,
-                issued_by=yc.issued_by.full_name,
-                created_at=yc.created_at.isoformat(),
-            )
-            for yc in yellow_cards
         ],
         total_violation_points=total_points,
     )
