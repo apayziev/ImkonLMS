@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { queryKeys } from "@/hooks/useQueryOptions"
 import type {
   AttendanceStatus,
   SessionDetailRead,
@@ -12,8 +13,6 @@ import type {
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS } from "./constants"
 import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
@@ -26,7 +25,12 @@ const ATTENDANCE_ICONS = {
 type Dim = "knowing" | "applying" | "reasoning"
 
 const DIM_MAX: Record<Dim, number> = { knowing: 4, applying: 4, reasoning: 2 }
-const DIM_LABEL: Record<Dim, string> = { knowing: "B", applying: "Q", reasoning: "M" }
+const DIM_LABEL: Record<Dim, string> = {
+  knowing: "B",
+  applying: "Q",
+  reasoning: "M",
+}
+const DIMS: readonly Dim[] = ["knowing", "applying", "reasoning"] as const
 
 const computeTotal = (a: SessionStudentAssessment) =>
   (a.knowing ?? 0) + (a.applying ?? 0) + (a.reasoning ?? 0)
@@ -50,25 +54,11 @@ export function StudentRow({
 }) {
   const queryClient = useQueryClient()
 
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle")
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [photoOpen, setPhotoOpen] = useState(false)
-
-  // Local copy of scores so the input value tracks user typing without
-  // refetching from the server until blur. `dirty` tracks dimensions the
-  // user is actively editing — server values for those are *not* applied
-  // until the edit blurs (which clears the flag), so a save on one input
-  // can't wipe an unblurred change in another.
-  const [scores, setScores] = useState<SessionStudentAssessment>(student.assessment)
-  const dirtyRef = useRef<Set<Dim>>(new Set())
-
-  useEffect(() => {
-    setScores((prev) => ({
-      knowing: dirtyRef.current.has("knowing") ? prev.knowing : student.assessment.knowing,
-      applying: dirtyRef.current.has("applying") ? prev.applying : student.assessment.applying,
-      reasoning: dirtyRef.current.has("reasoning") ? prev.reasoning : student.assessment.reasoning,
-    }))
-  }, [student.assessment])
 
   useEffect(() => {
     return () => clearTimeout(saveTimerRef.current)
@@ -113,12 +103,38 @@ export function StudentRow({
     onError: (error) => onSaveError(error, "Saqlashda xatolik"),
   })
 
+  // Optimistic assessment update — pill highlights instantly on click,
+  // rolls back on error. The server response is authoritative on success.
   const assessmentMutation = useMutation({
     mutationFn: (data: Partial<Record<Dim, number | null>>) =>
-      lessonsApi.updateAssessment(sessionId, { student_id: student.student_id, ...data }),
-    onMutate: () => {
+      lessonsApi.updateAssessment(sessionId, {
+        student_id: student.student_id,
+        ...data,
+      }),
+    onMutate: async (data) => {
       clearTimeout(saveTimerRef.current)
       setSaveStatus("saving")
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.lessonSession(sessionId),
+      })
+      const previous = queryClient.getQueryData<SessionDetailRead>(
+        queryKeys.lessonSession(sessionId),
+      )
+      queryClient.setQueryData(
+        queryKeys.lessonSession(sessionId),
+        (old: SessionDetailRead | undefined) => {
+          if (!old) return old
+          return {
+            ...old,
+            students: old.students.map((s) =>
+              s.student_id === student.student_id
+                ? { ...s, assessment: { ...s.assessment, ...data } }
+                : s,
+            ),
+          }
+        },
+      )
+      return { previous }
     },
     onSuccess: (response) => {
       flashSaved()
@@ -137,54 +153,45 @@ export function StudentRow({
         },
       )
     },
-    onError: (error) => onSaveError(error, "Baholashda xatolik"),
+    onError: (error, _data, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.lessonSession(sessionId),
+          context.previous,
+        )
+      }
+      onSaveError(error, "Baholashda xatolik")
+    },
   })
 
   const handleStatusChange = (newStatus: AttendanceStatus) => {
     if (disabled) return
-    const resolved = newStatus === student.status ? ("unmarked" as const) : newStatus
+    const resolved =
+      newStatus === student.status ? ("unmarked" as const) : newStatus
     attendanceMutation.mutate({ status: resolved })
-  }
-
-  const handleScoreChange = (dim: Dim, raw: string) => {
-    dirtyRef.current.add(dim)
-    if (raw === "") {
-      setScores((prev) => ({ ...prev, [dim]: null }))
-      return
-    }
-    const num = Number(raw)
-    if (Number.isNaN(num)) return
-    const clamped = Math.min(DIM_MAX[dim], Math.max(0, Math.floor(num)))
-    setScores((prev) => ({ ...prev, [dim]: clamped }))
-  }
-
-  const handleScoreBlur = (dim: Dim) => {
-    if (disabled || isAbsent) {
-      dirtyRef.current.delete(dim)
-      return
-    }
-    if (scores[dim] === student.assessment[dim]) {
-      dirtyRef.current.delete(dim)
-      return
-    }
-    assessmentMutation.mutate(
-      { [dim]: scores[dim] },
-      { onSettled: () => dirtyRef.current.delete(dim) },
-    )
   }
 
   const isAbsent = student.status === "absent"
   const scoresDisabled = disabled || isAbsent
-  const total = computeTotal(scores)
-  const empty = isEmpty(scores)
-  const partial = isPartial(scores)
+
+  // Toggle: clicking the currently-active value clears it (NULL = not assessed).
+  const handleScoreClick = (dim: Dim, value: number) => {
+    if (scoresDisabled) return
+    const next = student.assessment[dim] === value ? null : value
+    assessmentMutation.mutate({ [dim]: next })
+  }
+
+  const total = computeTotal(student.assessment)
+  const empty = isEmpty(student.assessment)
+  const partial = isPartial(student.assessment)
 
   return (
     <tr
       className={cn(
         "transition-colors hover:bg-muted/50",
         isLate && "bg-amber-50/50 dark:bg-amber-950/10",
-        (attendanceMutation.isPending || assessmentMutation.isPending) && "opacity-70",
+        (attendanceMutation.isPending || assessmentMutation.isPending) &&
+          "opacity-70",
       )}
     >
       {/* Number + Save Status */}
@@ -208,7 +215,10 @@ export function StudentRow({
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative group shrink-0">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+              <AvatarImage
+                src={student.photo_url ?? undefined}
+                alt={student.full_name}
+              />
               <AvatarFallback className="text-xs">
                 {student.first_name[0]}
                 {student.last_name[0]}
@@ -275,36 +285,20 @@ export function StudentRow({
 
       {/* Daily activity (BQM) */}
       <td className="py-3 px-3">
-        <div className="flex items-center justify-center gap-2">
-          {(["knowing", "applying", "reasoning"] as const).map((dim) => (
-            <label key={dim} className="flex items-center gap-1">
-              <span className="text-xs font-medium text-muted-foreground w-3 text-right">
-                {DIM_LABEL[dim]}
-              </span>
-              <input
-                type="number"
-                min={0}
-                max={DIM_MAX[dim]}
-                value={scores[dim] ?? ""}
-                onChange={(e) => handleScoreChange(dim, e.target.value)}
-                onBlur={() => handleScoreBlur(dim)}
-                disabled={scoresDisabled}
-                placeholder="—"
-                title={`Maks: ${DIM_MAX[dim]}`}
-                className={cn(
-                  "w-9 h-7 text-center text-sm rounded border outline-none transition-colors",
-                  "border-input bg-background",
-                  "focus-visible:border-[var(--imkon-teal)] focus-visible:ring-[3px] focus-visible:ring-[var(--imkon-teal)]/20",
-                  scoresDisabled && "cursor-not-allowed opacity-50 bg-muted",
-                  // Hide native number spinners
-                  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                )}
-              />
-            </label>
+        <div className="flex items-center justify-center gap-3">
+          {DIMS.map((dim) => (
+            <ScoreDim
+              key={dim}
+              label={DIM_LABEL[dim]}
+              max={DIM_MAX[dim]}
+              value={student.assessment[dim]}
+              disabled={scoresDisabled}
+              onPick={(n) => handleScoreClick(dim, n)}
+            />
           ))}
           <span
             className={cn(
-              "text-sm ml-2 tabular-nums min-w-[3rem]",
+              "text-sm ml-1 tabular-nums min-w-[3rem]",
               empty
                 ? "text-muted-foreground/40"
                 : partial
@@ -317,5 +311,51 @@ export function StudentRow({
         </div>
       </td>
     </tr>
+  )
+}
+
+function ScoreDim({
+  label,
+  max,
+  value,
+  disabled,
+  onPick,
+}: {
+  label: string
+  max: number
+  value: number | null
+  disabled: boolean
+  onPick: (n: number) => void
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs font-medium text-muted-foreground w-3 text-right">
+        {label}
+      </span>
+      <div className="flex gap-0.5">
+        {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
+          const active = value === n
+          return (
+            <button
+              key={n}
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(n)}
+              title={active ? "Bekor qilish uchun bosing" : `${label}: ${n}`}
+              className={cn(
+                "w-7 h-7 text-xs font-semibold rounded border transition-colors",
+                active
+                  ? "bg-[var(--imkon-teal)] text-white border-[var(--imkon-teal)]"
+                  : "bg-background text-muted-foreground border-border hover:bg-accent hover:text-foreground",
+                disabled &&
+                  "cursor-not-allowed opacity-50 hover:bg-background hover:text-muted-foreground",
+              )}
+            >
+              {n}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }

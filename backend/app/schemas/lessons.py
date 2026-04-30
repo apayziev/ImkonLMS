@@ -142,9 +142,9 @@ class AssessmentUpdateRequest(BaseModel):
     """Patch one dimension at a time, or several together. Each is optional."""
 
     student_id: int
-    knowing: int | None = Field(default=None, ge=0, le=4)
-    applying: int | None = Field(default=None, ge=0, le=4)
-    reasoning: int | None = Field(default=None, ge=0, le=2)
+    knowing: int | None = Field(default=None, ge=1, le=4)
+    applying: int | None = Field(default=None, ge=1, le=4)
+    reasoning: int | None = Field(default=None, ge=1, le=2)
 
 
 class LessonMaterialRead(BaseModel):
