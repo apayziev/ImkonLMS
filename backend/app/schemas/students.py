@@ -45,6 +45,10 @@ class StudentRead(BaseModel):
     is_deleted: bool = False
     deleted_at: date | None = None
 
+    # Computed by the list endpoint when sufficient attendance data exists.
+    # 0–100; null if the student has no marked sessions.
+    attendance_rate: int | None = None
+
     @computed_field
     @property
     def father_full_name(self) -> str | None:
@@ -60,6 +64,15 @@ class StudentRead(BaseModel):
             return None
         parts = [p for p in [self.mother_last_name, self.mother_first_name] if p]
         return " ".join(parts) if parts else None
+
+
+class StudentsStats(BaseModel):
+    """Roster-wide counters for the students page header."""
+
+    total: int
+    active: int
+    frozen: int
+    new_this_month: int
 
 
 StudentList = PaginatedList[StudentRead]

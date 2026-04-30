@@ -1,9 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  GraduationCap,
-  Snowflake,
-} from "lucide-react"
+import { ChevronRight, GraduationCap, Snowflake } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import type { GradeRead, StudentRead } from "@/lib/api"
@@ -22,8 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
-import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
-import { formatDate, getInitials, sortGrades } from "@/lib/utils"
+import { getGradesQueryOptions, getStudentsStatsQueryOptions } from "@/hooks/useQueryOptions"
+import { cn, getInitials, sortGrades } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
   component: StudentsPage,
@@ -34,6 +31,67 @@ export const Route = createFileRoute("/_layout/students")({
 
 type ModalType = "detail"
 type ModalState = { type: ModalType; student: StudentRead } | null
+
+const AVATAR_PALETTE = [
+  "var(--imkon-red)",
+  "var(--imkon-purple-dark)",
+  "var(--imkon-teal-dark)",
+  "var(--imkon-purple)",
+  "var(--imkon-maroon)",
+] as const
+
+const STAT_ACCENTS = {
+  total: "var(--imkon-maroon)",
+  active: "var(--imkon-teal)",
+  frozen: "#3B82F6", // blue — matches the existing Snowflake icon tint
+  newThisMonth: "var(--imkon-red)",
+} as const
+
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: number | string
+  accent: string
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+      <div className="h-9 w-1.5 rounded-full shrink-0" style={{ background: accent }} />
+      <div className="min-w-0">
+        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+          {label}
+        </div>
+        <div className="text-2xl font-bold leading-tight" style={{ color: accent }}>
+          {value}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AttendanceBar({ rate }: { rate: number | null }) {
+  if (rate === null) {
+    return <span className="text-xs text-muted-foreground/60">—</span>
+  }
+  const color =
+    rate > 90
+      ? "var(--imkon-teal)"
+      : rate > 80
+        ? "#F59E0B" // amber-500 — between teal and red
+        : "var(--imkon-red)"
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${rate}%`, background: color }} />
+      </div>
+      <span className="text-xs font-bold tabular-nums w-8 text-right" style={{ color }}>
+        {rate}%
+      </span>
+    </div>
+  )
+}
 
 function StudentsPage() {
   const [gradeFilter, setGradeFilter] = useState("all")
@@ -58,6 +116,8 @@ function StudentsPage() {
   const { data: gradesData } = useQuery(getGradesQueryOptions())
   const grades: GradeRead[] = sortGrades(gradesData?.data ?? [])
 
+  const { data: stats } = useQuery(getStudentsStatsQueryOptions())
+
   const gradeId = gradeFilter !== "all" ? Number(gradeFilter) : undefined
   const status = statusFilter !== "all" ? statusFilter : undefined
 
@@ -80,13 +140,11 @@ function StudentsPage() {
   const totalCount = studentsData?.count ?? 0
   const totalPages = Math.ceil(totalCount / pageSize)
 
-  const getGradeName = (gradeId: number | null): string => {
-    if (!gradeId) return "—"
-    const grade = grades.find((g) => g.id === gradeId)
-    return grade?.display_name || "—"
+  const getGradeName = (id: number | null): string => {
+    if (!id) return "—"
+    return grades.find((g) => g.id === id)?.display_name || "—"
   }
 
-  // Reset page on filter change
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     setCurrentPage(1)
@@ -99,6 +157,10 @@ function StudentsPage() {
     setStatusFilter(value)
     setCurrentPage(1)
   }
+
+  const isFiltered =
+    searchQuery !== "" || gradeFilter !== "all" || statusFilter !== "all"
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -106,15 +168,34 @@ function StudentsPage() {
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <GraduationCap className="h-6 w-6 text-primary" />
           O'quvchilar
-          {totalCount > 0 && (
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-              {totalCount}
-            </span>
-          )}
         </h1>
         <p className="text-muted-foreground text-sm">
           Sinf va o'quvchilar ma'lumotlari
         </p>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          label="Jami"
+          value={stats?.total ?? "—"}
+          accent={STAT_ACCENTS.total}
+        />
+        <StatCard
+          label="Faol"
+          value={stats?.active ?? "—"}
+          accent={STAT_ACCENTS.active}
+        />
+        <StatCard
+          label="Muzlatilgan"
+          value={stats?.frozen ?? "—"}
+          accent={STAT_ACCENTS.frozen}
+        />
+        <StatCard
+          label="Yangi (bu oy)"
+          value={stats ? `+${stats.new_this_month}` : "—"}
+          accent={STAT_ACCENTS.newThisMonth}
+        />
       </div>
 
       {/* Filters */}
@@ -164,165 +245,128 @@ function StudentsPage() {
             </SelectItem>
           </SelectContent>
         </Select>
-        {(searchQuery || gradeFilter !== "all" || statusFilter !== "all") && (
+        {isFiltered && (
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {totalCount} ta natija
           </span>
         )}
       </div>
 
-      {/* Students Table */}
-      <div className="rounded-md border overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead className="bg-muted/50">
-            <tr className="border-b">
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                O'quvchi
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                Hujjat raqami
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                Jinsi
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                Tug'ilgan sana
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                Sinf
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                Ota-ona
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                Holat
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              Array.from({ length: 5 }, (_, i) => (
-                <tr key={i} className="border-b">
-                  <td className="p-4"><Skeleton className="h-4 w-8" /></td>
-                  <td className="p-4"><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-32" /></div></td>
-                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-20" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-16" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                </tr>
-              ))
-            ) : students.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-12">
-                  <GraduationCap className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">O'quvchilar topilmadi</p>
-                </td>
-              </tr>
-            ) : (
-              students.map((student) => (
-                <tr
-                  key={student.id}
-                  className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
-                  onClick={() => openModal("detail", student)}
+      {/* Students grid table */}
+      <div className="rounded-xl border overflow-hidden">
+        {/* Header row */}
+        <div className="hidden md:grid grid-cols-[44px_1.6fr_80px_1.4fr_1.2fr_1fr_28px] items-center gap-3 px-5 py-3 border-b bg-muted/30 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+          <span />
+          <span>O'quvchi</span>
+          <span>Sinf</span>
+          <span>Ota-ona</span>
+          <span>Telefon</span>
+          <span>Davomat</span>
+          <span />
+        </div>
+
+        {/* Body */}
+        <div className="divide-y">
+          {isLoading ? (
+            Array.from({ length: 5 }, (_, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[44px_1.6fr_80px_1.4fr_1.2fr_1fr_28px] items-center gap-3 px-5 py-3.5"
+              >
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <span />
+              </div>
+            ))
+          ) : students.length === 0 ? (
+            <div className="py-16 text-center">
+              <GraduationCap className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground">O'quvchilar topilmadi</p>
+            </div>
+          ) : (
+            students.map((student, i) => (
+              <button
+                type="button"
+                key={student.id}
+                onClick={() => openModal("detail", student)}
+                className={cn(
+                  "w-full grid md:grid-cols-[44px_1.6fr_80px_1.4fr_1.2fr_1fr_28px] grid-cols-[44px_1fr_28px] items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:bg-muted/60",
+                  student.is_frozen && "opacity-60",
+                )}
+              >
+                <Avatar
+                  className={cn(
+                    "h-9 w-9 ring-2 ring-background",
+                    i % 2 === 0 ? "rounded-full" : "rounded-xl",
+                  )}
                 >
-                  <td className="p-4 align-middle">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
-                        <AvatarFallback className="bg-[var(--imkon-purple)] text-white text-sm">
-                          {getInitials(student.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{student.full_name}</p>
-                        {student.phone_number && (
-                          <span className="text-xs text-muted-foreground">{student.phone_number}</span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 align-middle font-mono text-sm text-muted-foreground">
-                    {student.document_id}
-                  </td>
-                  <td className="p-4 align-middle">
-                    {student.gender === "male" ? (
-                      <span className="inline-flex items-center rounded-full bg-[var(--imkon-purple)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--imkon-purple)]">
-                        O'g'il
-                      </span>
-                    ) : student.gender === "female" ? (
-                      <span className="inline-flex items-center rounded-full bg-[var(--imkon-maroon)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--imkon-maroon)]">
-                        Qiz
-                      </span>
-                    ) : (
-                      "—"
+                  <AvatarImage
+                    src={getPhotoUrl(student.photo_url)}
+                    alt={student.full_name}
+                  />
+                  <AvatarFallback
+                    className={cn(
+                      "text-white text-sm font-semibold",
+                      i % 2 === 0 ? "rounded-full" : "rounded-xl",
                     )}
-                  </td>
-                  <td className="p-4 align-middle text-sm text-muted-foreground">
-                    {student.birth_date
-                      ? formatDate(student.birth_date)
-                      : "—"}
-                  </td>
-                  <td className="p-4 align-middle">
-                    <span className="inline-flex items-center rounded-full bg-[var(--imkon-purple)]/20 px-2.5 py-0.5 text-xs font-medium text-[var(--imkon-purple)]">
-                      <GraduationCap className="mr-1 h-3 w-3" />
-                      {getGradeName(student.grade_id)}
+                    style={{
+                      background: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+                    }}
+                  >
+                    {getInitials(student.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm truncate">
+                      {student.full_name}
                     </span>
-                  </td>
-                  <td className="p-4 align-middle text-sm">
-                    {(() => {
-                      const parentName =
-                        student.father_first_name || student.father_last_name
-                          ? [student.father_last_name, student.father_first_name].filter(Boolean).join(" ")
-                          : student.mother_first_name || student.mother_last_name
-                            ? [student.mother_last_name, student.mother_first_name].filter(Boolean).join(" ")
-                            : null
-                      const parentPhone = student.father_phone || student.mother_phone
-                      return parentName ? (
-                        <div>
-                          <p className="text-muted-foreground">{parentName}</p>
-                          {parentPhone && (
-                            <p className="text-xs text-muted-foreground">{parentPhone}</p>
-                          )}
-                        </div>
-                      ) : (
-                        "—"
-                      )
-                    })()}
-                  </td>
-                  <td className="p-4 align-middle">
-                    {student.is_frozen ? (
-                      <div className="flex flex-col">
-                        <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-600">
-                          <Snowflake className="mr-1 h-3 w-3" />
-                          Muzlatilgan
-                        </span>
-                        {student.departure_date && (
-                          <span className="text-xs text-muted-foreground mt-1">
-                            {student.departure_date}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          student.is_active
-                            ? "bg-[var(--imkon-teal)]/20 text-[var(--imkon-teal)]"
-                            : "bg-[var(--imkon-red)]/20 text-[var(--imkon-red)]"
-                        }`}
-                      >
-                        {student.is_active ? "Faol" : "Nofaol"}
+                    {student.is_frozen && (
+                      <span className="shrink-0 rounded-full bg-blue-500/15 text-blue-600 text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5">
+                        Muzlatilgan
                       </span>
                     )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground font-mono truncate">
+                    {student.student_id || student.document_id}
+                  </div>
+                  {/* Mobile fallback for the 3 columns hidden in narrow layout */}
+                  <div className="md:hidden text-[11px] text-muted-foreground mt-0.5 truncate">
+                    {getGradeName(student.grade_id)}
+                    {student.father_full_name && ` · ${student.father_full_name}`}
+                    {student.attendance_rate !== null &&
+                      ` · ${student.attendance_rate}%`}
+                  </div>
+                </div>
+
+                <span className="hidden md:inline-flex items-center justify-center rounded-full bg-muted text-xs font-medium px-2 py-0.5">
+                  {getGradeName(student.grade_id)}
+                </span>
+
+                <span className="hidden md:block text-sm truncate">
+                  {student.father_full_name ?? "—"}
+                </span>
+
+                <span className="hidden md:block text-xs text-muted-foreground font-mono truncate">
+                  {student.father_phone ?? "—"}
+                </span>
+
+                <div className="hidden md:block">
+                  <AttendanceBar rate={student.attendance_rate} />
+                </div>
+
+                <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+              </button>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Pagination */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -333,12 +377,15 @@ function StudentsPage() {
         itemLabel="o'quvchi"
       />
 
-      {/* Modals */}
       <StudentDetailDrawer
         student={activeModal?.type === "detail" ? activeModal.student : null}
         open={activeModal?.type === "detail"}
         onOpenChange={(open) => !open && closeModal()}
-        gradeName={activeModal?.type === "detail" ? getGradeName(activeModal.student.grade_id) : undefined}
+        gradeName={
+          activeModal?.type === "detail"
+            ? getGradeName(activeModal.student.grade_id)
+            : undefined
+        }
       />
     </div>
   )

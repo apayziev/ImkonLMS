@@ -1,5 +1,5 @@
 import { todayStr } from "@/components/Lessons/formatters"
-import { academicYearsApi, gradesApi, lessonsApi, quartersApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
+import { academicYearsApi, gradesApi, lessonsApi, quartersApi, studentsApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -10,6 +10,7 @@ export const queryKeys = {
   grades: ["grades"] as const,
   subjects: ["subjects"] as const,
   students: ["students"] as const,
+  studentsStats: ["students", "stats"] as const,
   teachers: ["teachers"] as const,
   currentAcademicYear: ["academic-years", "current"] as const,
   schoolSettings: ["school-settings"] as const,
@@ -46,6 +47,17 @@ export function getSubjectsQueryOptions() {
       const { data } = await subjectsApi.list(0, MAX_SUBJECTS)
       return data
     },
+  }
+}
+
+export function getStudentsStatsQueryOptions() {
+  return {
+    queryKey: queryKeys.studentsStats,
+    queryFn: async () => {
+      const { data } = await studentsApi.stats()
+      return data
+    },
+    staleTime: 60_000,
   }
 }
 
