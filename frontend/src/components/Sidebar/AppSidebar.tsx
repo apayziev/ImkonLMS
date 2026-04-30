@@ -28,9 +28,10 @@ const teacherMenuItems: Item[] = [
 
 export function AppSidebar() {
   const { user } = useAuth()
+  const isTeacher = user?.role === "teacher"
   const menuItems = useMemo(
-    () => (user?.role === "teacher" ? teacherMenuItems : adminMenuItems),
-    [user?.role],
+    () => (isTeacher ? teacherMenuItems : adminMenuItems),
+    [isTeacher],
   )
 
   return (
@@ -39,7 +40,7 @@ export function AppSidebar() {
         <Logo variant="responsive" />
       </SidebarHeader>
       <SidebarContent>
-        <Main items={menuItems} />
+        <Main items={menuItems} label={isTeacher ? "O'qituvchi" : "Admin paneli"} />
       </SidebarContent>
       <SidebarFooter>
         {user && <User user={user} />}

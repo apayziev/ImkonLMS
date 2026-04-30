@@ -44,7 +44,7 @@ export function ParentUser() {
                 <SidebarUserAvatar name={displayName} />
               ) : (
                 <>
-                  <SidebarUserCard name={displayName} />
+                  <SidebarUserCard name={displayName} subtitle="Ota-ona" />
                   <ChevronsUpDown className="ml-auto size-4 text-white/60" />
                 </>
               )}

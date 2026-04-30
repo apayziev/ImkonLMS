@@ -18,6 +18,12 @@ import {
 import useAuth from "@/hooks/useAuth"
 import { SidebarUserAvatar, SidebarUserCard } from "./UserCard"
 
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Administrator",
+  academic_head: "Akademik rahbar",
+  teacher: "O'qituvchi",
+}
+
 export function User({ user }: { user: UserRead }) {
   const { logout } = useAuth()
   const { isMobile, setOpenMobile, state } = useSidebar()
@@ -29,6 +35,9 @@ export function User({ user }: { user: UserRead }) {
   }
 
   const name = user.full_name || "User"
+  const roleLabel = user.is_superuser
+    ? "Administrator"
+    : (ROLE_LABEL[user.role] ?? user.role)
 
   return (
     <SidebarMenu className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}>
@@ -43,7 +52,7 @@ export function User({ user }: { user: UserRead }) {
                 <SidebarUserAvatar name={name} photoUrl={user.photo_url} />
               ) : (
                 <>
-                  <SidebarUserCard name={name} photoUrl={user.photo_url} />
+                  <SidebarUserCard name={name} photoUrl={user.photo_url} subtitle={roleLabel} />
                   <ChevronsUpDown className="ml-auto size-4 text-white/60" />
                 </>
               )}

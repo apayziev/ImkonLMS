@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react"
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -18,9 +19,10 @@ export type Item = {
 
 interface MainProps {
   items: Item[]
+  label?: string
 }
 
-export function Main({ items }: MainProps) {
+export function Main({ items, label }: MainProps) {
   const { isMobile, setOpenMobile, state } = useSidebar()
   const router = useRouterState()
   const currentPath = router.location.pathname
@@ -32,6 +34,11 @@ export function Main({ items }: MainProps) {
 
   return (
     <SidebarGroup className={isCollapsed ? "px-0" : "px-2"}>
+      {label && !isCollapsed && (
+        <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] uppercase text-white/40 px-3.5 mb-1">
+          {label}
+        </SidebarGroupLabel>
+      )}
       <SidebarGroupContent>
         <SidebarMenu className={`gap-2 ${isCollapsed ? "items-center" : ""}`}>
           {items.map((item) => {

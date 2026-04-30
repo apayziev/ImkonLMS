@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router"
-import { GraduationCap, RefreshCw } from "lucide-react"
+import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router"
+import { ChevronRight, GraduationCap, Home, RefreshCw } from "lucide-react"
 import { useEffect } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 import { toast } from "sonner"
@@ -42,6 +42,44 @@ const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"] as const
 // Sync endpoint returns counts per affected table; unknown keys are tolerated
 // so a backend that adds new tables doesn't break the toast.
 const syncResponseSchema = z.record(z.string(), z.number().int().nonnegative()).default({})
+
+const PATH_LABELS: Record<string, string> = {
+  "/students": "O'quvchilar",
+  "/teachers": "O'qituvchilar",
+  "/timetable": "Dars jadvali",
+  "/lessons": "Darslar",
+  "/lesson-plan": "Dars rejasi",
+  "/monitoring": "Monitoring",
+  "/settings": "Sozlamalar",
+  "/attendance": "Davomat",
+}
+
+function Breadcrumb({ pathname }: { pathname: string }) {
+  if (pathname === "/") {
+    return (
+      <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+        <Home className="size-4" />
+        Bosh sahifa
+      </span>
+    )
+  }
+  const label = PATH_LABELS[pathname] ?? null
+  return (
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
+      <Link
+        to="/"
+        className="text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Bosh sahifaga qaytish"
+      >
+        <Home className="size-4" />
+      </Link>
+      <ChevronRight className="size-3.5 text-muted-foreground/50" aria-hidden="true" />
+      <span className="font-medium text-foreground" aria-current="page">
+        {label ?? pathname.replace(/^\//, "")}
+      </span>
+    </nav>
+  )
+}
 
 function Layout() {
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
@@ -101,8 +139,9 @@ function Layout() {
           className="fixed top-0 right-0 w-full sm:w-[400px] h-full opacity-[0.03] pointer-events-none z-0"
           style={BG_PATTERN_STYLE}
         />
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-sm">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b px-4 bg-background/80 backdrop-blur-sm">
           <SidebarTrigger className="-ml-1 text-muted-foreground" aria-label="Sidebar ochish/yopish" />
+          <Breadcrumb pathname={currentPath} />
           <div className="ml-auto flex items-center gap-2">
             {user?.is_superuser && (
               <Button
