@@ -1,15 +1,7 @@
-/**
- * TmsTestPickerDialog — iframe-based TMS test picker for homework integration.
- *
- * Flow:
- * 1. On open: LMS backend calls TMS to get embed token
- * 2. TMS test picker is loaded in iframe
- * 3. Teacher selects a test → TMS sends postMessage
- * 4. Dialog calls onSelect with { test_id, title }
- */
 import { Loader2, Unlink, ExternalLink } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { z } from "zod"
 
 import { tmsApi } from "@/lib/api"
 import { TMS } from "@/config"
@@ -30,11 +22,13 @@ interface TmsTestPickerDialogProps {
   onRemove: () => void
 }
 
-interface TmsTestMessage {
-  type: "tms-test-selected"
-  test_id: number
-  title: string
-}
+const tmsTestMessageSchema = z.object({
+  type: z.literal("tms-test-selected"),
+  test_id: z.number().int().positive(),
+  title: z.string().min(1),
+})
+
+const TMS_HOST = new URL(TMS.origin).host
 
 export function TmsTestPickerDialog({
   currentTestId,
@@ -60,14 +54,16 @@ export function TmsTestPickerDialog({
       .finally(() => setLoading(false))
   }, [open])
 
-  // Listen for postMessage from TMS iframe
+  // Listen for postMessage from TMS iframe.
+  // - exact-host origin match (substring match would let evil-tms.example.com pass)
+  // - Zod parse on payload (iframe may be compromised; never trust shape)
   const handleMessage = useCallback(
-    (event: MessageEvent<TmsTestMessage>) => {
-      // Validate origin
-      if (!event.origin.includes(new URL(TMS.origin).hostname)) return
-      if (event.data?.type !== "tms-test-selected") return
+    (event: MessageEvent<unknown>) => {
+      if (new URL(event.origin).host !== TMS_HOST) return
+      const parsed = tmsTestMessageSchema.safeParse(event.data)
+      if (!parsed.success) return
 
-      onSelect(event.data.test_id, event.data.title)
+      onSelect(parsed.data.test_id, parsed.data.title)
       setOpen(false)
       toast.success("Test biriktirildi")
     },
@@ -139,6 +135,7 @@ export function TmsTestPickerDialog({
             <iframe
               ref={iframeRef}
               src={embedUrl}
+              sandbox="allow-same-origin allow-scripts allow-forms"
               className="w-full h-full rounded-md border"
               title="TMS Test Picker"
             />

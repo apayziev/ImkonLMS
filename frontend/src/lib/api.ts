@@ -29,6 +29,16 @@ const validated = <T>(schema: { parse: (v: unknown) => T }) =>
 
 const REFRESH_URL = "/api/v1/login/refresh";
 
+// Explicit set so the 401 interceptor doesn't try to silentRefresh on a login
+// failure (which would loop). Substring matching ("/login/" includes) caught
+// unrelated paths like a hypothetical "/login-history/" — list them explicitly.
+const LOGIN_ENDPOINTS: ReadonlySet<string> = new Set([
+  "/api/v1/login/",
+  "/api/v1/login/student",
+  "/api/v1/login/parent",
+  REFRESH_URL,
+]);
+
 const refreshState: Record<TokenScope, Promise<string | null> | null> = {
   admin: null,
   parent: null,
@@ -88,8 +98,8 @@ const buildAuthClient = (
       const originalRequest = error.config;
       const isUnauthorized = error.response?.status === 401;
       const isLoginEndpoint =
-        originalRequest?.url?.includes("/login/") ||
-        originalRequest?.url?.endsWith("/login");
+        typeof originalRequest?.url === "string" &&
+        LOGIN_ENDPOINTS.has(originalRequest.url);
       const isOnLoginPage = window.location.pathname === loginPathGetter();
 
       if (
@@ -123,17 +133,22 @@ const parentAxiosInstance = buildAuthClient(
 
 export default api;
 
-// Serialize params with array support (entry_id=1&entry_id=2)
+// Serialize params with array support (entry_id=1&entry_id=2). Skips null/undefined,
+// URL-encodes both keys and values so values containing & = ? don't break the query.
 const arrayParamsSerializer = (params: Record<string, unknown>) => {
-  const parts: string[] = [];
+  const search = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
+    if (v === null || v === undefined) continue;
     if (Array.isArray(v)) {
-      for (const item of v) parts.push(`${k}=${item}`);
+      for (const item of v) {
+        if (item === null || item === undefined) continue;
+        search.append(k, String(item));
+      }
     } else {
-      parts.push(`${k}=${v}`);
+      search.append(k, String(v));
     }
   }
-  return parts.join("&");
+  return search.toString();
 };
 
 // --- Shared Status Types ---
