@@ -296,20 +296,11 @@ export interface StudentRead {
   return_date: string | null;
   is_deleted: boolean;
   deleted_at: string | null;
-  /** 0–100 from all marked sessions; null when the student has none. */
-  attendance_rate: number | null;
 }
 
 export interface StudentList {
   data: StudentRead[];
   count: number;
-}
-
-export interface StudentsStats {
-  total: number;
-  active: number;
-  frozen: number;
-  new_this_month: number;
 }
 
 export const studentsApi = {
@@ -322,7 +313,6 @@ export const studentsApi = {
       status?: string;
     } = {},
   ) => api.get<StudentList>("/api/v1/students/", { params }),
-  stats: () => api.get<StudentsStats>("/api/v1/students/stats"),
 };
 
 // --- Academic Year Types & API ---
