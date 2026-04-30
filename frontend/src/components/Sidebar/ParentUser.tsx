@@ -1,59 +1,39 @@
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    useSidebar,
-} from "@/components/ui/sidebar";
-import useParentAuth from "@/hooks/useParentAuth";
-import { getInitials } from "@/lib/utils";
-
-function ParentInfo({ name }: { name: string }) {
-  return (
-    <div className="flex items-center gap-2.5 w-full min-w-0">
-      <Avatar className="size-8 ring-2 ring-white/20">
-        <AvatarFallback className="bg-white/20 text-white font-semibold">
-          {getInitials(name)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex flex-col items-start min-w-0">
-        <p className="text-sm font-medium truncate w-full">{name}</p>
-      </div>
-    </div>
-  );
-}
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar"
+import useParentAuth from "@/hooks/useParentAuth"
+import { SidebarUserAvatar, SidebarUserCard } from "./UserCard"
 
 export function ParentUser() {
-  const { parent, logout } = useParentAuth();
-  const { isMobile, setOpenMobile, state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { parent, logout } = useParentAuth()
+  const { isMobile, setOpenMobile, state } = useSidebar()
+  const isCollapsed = state === "collapsed"
 
   const handleLogout = () => {
-    if (isMobile) setOpenMobile(false);
-    logout();
-  };
+    if (isMobile) setOpenMobile(false)
+    logout()
+  }
 
-  if (!parent) return null;
+  if (!parent) return null
 
-  const displayName = parent.name || parent.phone;
+  const displayName = parent.name || parent.phone
 
   return (
-    <SidebarMenu
-      className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}
-    >
-      <SidebarMenuItem
-        className={isCollapsed ? "flex justify-center w-full" : ""}
-      >
+    <SidebarMenu className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}>
+      <SidebarMenuItem className={isCollapsed ? "flex justify-center w-full" : ""}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
@@ -61,14 +41,10 @@ export function ParentUser() {
               className={`rounded-lg data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground ${isCollapsed ? "w-10 h-10 p-0 flex items-center justify-center" : ""}`}
             >
               {isCollapsed ? (
-                <Avatar className="size-8 ring-2 ring-white/20">
-                  <AvatarFallback className="bg-white/20 text-white font-semibold">
-                    {getInitials(displayName)}
-                  </AvatarFallback>
-                </Avatar>
+                <SidebarUserAvatar name={displayName} />
               ) : (
                 <>
-                  <ParentInfo name={displayName} />
+                  <SidebarUserCard name={displayName} />
                   <ChevronsUpDown className="ml-auto size-4 text-white/60" />
                 </>
               )}
@@ -81,7 +57,7 @@ export function ParentUser() {
             sideOffset={4}
           >
             <DropdownMenuLabel className="p-0 font-normal">
-              <ParentInfo name={displayName} />
+              <SidebarUserCard name={displayName} />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -95,5 +71,5 @@ export function ParentUser() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  );
+  )
 }

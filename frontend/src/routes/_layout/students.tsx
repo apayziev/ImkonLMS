@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
-import { formatDate, getInitials } from "@/lib/utils"
+import { formatDate, getInitials, sortGrades } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
   component: StudentsPage,
@@ -56,9 +56,7 @@ function StudentsPage() {
   const closeModal = useCallback(() => setActiveModal(null), [])
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
-    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
-  )
+  const grades: GradeRead[] = sortGrades(gradesData?.data ?? [])
 
   const gradeId = gradeFilter !== "all" ? Number(gradeFilter) : undefined
   const status = statusFilter !== "all" ? statusFilter : undefined

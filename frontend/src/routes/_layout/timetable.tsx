@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
+import { sortGrades } from "@/lib/utils"
 import useAuth from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -60,9 +61,7 @@ function TimetablePage() {
 
   const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
 
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
-    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
-  )
+  const grades: GradeRead[] = sortGrades(gradesData?.data ?? [])
   const allowedGradeIds = isTeacher && teacherGradeIds.length > 0
     ? new Set(teacherGradeIds)
     : null
