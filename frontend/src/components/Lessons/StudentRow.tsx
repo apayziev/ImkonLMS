@@ -55,11 +55,19 @@ export function StudentRow({
   const [photoOpen, setPhotoOpen] = useState(false)
 
   // Local copy of scores so the input value tracks user typing without
-  // refetching from the server until blur.
+  // refetching from the server until blur. `dirty` tracks dimensions the
+  // user is actively editing — server values for those are *not* applied
+  // until the edit blurs (which clears the flag), so a save on one input
+  // can't wipe an unblurred change in another.
   const [scores, setScores] = useState<SessionStudentAssessment>(student.assessment)
+  const dirtyRef = useRef<Set<Dim>>(new Set())
 
   useEffect(() => {
-    setScores(student.assessment)
+    setScores((prev) => ({
+      knowing: dirtyRef.current.has("knowing") ? prev.knowing : student.assessment.knowing,
+      applying: dirtyRef.current.has("applying") ? prev.applying : student.assessment.applying,
+      reasoning: dirtyRef.current.has("reasoning") ? prev.reasoning : student.assessment.reasoning,
+    }))
   }, [student.assessment])
 
   useEffect(() => {
@@ -96,10 +104,7 @@ export function StudentRow({
           return {
             ...old,
             students: old.students.map((s) =>
-              // Preserve assessment — attendance update doesn't touch BQM scores.
-              s.student_id === student.student_id
-                ? { ...response.data, assessment: s.assessment }
-                : s,
+              s.student_id === student.student_id ? response.data : s,
             ),
           }
         },
@@ -142,6 +147,7 @@ export function StudentRow({
   }
 
   const handleScoreChange = (dim: Dim, raw: string) => {
+    dirtyRef.current.add(dim)
     if (raw === "") {
       setScores((prev) => ({ ...prev, [dim]: null }))
       return
@@ -153,9 +159,18 @@ export function StudentRow({
   }
 
   const handleScoreBlur = (dim: Dim) => {
-    if (disabled || isAbsent) return
-    if (scores[dim] === student.assessment[dim]) return
-    assessmentMutation.mutate({ [dim]: scores[dim] })
+    if (disabled || isAbsent) {
+      dirtyRef.current.delete(dim)
+      return
+    }
+    if (scores[dim] === student.assessment[dim]) {
+      dirtyRef.current.delete(dim)
+      return
+    }
+    assessmentMutation.mutate(
+      { [dim]: scores[dim] },
+      { onSettled: () => dirtyRef.current.delete(dim) },
+    )
   }
 
   const isAbsent = student.status === "absent"
@@ -168,7 +183,7 @@ export function StudentRow({
     <tr
       className={cn(
         "transition-colors hover:bg-muted/50",
-        isLate && "bg-amber-50/50",
+        isLate && "bg-amber-50/50 dark:bg-amber-950/10",
         (attendanceMutation.isPending || assessmentMutation.isPending) && "opacity-70",
       )}
     >
@@ -214,7 +229,7 @@ export function StudentRow({
               {student.last_name} {student.first_name}
             </span>
             {isLate && (
-              <span className="flex items-center gap-1.5 text-xs text-amber-500 mt-0.5">
+              <span className="flex items-center gap-1.5 text-xs text-amber-500 dark:text-amber-400 mt-0.5">
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />

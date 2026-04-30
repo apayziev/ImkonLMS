@@ -6,8 +6,8 @@ from fastapi import APIRouter
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.core.exceptions import BadRequestException, NotFoundException
 from app.core.enums import AttendanceStatus
+from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.session_assessment import SessionAssessment
 from app.models.session_attendance import SessionAttendance
 from app.schemas.lessons import AssessmentUpdateRequest, SessionStudentAssessment
@@ -34,6 +34,10 @@ async def update_assessment(
     """
     _require_teacher(current_user)
 
+    fields_set = body.model_fields_set
+    if not (fields_set & {"knowing", "applying", "reasoning"}):
+        raise BadRequestException("Hech qanday ball ko'rsatilmagan")
+
     session = await _get_teacher_session(db, session_id, current_user.id)
     _require_not_completed(session)
 
@@ -52,8 +56,6 @@ async def update_assessment(
     if attendance_status == AttendanceStatus.ABSENT:
         raise BadRequestException("Kelmagan o'quvchini baholash mumkin emas")
 
-    # Patch fields only if explicitly provided in the request body.
-    fields_set = body.model_fields_set
     row = (
         await db.execute(
             select(SessionAssessment).where(
