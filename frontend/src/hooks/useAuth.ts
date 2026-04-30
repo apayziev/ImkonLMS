@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import { AUTH } from "@/config"
+import { queryKeys } from "@/hooks/useQueryOptions"
 import {
   type UserRead,
   loginApi,
@@ -19,7 +20,7 @@ const useAuth = () => {
   const queryClient = useQueryClient()
 
   const { data: user, isLoading } = useQuery<UserRead>({
-    queryKey: ["currentUser"],
+    queryKey: queryKeys.currentUser,
     queryFn: async () => {
       const { data } = await usersApi.me()
       return data
@@ -68,7 +69,7 @@ const useAuth = () => {
       // Ignore logout errors
     }
     tokenStore.clear("admin")
-    queryClient.removeQueries({ queryKey: ["currentUser"] })
+    queryClient.removeQueries({ queryKey: queryKeys.currentUser })
     queryClient.clear()
     navigate({ to: AUTH.loginPath })
   }

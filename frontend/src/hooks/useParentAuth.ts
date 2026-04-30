@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import { AUTH } from "@/config"
+import { queryKeys } from "@/hooks/useQueryOptions"
 import {
   type ParentLoginRequest,
   type ParentMeRead,
@@ -18,7 +19,7 @@ const useParentAuth = () => {
   const queryClient = useQueryClient()
 
   const { data: parent, isLoading } = useQuery<ParentMeRead>({
-    queryKey: ["parentUser"],
+    queryKey: queryKeys.parentUser,
     queryFn: async () => {
       const { data } = await parentApi.me()
       return data
@@ -45,7 +46,8 @@ const useParentAuth = () => {
 
   const logout = () => {
     tokenStore.clear("parent")
-    queryClient.removeQueries({ queryKey: ["parentUser"] })
+    queryClient.removeQueries({ queryKey: queryKeys.parentUser })
+    queryClient.clear()
     navigate({ to: AUTH.parentLoginPath })
   }
 

@@ -1,15 +1,15 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { redirect } from "@tanstack/react-router"
 
+import { queryKeys } from "@/hooks/useQueryOptions"
 import { type UserRead, usersApi } from "@/lib/api"
 
-const CURRENT_USER_KEY = ["currentUser"]
 const TEACHER_HOME = "/lessons"
 const DEFAULT_HOME = "/"
 
 const fetchCurrentUser = (queryClient: QueryClient) =>
   queryClient.ensureQueryData<UserRead>({
-    queryKey: CURRENT_USER_KEY,
+    queryKey: queryKeys.currentUser,
     queryFn: async () => (await usersApi.me()).data,
     staleTime: 5 * 60_000,
   })

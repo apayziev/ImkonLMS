@@ -4,6 +4,8 @@ const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
 
 export const queryKeys = {
+  currentUser: ["currentUser"] as const,
+  parentUser: ["parentUser"] as const,
   grades: ["grades"] as const,
   subjects: ["subjects"] as const,
   students: ["students"] as const,
