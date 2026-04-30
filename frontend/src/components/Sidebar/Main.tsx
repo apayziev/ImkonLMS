@@ -39,7 +39,7 @@ export function Main({ items }: MainProps) {
 
             return (
               <SidebarMenuItem
-                key={item.title}
+                key={item.path}
                 className={isCollapsed ? "flex justify-center w-full" : ""}
               >
                 <SidebarMenuButton

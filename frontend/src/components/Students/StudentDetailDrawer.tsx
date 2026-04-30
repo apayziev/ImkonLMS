@@ -52,7 +52,7 @@ export function StudentDetailDrawer({
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
               <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
-              <AvatarFallback className="bg-[#6720FF] text-white text-2xl">
+              <AvatarFallback className="bg-[var(--imkon-purple)] text-white text-2xl">
                 {getInitials(student.full_name)}
               </AvatarFallback>
             </Avatar>
@@ -96,7 +96,7 @@ export function StudentDetailDrawer({
               {student.phone_number && (
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Telefon</span>
-                  <a href={`tel:${student.phone_number}`} className="text-sm text-[#6720FF] hover:underline">
+                  <a href={`tel:${student.phone_number}`} className="text-sm text-[var(--imkon-purple)] hover:underline">
                     {student.phone_number}
                   </a>
                 </div>
@@ -124,7 +124,7 @@ export function StudentDetailDrawer({
                   {student.father_phone && (
                     <a
                       href={`tel:${student.father_phone}`}
-                      className="text-sm text-[#6720FF] hover:underline flex items-center gap-1"
+                      className="text-sm text-[var(--imkon-purple)] hover:underline flex items-center gap-1"
                     >
                       <Phone className="h-3 w-3" />
                       {student.father_phone}
@@ -144,7 +144,7 @@ export function StudentDetailDrawer({
                   {student.mother_phone && (
                     <a
                       href={`tel:${student.mother_phone}`}
-                      className="text-sm text-[#6720FF] hover:underline flex items-center gap-1"
+                      className="text-sm text-[var(--imkon-purple)] hover:underline flex items-center gap-1"
                     >
                       <Phone className="h-3 w-3" />
                       {student.mother_phone}

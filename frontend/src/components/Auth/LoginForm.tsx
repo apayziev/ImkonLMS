@@ -67,7 +67,7 @@ export function LoginForm({ isPending, onSubmit }: LoginFormProps) {
       <div className="flex flex-col w-full mx-auto">
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-full bg-[#FF3B47]/10 flex items-center justify-center border-2 border-[#FF3B47]/20">
+            <div className="w-14 h-14 rounded-full bg-[var(--imkon-red)]/10 flex items-center justify-center border-2 border-[var(--imkon-red)]/20">
               <img src="/images/icons/red-icon.png" alt="IMKON" className="w-8 h-8" />
             </div>
           </div>

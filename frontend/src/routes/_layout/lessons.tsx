@@ -253,7 +253,7 @@ function QuarterDatesView({
                 isSelected
                   ? "bg-primary text-primary-foreground border-primary"
                   : isCompleted
-                    ? "bg-[#00A27D]/10 border-[#00A27D] hover:border-[#0D735B]"
+                    ? "bg-[var(--imkon-teal)]/10 border-[var(--imkon-teal)] hover:border-[var(--imkon-teal-dark)]"
                     : isInProgress
                       ? "bg-amber-50 border-amber-400 hover:border-amber-500 dark:bg-amber-950/30 dark:border-amber-700"
                       : isToday
@@ -265,7 +265,7 @@ function QuarterDatesView({
             >
               <span className={cn(
                 "text-sm font-bold",
-                !isSelected && isCompleted && "text-[#0D735B]",
+                !isSelected && isCompleted && "text-[var(--imkon-teal-dark)]",
                 !isSelected && isInProgress && "text-amber-700 dark:text-amber-400",
                 !isSelected && !isCompleted && !isInProgress && isPast && !isToday && "text-muted-foreground",
               )}>
@@ -276,7 +276,7 @@ function QuarterDatesView({
                 isSelected
                   ? "text-primary-foreground/80"
                   : isCompleted
-                    ? "text-[#00A27D]"
+                    ? "text-[var(--imkon-teal)]"
                     : isInProgress
                       ? "text-amber-600 dark:text-amber-500"
                       : isToday

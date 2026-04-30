@@ -15,7 +15,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div
       className="relative min-h-svh flex flex-col items-center justify-center overflow-hidden"
-      style={{ backgroundColor: "#FF3B47" }}
+      style={{ backgroundColor: "var(--imkon-red)" }}
     >
       {/* Pattern Background */}
       <div
@@ -37,7 +37,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           alt="IMKON"
           className="h-8 sm:h-10"
         />
-        <div className="bg-white text-[#FF3B47] px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg">
+        <div className="bg-white text-[var(--imkon-red)] px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg">
           <span className="text-xs sm:text-sm font-bold tracking-wide">LMS</span>
         </div>
       </div>

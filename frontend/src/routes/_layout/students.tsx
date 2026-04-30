@@ -146,7 +146,7 @@ function StudentsPage() {
             <SelectItem value="all">Barcha holatlar</SelectItem>
             <SelectItem value="active">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#00A27D]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--imkon-teal)]" />
                 Faol
               </span>
             </SelectItem>
@@ -158,7 +158,7 @@ function StudentsPage() {
             </SelectItem>
             <SelectItem value="inactive">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#FF3B47]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--imkon-red)]" />
                 Nofaol
               </span>
             </SelectItem>
@@ -230,7 +230,7 @@ function StudentsPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
-                        <AvatarFallback className="bg-[#6720FF] text-white text-sm">
+                        <AvatarFallback className="bg-[var(--imkon-purple)] text-white text-sm">
                           {getInitials(student.full_name)}
                         </AvatarFallback>
                       </Avatar>
@@ -247,11 +247,11 @@ function StudentsPage() {
                   </td>
                   <td className="p-4 align-middle">
                     {student.gender === "male" ? (
-                      <span className="inline-flex items-center rounded-full bg-[#6720FF]/10 px-2.5 py-0.5 text-xs font-medium text-[#6720FF]">
+                      <span className="inline-flex items-center rounded-full bg-[var(--imkon-purple)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--imkon-purple)]">
                         O'g'il
                       </span>
                     ) : student.gender === "female" ? (
-                      <span className="inline-flex items-center rounded-full bg-[#4B0924]/10 px-2.5 py-0.5 text-xs font-medium text-[#4B0924]">
+                      <span className="inline-flex items-center rounded-full bg-[var(--imkon-maroon)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--imkon-maroon)]">
                         Qiz
                       </span>
                     ) : (
@@ -264,7 +264,7 @@ function StudentsPage() {
                       : "—"}
                   </td>
                   <td className="p-4 align-middle">
-                    <span className="inline-flex items-center rounded-full bg-[#6720FF]/20 px-2.5 py-0.5 text-xs font-medium text-[#6720FF]">
+                    <span className="inline-flex items-center rounded-full bg-[var(--imkon-purple)]/20 px-2.5 py-0.5 text-xs font-medium text-[var(--imkon-purple)]">
                       <GraduationCap className="mr-1 h-3 w-3" />
                       {getGradeName(student.grade_id)}
                     </span>
@@ -307,8 +307,8 @@ function StudentsPage() {
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           student.is_active
-                            ? "bg-[#00A27D]/20 text-[#00A27D]"
-                            : "bg-[#FF3B47]/20 text-[#FF3B47]"
+                            ? "bg-[var(--imkon-teal)]/20 text-[var(--imkon-teal)]"
+                            : "bg-[var(--imkon-red)]/20 text-[var(--imkon-red)]"
                         }`}
                       >
                         {student.is_active ? "Faol" : "Nofaol"}

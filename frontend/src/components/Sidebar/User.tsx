@@ -61,7 +61,7 @@ export function User({ user }: { user: UserRead }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="text-red-500 hover:text-red-600 focus:text-red-600 hover:bg-red-50 focus:bg-red-50"
+              variant="destructive"
             >
               <LogOut />
               Chiqish

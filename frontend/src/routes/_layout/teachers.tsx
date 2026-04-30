@@ -164,7 +164,7 @@ function TeachersPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={getPhotoUrl(teacher.photo_url)} alt={teacher.full_name} />
-                        <AvatarFallback className="bg-[#6720FF] text-white text-sm">
+                        <AvatarFallback className="bg-[var(--imkon-purple)] text-white text-sm">
                           {getInitials(teacher.full_name)}
                         </AvatarFallback>
                       </Avatar>
@@ -245,8 +245,8 @@ function TeachersPage() {
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         teacher.is_active
-                          ? "bg-[#00A27D]/20 text-[#00A27D]"
-                          : "bg-[#FF3B47]/20 text-[#FF3B47]"
+                          ? "bg-[var(--imkon-teal)]/20 text-[var(--imkon-teal)]"
+                          : "bg-[var(--imkon-red)]/20 text-[var(--imkon-red)]"
                       }`}
                     >
                       {teacher.is_active ? "Faol" : "Nofaol"}

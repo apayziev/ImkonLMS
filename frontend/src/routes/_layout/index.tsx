@@ -70,7 +70,7 @@ function AdminCards() {
       value: studentsData?.count ?? 0,
       description: "Jami o'quvchilar soni",
       icon: GraduationCap,
-      color: "text-[#6720FF]",
+      color: "text-[var(--imkon-purple)]",
       isLoading: loadingStudents,
     },
     {
@@ -78,7 +78,7 @@ function AdminCards() {
       value: teachersData?.count ?? 0,
       description: "Jami o'qituvchilar soni",
       icon: Users2,
-      color: "text-[#00A27D]",
+      color: "text-[var(--imkon-teal)]",
       isLoading: loadingTeachers,
     },
     {
@@ -86,7 +86,7 @@ function AdminCards() {
       value: subjectsData?.count ?? 0,
       description: "Jami fanlar soni",
       icon: BookOpen,
-      color: "text-[#FF3B47]",
+      color: "text-[var(--imkon-red)]",
       isLoading: loadingSubjects,
     },
     {
@@ -94,7 +94,7 @@ function AdminCards() {
       value: gradesData?.count ?? 0,
       description: "Jami sinflar soni",
       icon: Users,
-      color: "text-[#321A94]",
+      color: "text-[var(--imkon-purple-dark)]",
       isLoading: loadingGrades,
     },
   ]

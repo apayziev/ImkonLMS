@@ -11,6 +11,11 @@ type LessonPlanSearch = {
   entryDate?: string
 }
 
+const positiveInt = (v: unknown): number | undefined => {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN
+  return Number.isInteger(n) && n > 0 ? n : undefined
+}
+
 export const Route = createFileRoute("/_layout/lesson-plan")({
   component: LessonPlanPage,
   head: () => ({
@@ -18,8 +23,8 @@ export const Route = createFileRoute("/_layout/lesson-plan")({
   }),
   validateSearch: (search: Record<string, unknown>): LessonPlanSearch => ({
     date: typeof search.date === "string" ? search.date : undefined,
-    planId: Number(search.planId) || undefined,
-    entryId: Number(search.entryId) || undefined,
+    planId: positiveInt(search.planId),
+    entryId: positiveInt(search.entryId),
     entryDate: typeof search.entryDate === "string" ? search.entryDate : undefined,
   }),
 })
