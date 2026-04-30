@@ -1,3 +1,4 @@
+import { todayStr } from "@/components/Lessons/formatters"
 import { academicYearsApi, gradesApi, lessonsApi, quartersApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
 
 const MAX_GRADES = 100
@@ -174,7 +175,9 @@ export function getLessonPlanQueryOptions(planId: number) {
 }
 
 export function getAttendanceQueryOptions(gradeId: number, date: string) {
-  const isToday = date === new Date().toISOString().split("T")[0]
+  // Compare against local YYYY-MM-DD; toISOString() is UTC, which can flip
+  // the day around midnight in zones east of UTC (e.g., 22:00 UTC+5 = next-day UTC).
+  const isToday = date === todayStr()
   return {
     queryKey: queryKeys.attendance(gradeId, date),
     queryFn: async () => {

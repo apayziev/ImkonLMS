@@ -53,9 +53,12 @@ export function SessionView({
     mutationFn: () => lessonsApi.endSession(sessionId),
     onSuccess: () => {
       toast.success("Dars tugatildi")
+      // Invalidate by key prefix — TanStack does prefix matching by default,
+      // so a partial key wipes every variant (any date, any entry-id range).
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
-      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "lessons-for-date" || q.queryKey[0] === "session-statuses" })
+      queryClient.invalidateQueries({ queryKey: ["lessons-for-date"] })
+      queryClient.invalidateQueries({ queryKey: ["session-statuses"] })
     },
     onError: (error) => {
       toast.error(getErrorDetail(error, "Darsni tugatishda xatolik"))

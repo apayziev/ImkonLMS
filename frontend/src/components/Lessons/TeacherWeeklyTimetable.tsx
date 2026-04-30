@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { CalendarDays, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { buildGrid } from "@/components/timetable/helpers"
@@ -76,6 +76,23 @@ export function TeacherWeeklyTimetable({
   const timeSlots = timeSlotsData?.data ?? []
   const entries = scheduleData?.data ?? []
   const { sorted, cellMap } = buildGrid(timeSlots, entries, workingDays)
+
+  // Lessons per (grade × subject) within the current quarter — used in cell
+  // labels. Computed once per render instead of inside every cell's IIFE.
+  const quarterLessonCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!currentQuarter) return map
+    const { start_date, end_date, holidays } = currentQuarter
+    for (const e of entries) {
+      const key = `${e.grade_display}|${e.subject_name}`
+      map.set(
+        key,
+        (map.get(key) ?? 0) +
+          countDayInRange(e.day_of_week, start_date, end_date, holidays),
+      )
+    }
+    return map
+  }, [entries, currentQuarter])
 
   // Fetch session statuses for the visible week
   const weekStart = weekDays.length > 0 ? toDateString(weekDays[0]) : ""
@@ -239,16 +256,15 @@ export function TeacherWeeklyTimetable({
                                     )}
                                   </div>
                                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
-                                  {currentQuarter && (() => {
-                                    const total = entries
-                                      .filter(e => e.grade_display === entry.grade_display && e.subject_name === entry.subject_name)
-                                      .reduce((sum, e) => sum + countDayInRange(e.day_of_week, currentQuarter.start_date, currentQuarter.end_date, currentQuarter.holidays), 0)
-                                    return (
-                                      <p className="text-[10px] text-muted-foreground mt-1.5">
-                                        {currentQuarter.number}-chorak · {total} ta dars
-                                      </p>
-                                    )
-                                  })()}
+                                  {currentQuarter && (
+                                    <p className="text-[10px] text-muted-foreground mt-1.5">
+                                      {currentQuarter.number}-chorak ·{" "}
+                                      {quarterLessonCounts.get(
+                                        `${entry.grade_display}|${entry.subject_name}`,
+                                      ) ?? 0}{" "}
+                                      ta dars
+                                    </p>
+                                  )}
                                 </>
                               )}
                             </button>

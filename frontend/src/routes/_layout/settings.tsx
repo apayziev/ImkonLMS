@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import type { QuarterRead } from "@/lib/api"
 import { quartersApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import useAuth from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -35,6 +36,7 @@ import {
 } from "@/hooks/useQueryOptions"
 import { requireAdmin } from "@/lib/routeGuards"
 import { formatDateShortUz } from "@/lib/utils"
+import { todayStr } from "@/components/Lessons/formatters"
 
 export const Route = createFileRoute("/_layout/settings")({
   beforeLoad: requireAdmin,
@@ -72,7 +74,7 @@ function SettingsPage() {
   )
   const quarters = quartersData?.data ?? []
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayStr()
   const currentQuarter = quarters.find((q) => q.start_date <= today && today <= q.end_date)
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true) }
@@ -91,23 +93,24 @@ function SettingsPage() {
   const createMutation = useMutation({
     mutationFn: (data: Parameters<typeof quartersApi.create>[0]) => quartersApi.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.quarters(academicYearId) }); toast.success("Chorak yaratildi"); setDialogOpen(false) },
-    onError: () => toast.error("Xatolik yuz berdi"),
+    onError: (err) => toast.error(getErrorDetail(err, "Chorakni yaratishda xatolik")),
   })
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Parameters<typeof quartersApi.update>[1] }) => quartersApi.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.quarters(academicYearId) }); toast.success("Chorak yangilandi"); setDialogOpen(false) },
-    onError: () => toast.error("Xatolik yuz berdi"),
+    onError: (err) => toast.error(getErrorDetail(err, "Chorakni yangilashda xatolik")),
   })
   const deleteMutation = useMutation({
     mutationFn: (id: number) => quartersApi.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.quarters(academicYearId) }); toast.success("Chorak o'chirildi") },
-    onError: () => toast.error("Xatolik yuz berdi"),
+    onError: (err) => toast.error(getErrorDetail(err, "Chorakni o'chirishda xatolik")),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!academicYearId) return
     if (!form.start_date || !form.end_date) { toast.error("Boshlanish va tugash sanasini tanlang"); return }
+    if (form.start_date > form.end_date) { toast.error("Boshlanish sanasi tugash sanasidan keyin bo'lishi mumkin emas"); return }
     const payload = {
       number: Number(form.number),
       start_date: form.start_date,

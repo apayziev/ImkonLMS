@@ -378,7 +378,7 @@ function DayAttendanceView({
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
-      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "session-statuses" })
+      queryClient.invalidateQueries({ queryKey: ["session-statuses"] })
       setActiveSessionId(response.data.id)
     },
     onError: (error) => {

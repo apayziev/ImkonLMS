@@ -65,6 +65,9 @@ export function TopicHomeworkSection({
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const pendingDataRef = useRef<Record<string, unknown> | null>(null)
 
+  // Re-sync local form state whenever the plan reference changes.
+  // The previous version listed all 8 fields individually — same behavior
+  // (TanStack Query gives a new object on every refetch), more noise.
   useEffect(() => {
     setLessonType(plan?.lesson_type ?? "")
     setTopic(plan?.topic ?? "")
@@ -74,7 +77,7 @@ export function TopicHomeworkSection({
     setKeywords(plan?.keywords ?? [])
     setResources(plan?.resources ?? [])
     setAssessmentMethods(plan?.assessment_methods ?? [])
-  }, [plan?.lesson_type, plan?.topic, plan?.homework, plan?.homework_deadline, plan?.objectives, plan?.keywords, plan?.resources, plan?.assessment_methods])
+  }, [plan])
 
   // Flush pending debounced save on unmount
   useEffect(() => {

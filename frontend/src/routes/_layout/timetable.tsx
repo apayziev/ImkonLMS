@@ -516,33 +516,29 @@ function ScheduleCell({
   subtitle?: string | null
   onClick?: () => void
 }) {
-  return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: keyboard support added via role/tabIndex/onKeyDown
-    <div
-      className={`min-h-[60px] rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all bg-primary/5 border border-primary/15 ${
-        onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring" : ""
-      }`}
-      onClick={onClick}
-      onKeyDown={onClick ? (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault()
-          onClick()
-        }
-      } : undefined}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-    >
+  const className = `min-h-[60px] rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all text-left bg-primary/5 border border-primary/15 ${
+    onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring" : ""
+  }`
+
+  const inner = (
+    <>
       <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" />
-      <div className="text-sm font-semibold truncate">
-        {entry.subject_name ?? "—"}
-      </div>
-      <div className="text-xs text-muted-foreground truncate mt-0.5">
-        {subtitle ?? "—"}
-      </div>      {entry.room && (
+      <div className="text-sm font-semibold truncate">{entry.subject_name ?? "—"}</div>
+      <div className="text-xs text-muted-foreground truncate mt-0.5">{subtitle ?? "—"}</div>
+      {entry.room && (
         <div className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
           Xona: {entry.room}
         </div>
-      )}    </div>
+      )}
+    </>
+  )
+
+  return onClick ? (
+    <button type="button" className={className} onClick={onClick}>
+      {inner}
+    </button>
+  ) : (
+    <div className={className}>{inner}</div>
   )
 }
 

@@ -4,6 +4,7 @@ import { GraduationCap, RefreshCw } from "lucide-react"
 import { useEffect } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 import { toast } from "sonner"
+import { z } from "zod"
 
 import { ErrorComponent } from "@/components/Common/ErrorComponent"
 import { Footer } from "@/components/Common/Footer"
@@ -38,6 +39,10 @@ const BG_PATTERN_STYLE = {
 
 const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"] as const
 
+// Sync endpoint returns counts per affected table; unknown keys are tolerated
+// so a backend that adds new tables doesn't break the toast.
+const syncResponseSchema = z.record(z.string(), z.number().int().nonnegative()).default({})
+
 function Layout() {
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { user } = useAuth()
@@ -61,7 +66,8 @@ function Layout() {
   const syncMutation = useMutation({
     mutationFn: () => syncApi.runSync(),
     onSuccess: (res) => {
-      const d = res.data as Record<string, number>
+      const parsed = syncResponseSchema.safeParse(res.data)
+      const d = parsed.success ? parsed.data : {}
       const parts = [
         d.students_created && `${d.students_created} yangi o'quvchi`,
         d.students_updated && `${d.students_updated} o'quvchi yangilandi`,

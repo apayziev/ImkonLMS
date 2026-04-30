@@ -3,6 +3,7 @@ import { Check, Clock, Loader2, Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { AttendanceStatus } from "@/lib/api"
+import { UZ_MONTHS_SHORT } from "@/lib/locale"
 import { cn } from "@/lib/utils"
 import { getAttendanceHistoryQueryOptions } from "@/hooks/useQueryOptions"
 
@@ -27,9 +28,7 @@ const STATUS_CELL: Record<AttendanceStatus, { icon: ReactNode; bg: string }> = {
 
 function formatShortDate(ds: string): string {
   const d = new Date(`${ds}T00:00:00`)
-  const day = d.getDate()
-  const months = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"]
-  return `${day} ${months[d.getMonth()]}`
+  return `${d.getDate()} ${UZ_MONTHS_SHORT[d.getMonth()].toLowerCase()}`
 }
 
 export function AttendanceHistoryView({
