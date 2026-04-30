@@ -49,3 +49,10 @@ export function getInitials(name: string): string {
     .join("")
     .toUpperCase()
 }
+
+/** Sort grades by level ascending, then section alphabetically (1-A, 1-B, 2-A...). */
+export function sortGrades<T extends { level: number; section: string }>(grades: readonly T[]): T[] {
+  return [...grades].sort((a, b) =>
+    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
+  )
+}

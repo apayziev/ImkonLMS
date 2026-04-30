@@ -26,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
+import { MultiSelectChips } from "@/components/Common/MultiSelectChips"
 import { TmsTestPickerDialog } from "./TmsTestPickerDialog"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import { useSaveStatus } from "@/hooks/useSaveStatus"
@@ -500,68 +501,28 @@ export function TopicHomeworkSection({
 
       {/* Row 6: Resources + Assessment Methods */}
       <div className="grid gap-4 md:grid-cols-[1fr_1fr] border-t pt-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Resurslar</label>
-          <div className="flex flex-wrap gap-1.5">
-            {RESOURCE_TYPES.map((r) => {
-              const selected = resources.includes(r.value)
-              return (
-                <button
-                  key={r.value}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    const next = selected
-                      ? resources.filter((v) => v !== r.value)
-                      : [...resources, r.value]
-                    setResources(next)
-                    saveImmediate({ resources: next.length > 0 ? next : null })
-                  }}
-                  className={cn(
-                    "text-xs px-2.5 py-1.5 rounded-md border transition-colors",
-                    selected
-                      ? "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)] border-[var(--imkon-teal)]/30 font-medium"
-                      : "text-muted-foreground border-border hover:bg-accent",
-                    disabled && "opacity-60 cursor-not-allowed",
-                  )}
-                >
-                  {r.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Baholash usullari</label>
-          <div className="flex flex-wrap gap-1.5">
-            {ASSESSMENT_METHODS.map((m) => {
-              const selected = assessmentMethods.includes(m.value)
-              return (
-                <button
-                  key={m.value}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    const next = selected
-                      ? assessmentMethods.filter((v) => v !== m.value)
-                      : [...assessmentMethods, m.value]
-                    setAssessmentMethods(next)
-                    saveImmediate({ assessment_methods: next.length > 0 ? next : null })
-                  }}
-                  className={cn(
-                    "text-xs px-2.5 py-1.5 rounded-md border transition-colors",
-                    selected
-                      ? "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)] border-[var(--imkon-purple)]/30 font-medium"
-                      : "text-muted-foreground border-border hover:bg-accent",
-                    disabled && "opacity-60 cursor-not-allowed",
-                  )}
-                >
-                  {m.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <MultiSelectChips
+          label="Resurslar"
+          options={RESOURCE_TYPES}
+          selected={resources}
+          disabled={disabled}
+          accent="teal"
+          onChange={(next) => {
+            setResources(next)
+            saveImmediate({ resources: next.length > 0 ? next : null })
+          }}
+        />
+        <MultiSelectChips
+          label="Baholash usullari"
+          options={ASSESSMENT_METHODS}
+          selected={assessmentMethods}
+          disabled={disabled}
+          accent="purple"
+          onChange={(next) => {
+            setAssessmentMethods(next)
+            saveImmediate({ assessment_methods: next.length > 0 ? next : null })
+          }}
+        />
       </div>
 
       {/* Materials */}

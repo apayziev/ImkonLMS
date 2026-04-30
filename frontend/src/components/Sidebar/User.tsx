@@ -1,7 +1,6 @@
 import { ChevronsUpDown, LogOut } from "lucide-react"
 
 import type { UserRead } from "@/lib/api"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,23 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
-import { getInitials } from "@/lib/utils"
-
-function UserInfo({ fullName, photoUrl }: { fullName?: string | null; photoUrl?: string | null }) {
-  return (
-    <div className="flex items-center gap-2.5 w-full min-w-0">
-      <Avatar className="size-8 ring-2 ring-white/20">
-        <AvatarImage src={photoUrl || undefined} alt={fullName || "User"} />
-        <AvatarFallback className="bg-white/20 text-white font-semibold">
-          {getInitials(fullName || "User")}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex flex-col items-start min-w-0">
-        <p className="text-sm font-medium truncate w-full">{fullName}</p>
-      </div>
-    </div>
-  )
-}
+import { SidebarUserAvatar, SidebarUserCard } from "./UserCard"
 
 export function User({ user }: { user: UserRead }) {
   const { logout } = useAuth()
@@ -45,6 +28,8 @@ export function User({ user }: { user: UserRead }) {
     logout()
   }
 
+  const name = user.full_name || "User"
+
   return (
     <SidebarMenu className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}>
       <SidebarMenuItem className={isCollapsed ? "flex justify-center w-full" : ""}>
@@ -55,15 +40,10 @@ export function User({ user }: { user: UserRead }) {
               className={`rounded-lg data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground ${isCollapsed ? "w-10 h-10 p-0 flex items-center justify-center" : ""}`}
             >
               {isCollapsed ? (
-                <Avatar className="size-8 ring-2 ring-white/20">
-                  <AvatarImage src={user.photo_url || undefined} alt={user.full_name || "User"} />
-                  <AvatarFallback className="bg-white/20 text-white font-semibold">
-                    {getInitials(user.full_name || "User")}
-                  </AvatarFallback>
-                </Avatar>
+                <SidebarUserAvatar name={name} photoUrl={user.photo_url} />
               ) : (
                 <>
-                  <UserInfo fullName={user.full_name} photoUrl={user.photo_url} />
+                  <SidebarUserCard name={name} photoUrl={user.photo_url} />
                   <ChevronsUpDown className="ml-auto size-4 text-white/60" />
                 </>
               )}
@@ -76,7 +56,7 @@ export function User({ user }: { user: UserRead }) {
             sideOffset={4}
           >
             <DropdownMenuLabel className="p-0 font-normal">
-              <UserInfo fullName={user.full_name} photoUrl={user.photo_url} />
+              <SidebarUserCard name={name} photoUrl={user.photo_url} />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
