@@ -15,7 +15,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { getCurrentAcademicYearQueryOptions } from "@/hooks/useQueryOptions"
+import { getCurrentAcademicYearQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { syncApi } from "@/lib/api"
 
@@ -74,7 +74,11 @@ function Layout() {
           ? parts.join(", ")
           : "Barcha ma'lumotlar dolzarb — o'zgarish yo'q",
       })
-      queryClient.invalidateQueries()
+      // Sync only touches roster data — invalidate just those, not the
+      // entire cache. An unscoped invalidate refetches every query on every
+      // mounted page (timetables, dashboards, ongoing sessions).
+      queryClient.invalidateQueries({ queryKey: queryKeys.students })
+      queryClient.invalidateQueries({ queryKey: queryKeys.teachers })
     },
     onError: () => {
       toast.error("Sync xatolik!", {
