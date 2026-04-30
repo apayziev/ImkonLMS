@@ -171,11 +171,13 @@ export function StudentRow({
     attendanceMutation.mutate({ status: resolved })
   }
 
-  const isAbsent = student.status === "absent"
-  // Serialize score edits: with optimistic updates + full-query rollback,
+  // Require an explicit attendance decision (present/late) before scoring.
+  // UNMARKED is not enough — the teacher must commit. Also serialize
+  // score edits: with optimistic updates + full-query rollback,
   // overlapping mutations could cause an error rollback to wipe a later
   // successful change. The mutation is fast, so blocking briefly is fine.
-  const scoresDisabled = disabled || isAbsent || assessmentMutation.isPending
+  const isAttended = student.status === "present" || student.status === "late"
+  const scoresDisabled = disabled || !isAttended || assessmentMutation.isPending
 
   // Toggle: clicking the currently-active value clears it (NULL = not assessed).
   const handleScoreClick = (dim: Dim, value: number) => {

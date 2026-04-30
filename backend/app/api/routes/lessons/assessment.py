@@ -41,7 +41,9 @@ async def update_assessment(
     session = await _get_teacher_session(db, session_id, current_user.id)
     _require_not_completed(session)
 
-    # Block scoring an absent student — there's nothing to assess.
+    # Require explicit attendance before scoring. UNMARKED (no decision yet)
+    # and ABSENT (nothing to assess) both block — the teacher must commit
+    # to present/late first.
     attendance_status = (
         await db.execute(
             select(SessionAttendance.status).where(
@@ -55,6 +57,8 @@ async def update_assessment(
         raise NotFoundException("O'quvchi davomat yozuvi topilmadi")
     if attendance_status == AttendanceStatus.ABSENT:
         raise BadRequestException("Kelmagan o'quvchini baholash mumkin emas")
+    if attendance_status == AttendanceStatus.UNMARKED:
+        raise BadRequestException("Avval davomatni belgilang")
 
     row = (
         await db.execute(
