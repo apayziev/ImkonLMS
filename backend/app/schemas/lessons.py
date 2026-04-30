@@ -117,9 +117,9 @@ class SessionStudentAssessment(BaseModel):
     when the student demonstrated only some skills in class.
     """
 
-    knowing: int | None = None  # 0–4
-    applying: int | None = None  # 0–4
-    reasoning: int | None = None  # 0–2
+    knowing: int | None = None  # 1–4 (NULL = not assessed)
+    applying: int | None = None  # 1–4 (NULL = not assessed)
+    reasoning: int | None = None  # 1–2 (NULL = not assessed)
 
 
 class SessionStudentRead(BaseModel):
@@ -142,9 +142,9 @@ class AssessmentUpdateRequest(BaseModel):
     """Patch one dimension at a time, or several together. Each is optional."""
 
     student_id: int
-    knowing: int | None = Field(default=None, ge=0, le=4)
-    applying: int | None = Field(default=None, ge=0, le=4)
-    reasoning: int | None = Field(default=None, ge=0, le=2)
+    knowing: int | None = Field(default=None, ge=1, le=4)
+    applying: int | None = Field(default=None, ge=1, le=4)
+    reasoning: int | None = Field(default=None, ge=1, le=2)
 
 
 class LessonMaterialRead(BaseModel):
