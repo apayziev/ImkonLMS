@@ -499,6 +499,12 @@ export interface TodayLessonsResponse {
   date: string;
 }
 
+export interface SessionStudentAssessment {
+  knowing: number | null;   // 0-4
+  applying: number | null;  // 0-4
+  reasoning: number | null; // 0-2
+}
+
 export interface SessionStudentRead {
   attendance_id: number;
   student_id: number;
@@ -508,6 +514,15 @@ export interface SessionStudentRead {
   photo_url: string | null;
   status: AttendanceStatus;
   marked_at: string | null;
+  assessment: SessionStudentAssessment;
+}
+
+export interface AssessmentUpdateRequest {
+  student_id: number;
+  // Only the keys present are patched. Send `null` to clear a dimension.
+  knowing?: number | null;
+  applying?: number | null;
+  reasoning?: number | null;
 }
 
 export interface SessionDetailRead {
@@ -634,6 +649,11 @@ export const lessonsApi = {
   updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
     api.patch<SessionStudentRead>(
       `/api/v1/lessons/sessions/${sessionId}/attendance`,
+      data,
+    ),
+  updateAssessment: (sessionId: number, data: AssessmentUpdateRequest) =>
+    api.patch<SessionStudentAssessment>(
+      `/api/v1/lessons/sessions/${sessionId}/assessment`,
       data,
     ),
   endSession: (sessionId: number) =>

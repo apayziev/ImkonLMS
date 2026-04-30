@@ -20,6 +20,7 @@ from app.schemas.lessons import (
     LessonMaterialRead,
     LessonPlanRead,
     SessionDetailRead,
+    SessionStudentAssessment,
     SessionStudentRead,
 )
 
@@ -86,6 +87,7 @@ async def _load_session_with_relations(db: SessionDep, session_id: int) -> Lesso
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.grade),
             selectinload(LessonSession.schedule_entry).selectinload(ScheduleEntry.time_slot),
             selectinload(LessonSession.attendances),
+            selectinload(LessonSession.assessments),
             selectinload(LessonSession.lesson_plan).selectinload(LessonPlan.materials),
         )
         .where(LessonSession.id == session_id, LessonSession.is_deleted == False)  # noqa: E712
@@ -236,8 +238,14 @@ def _build_session_detail(
     entry: ScheduleEntry,
     attendances: list[tuple[SessionAttendance, User | None]],
 ) -> SessionDetailRead:
+    # Index assessments by student_id so we attach them in O(1) per row
+    # rather than scanning the list each time.
+    assessment_by_student = {
+        a.student_id: a for a in session.assessments if not a.is_deleted
+    }
     students = []
     for att, student in sorted(attendances, key=lambda x: (x[1].last_name if x[1] else "", x[1].first_name if x[1] else "")):
+        a = assessment_by_student.get(att.student_id)
         students.append(
             SessionStudentRead(
                 attendance_id=att.id,
@@ -248,6 +256,11 @@ def _build_session_detail(
                 photo_url=student.photo_url if student else None,
                 status=att.status,
                 marked_at=att.marked_at.isoformat() if att.marked_at else None,
+                assessment=SessionStudentAssessment(
+                    knowing=a.knowing if a else None,
+                    applying=a.applying if a else None,
+                    reasoning=a.reasoning if a else None,
+                ),
             )
         )
 

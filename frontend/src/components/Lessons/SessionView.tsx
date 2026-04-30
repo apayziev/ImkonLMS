@@ -150,6 +150,7 @@ export function SessionView({
             <th className="w-10 py-3 px-4 text-left font-medium">#</th>
             <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
             <th className="py-3 px-3 text-center font-medium">Davomat</th>
+            <th className="py-3 px-3 text-center font-medium">Darsdagi faollik</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">

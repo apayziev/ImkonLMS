@@ -14,6 +14,7 @@ from app.core.formatting import format_time
 from app.models.grade import Grade
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
+from app.models.session_assessment import SessionAssessment
 from app.models.session_attendance import SessionAttendance
 from app.models.user import User
 from app.schemas.lessons import (
@@ -23,6 +24,7 @@ from app.schemas.lessons import (
     AttendanceSessionRead,
     AttendanceStudentRead,
     AttendanceUpdateRequest,
+    SessionStudentAssessment,
     SessionStudentRead,
 )
 
@@ -38,16 +40,24 @@ async def update_attendance(
     db: SessionDep,
     current_user: CurrentUser,
 ) -> SessionStudentRead:
-    """Update a single student's attendance status and/or grade. Real-time save."""
+    """Update a single student's attendance status. Real-time save."""
     _require_teacher(current_user)
 
     session = await _get_teacher_session(db, session_id, current_user.id)
     _require_not_completed(session)
 
-    # Query 2: attendance + student in one JOIN
+    # Pull attendance + student + (optional) assessment in one round-trip
+    # so the response carries the full row state — frontend can replace the
+    # student entry without merging fields back from local cache.
     att_query = (
-        select(SessionAttendance, User)
+        select(SessionAttendance, User, SessionAssessment)
         .join(User, SessionAttendance.student_id == User.id)
+        .outerjoin(
+            SessionAssessment,
+            (SessionAssessment.lesson_session_id == session_id)
+            & (SessionAssessment.student_id == body.student_id)
+            & (SessionAssessment.is_deleted == False),  # noqa: E712
+        )
         .where(
             SessionAttendance.lesson_session_id == session_id,
             SessionAttendance.student_id == body.student_id,
@@ -58,7 +68,7 @@ async def update_attendance(
     if not row:
         raise NotFoundException("O'quvchi davomat yozuvi topilmadi")
 
-    attendance, student = row
+    attendance, student, assessment = row
 
     attendance.status = body.status
     attendance.marked_at = None if body.status == AttendanceStatus.UNMARKED else datetime.now(UTC)
@@ -75,6 +85,11 @@ async def update_attendance(
         photo_url=student.photo_url,
         status=attendance.status,
         marked_at=attendance.marked_at.isoformat() if attendance.marked_at else None,
+        assessment=SessionStudentAssessment(
+            knowing=assessment.knowing if assessment else None,
+            applying=assessment.applying if assessment else None,
+            reasoning=assessment.reasoning if assessment else None,
+        ),
     )
 
 

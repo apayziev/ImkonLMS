@@ -11,6 +11,7 @@ from .quarter import Quarter
 from .refresh_token import RefreshToken
 from .schedule_entry import ScheduleEntry
 from .school_settings import SchoolSettings
+from .session_assessment import SessionAssessment
 from .session_attendance import SessionAttendance
 from .subject import Subject
 from .sync_log import SyncLog
@@ -29,6 +30,7 @@ __all__ = [
     "RefreshToken",
     "ScheduleEntry",
     "SchoolSettings",
+    "SessionAssessment",
     "SessionAttendance",
     "Subject",
     "SyncLog",
