@@ -22,9 +22,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("UPDATE session_assessment SET knowing = NULL WHERE knowing = 0")
-    op.execute("UPDATE session_assessment SET applying = NULL WHERE applying = 0")
-    op.execute("UPDATE session_assessment SET reasoning = NULL WHERE reasoning = 0")
+    op.execute(
+        """
+        UPDATE session_assessment
+        SET
+            knowing = NULLIF(knowing, 0),
+            applying = NULLIF(applying, 0),
+            reasoning = NULLIF(reasoning, 0)
+        WHERE knowing = 0 OR applying = 0 OR reasoning = 0
+        """
+    )
 
     op.drop_constraint("ck_knowing_range", "session_assessment", type_="check")
     op.drop_constraint("ck_applying_range", "session_assessment", type_="check")

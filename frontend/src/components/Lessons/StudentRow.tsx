@@ -172,7 +172,10 @@ export function StudentRow({
   }
 
   const isAbsent = student.status === "absent"
-  const scoresDisabled = disabled || isAbsent
+  // Serialize score edits: with optimistic updates + full-query rollback,
+  // overlapping mutations could cause an error rollback to wipe a later
+  // successful change. The mutation is fast, so blocking briefly is fine.
+  const scoresDisabled = disabled || isAbsent || assessmentMutation.isPending
 
   // Toggle: clicking the currently-active value clears it (NULL = not assessed).
   const handleScoreClick = (dim: Dim, value: number) => {
