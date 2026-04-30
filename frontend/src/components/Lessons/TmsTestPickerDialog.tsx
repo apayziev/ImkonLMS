@@ -28,7 +28,10 @@ const tmsTestMessageSchema = z.object({
   title: z.string().min(1),
 })
 
-const TMS_HOST = new URL(TMS.origin).host
+// Normalized at module load (TMS.origin comes from env/build-time config).
+// We compare event.origin as a plain string at runtime — opaque/sandboxed
+// senders surface as the literal "null" and would have thrown on new URL().
+const TMS_ORIGIN = new URL(TMS.origin).origin
 
 export function TmsTestPickerDialog({
   currentTestId,
@@ -55,11 +58,12 @@ export function TmsTestPickerDialog({
   }, [open])
 
   // Listen for postMessage from TMS iframe.
-  // - exact-host origin match (substring match would let evil-tms.example.com pass)
+  // - exact-origin string match (substring match would let evil-tms.example.com
+  //   pass; parsing event.origin would throw on opaque "null" senders)
   // - Zod parse on payload (iframe may be compromised; never trust shape)
   const handleMessage = useCallback(
     (event: MessageEvent<unknown>) => {
-      if (new URL(event.origin).host !== TMS_HOST) return
+      if (event.origin !== TMS_ORIGIN) return
       const parsed = tmsTestMessageSchema.safeParse(event.data)
       if (!parsed.success) return
 
