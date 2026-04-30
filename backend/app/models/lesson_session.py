@@ -49,3 +49,9 @@ class LessonSession(BaseModel):
         init=False,
         cascade="all, delete-orphan",
     )
+    assessments: Mapped[list["SessionAssessment"]] = relationship(
+        back_populates="lesson_session",
+        default_factory=list,
+        init=False,
+        cascade="all, delete-orphan",
+    )

@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from .assessment import router as assessment_router
 from .attendance import router as attendance_router
 from .materials import router as materials_router
 from .schedule import router as schedule_router
@@ -13,5 +14,6 @@ router = APIRouter(prefix="/lessons", tags=["lessons"])
 router.include_router(schedule_router)
 router.include_router(sessions_router)
 router.include_router(attendance_router)
+router.include_router(assessment_router)
 router.include_router(materials_router)
 router.include_router(stats_router)

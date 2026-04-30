@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import AttendanceStatus, SessionStatus
 
@@ -110,8 +110,20 @@ class SessionStartRequest(BaseModel):
     target_date: date | None = None  # If None, defaults to today
 
 
+class SessionStudentAssessment(BaseModel):
+    """Daily BQM scores for one student in a session.
+
+    Each dimension is independently optional — partial assessments are allowed
+    when the student demonstrated only some skills in class.
+    """
+
+    knowing: int | None = None  # 0–4
+    applying: int | None = None  # 0–4
+    reasoning: int | None = None  # 0–2
+
+
 class SessionStudentRead(BaseModel):
-    """One student's attendance in a session."""
+    """One student's attendance + assessment in a session."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,6 +135,16 @@ class SessionStudentRead(BaseModel):
     photo_url: str | None = None
     status: AttendanceStatus
     marked_at: str | None = None
+    assessment: SessionStudentAssessment = SessionStudentAssessment()
+
+
+class AssessmentUpdateRequest(BaseModel):
+    """Patch one dimension at a time, or several together. Each is optional."""
+
+    student_id: int
+    knowing: int | None = Field(default=None, ge=0, le=4)
+    applying: int | None = Field(default=None, ge=0, le=4)
+    reasoning: int | None = Field(default=None, ge=0, le=2)
 
 
 class LessonMaterialRead(BaseModel):
