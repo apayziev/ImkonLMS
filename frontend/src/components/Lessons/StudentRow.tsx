@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
+import { Check, Clock, Eye, Loader2, Plus, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import type {
   AttendanceStatus,
@@ -29,6 +30,17 @@ const DIM_LABEL: Record<Dim, string> = {
   knowing: "B",
   applying: "Q",
   reasoning: "M",
+}
+const DIM_FULL_LABEL: Record<Dim, string> = {
+  knowing: "Bilim",
+  applying: "Qo'llay",
+  reasoning: "Mulohaza",
+}
+// Per-dimension brand color — semantic so anomalies stand out at a glance.
+const DIM_COLOR: Record<Dim, string> = {
+  knowing: "var(--imkon-purple-dark)",
+  applying: "var(--imkon-teal-dark)",
+  reasoning: "var(--imkon-red)",
 }
 const DIMS: readonly Dim[] = ["knowing", "applying", "reasoning"] as const
 
@@ -179,11 +191,12 @@ export function StudentRow({
   const isAttended = student.status === "present" || student.status === "late"
   const scoresDisabled = disabled || !isAttended || assessmentMutation.isPending
 
-  // Toggle: clicking the currently-active value clears it (NULL = not assessed).
-  const handleScoreClick = (dim: Dim, value: number) => {
+  // BqmDot popover sends a number (set) or null (explicit clear via the X
+  // button). No toggle logic — clicking an already-selected value is a no-op
+  // for the user, the mutation just resends the same value.
+  const handleScoreClick = (dim: Dim, value: number | null) => {
     if (scoresDisabled) return
-    const next = student.assessment[dim] === value ? null : value
-    assessmentMutation.mutate({ [dim]: next })
+    assessmentMutation.mutate({ [dim]: value })
   }
 
   const total = computeTotal(student.assessment)
@@ -288,17 +301,19 @@ export function StudentRow({
         </div>
       </td>
 
-      {/* Daily activity (BQM) */}
+      {/* Daily activity (BQM) — 3 compact dots, popover per dimension. */}
       <td className="py-3 px-3">
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-2">
           {DIMS.map((dim) => (
-            <ScoreDim
+            <BqmDot
               key={dim}
               label={DIM_LABEL[dim]}
+              fullLabel={DIM_FULL_LABEL[dim]}
               max={DIM_MAX[dim]}
+              color={DIM_COLOR[dim]}
               value={student.assessment[dim]}
               disabled={scoresDisabled}
-              onPick={(n) => handleScoreClick(dim, n)}
+              onChange={(n) => handleScoreClick(dim, n)}
             />
           ))}
           <span
@@ -319,48 +334,103 @@ export function StudentRow({
   )
 }
 
-function ScoreDim({
+function BqmDot({
   label,
+  fullLabel,
   max,
+  color,
   value,
   disabled,
-  onPick,
+  onChange,
 }: {
   label: string
+  fullLabel: string
   max: number
+  color: string
   value: number | null
   disabled: boolean
-  onPick: (n: number) => void
+  /** null clears, number sets. Caller decides whether to toggle on click. */
+  onChange: (next: number | null) => void
 }) {
+  const [open, setOpen] = useState(false)
+  const isSet = value !== null && value !== undefined
+
+  const pick = (n: number | null) => {
+    onChange(n)
+    setOpen(false)
+  }
+
   return (
-    <div className="flex items-center gap-1">
-      <span className="text-xs font-medium text-muted-foreground w-3 text-right">
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-[9px] font-bold tracking-wider text-muted-foreground/60">
         {label}
       </span>
-      <div className="flex gap-0.5">
-        {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
-          const active = value === n
-          return (
+      <Popover open={open && !disabled} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={
+              isSet
+                ? `${fullLabel}: ${value} / ${max}`
+                : `${fullLabel} baholash`
+            }
+            title={isSet ? `${value}/${max}` : "Belgilash uchun bosing"}
+            className={cn(
+              "w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold transition-colors",
+              isSet
+                ? "text-white"
+                : "bg-muted/40 text-muted-foreground/50 border border-dashed border-muted-foreground/25 hover:bg-muted/70",
+              disabled && "cursor-not-allowed opacity-50",
+            )}
+            style={isSet ? { background: color } : undefined}
+          >
+            {isSet ? value : <Plus className="h-3 w-3" />}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="center"
+          sideOffset={6}
+          className="p-2 w-auto flex items-center gap-1"
+        >
+          <span
+            className="text-[9px] font-extrabold tracking-wider uppercase pr-1"
+            style={{ color }}
+          >
+            {fullLabel}
+          </span>
+          {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
+            const sel = n === value
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => pick(n)}
+                className={cn(
+                  "w-7 h-7 rounded-md text-sm font-semibold transition-colors",
+                  sel
+                    ? "text-white"
+                    : "bg-muted/40 text-foreground hover:bg-muted",
+                )}
+                style={sel ? { background: color } : undefined}
+              >
+                {n}
+              </button>
+            )
+          })}
+          {isSet && (
             <button
-              key={n}
               type="button"
-              disabled={disabled}
-              onClick={() => onPick(n)}
-              title={active ? "Bekor qilish uchun bosing" : `${label}: ${n}`}
-              className={cn(
-                "w-7 h-7 text-xs font-semibold rounded border transition-colors",
-                active
-                  ? "bg-[var(--imkon-teal)] text-white border-[var(--imkon-teal)]"
-                  : "bg-background text-muted-foreground border-border hover:bg-accent hover:text-foreground",
-                disabled &&
-                  "cursor-not-allowed opacity-50 hover:bg-background hover:text-muted-foreground",
-              )}
+              onClick={() => pick(null)}
+              aria-label="Tozalash"
+              title="Tozalash"
+              className="w-7 h-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted flex items-center justify-center ml-0.5"
             >
-              {n}
+              <X className="h-3.5 w-3.5" />
             </button>
-          )
-        })}
-      </div>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }
