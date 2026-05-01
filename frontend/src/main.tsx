@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
+import axios from "axios"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 
@@ -15,7 +16,12 @@ const queryClient = new QueryClient({
       staleTime: 60_000,
       gcTime: 5 * 60_000,
       refetchOnWindowFocus: false,
-      retry: 1,
+      // 401 is handled by the axios interceptor (silentRefresh + redirect),
+      // so retrying it would just duplicate the auth dance.
+      retry: (failureCount, error) =>
+        axios.isAxiosError(error) && error.response?.status === 401
+          ? false
+          : failureCount < 1,
     },
   },
 })

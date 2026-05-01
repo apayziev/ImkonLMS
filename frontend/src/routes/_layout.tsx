@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { GraduationCap, RefreshCw } from "lucide-react"
-import { useEffect } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -16,8 +15,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { getCurrentAcademicYearQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
+import {
+  getCurrentAcademicYearQueryOptions,
+  queryKeys,
+} from "@/hooks/useQueryOptions"
 import { syncApi } from "@/lib/api"
 
 export const Route = createFileRoute("/_layout")({
@@ -37,31 +39,16 @@ const BG_PATTERN_STYLE = {
   backgroundRepeat: "no-repeat",
 } as const
 
-const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"] as const
-
 // Sync endpoint returns counts per affected table; unknown keys are tolerated
 // so a backend that adds new tables doesn't break the toast.
-const syncResponseSchema = z.record(z.string(), z.number().int().nonnegative()).default({})
+const syncResponseSchema = z
+  .record(z.string(), z.number().int().nonnegative())
+  .default({})
 
 function Layout() {
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  const router = useRouterState()
-  const currentPath = router.location.pathname
-
-  // Teacher subdomain: non-teacher → stays on admin home (different subdomain is just cosmetic for admin)
-  // Teacher user (any subdomain): block admin-only routes
-  const isTeacher = user?.role === "teacher"
-
-  useEffect(() => {
-    if (!user) return
-
-    if (isTeacher && !TEACHER_ALLOWED.some((r) => r === "/" ? currentPath === "/" : currentPath.startsWith(r))) {
-      navigate({ to: "/lessons" })
-    }
-  }, [user, currentPath, isTeacher, navigate])
 
   const syncMutation = useMutation({
     mutationFn: () => syncApi.runSync(),
@@ -102,7 +89,10 @@ function Layout() {
           style={BG_PATTERN_STYLE}
         />
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-sm">
-          <SidebarTrigger className="-ml-1 text-muted-foreground" aria-label="Sidebar ochish/yopish" />
+          <SidebarTrigger
+            className="-ml-1 text-muted-foreground"
+            aria-label="Sidebar ochish/yopish"
+          />
           <div className="ml-auto flex items-center gap-2">
             {user?.is_superuser && (
               <Button
@@ -112,7 +102,9 @@ function Layout() {
                 disabled={syncMutation.isPending}
                 className="gap-1.5 text-sm"
               >
-                <RefreshCw className={`size-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`size-4 ${syncMutation.isPending ? "animate-spin" : ""}`}
+                />
                 {syncMutation.isPending ? "Sync..." : "Sync"}
               </Button>
             )}

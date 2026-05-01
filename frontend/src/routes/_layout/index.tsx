@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Navigate, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Navigate } from "@tanstack/react-router"
 import { BookOpen, GraduationCap, Users, Users2 } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/Common/AnimatedNumber"
@@ -13,6 +13,7 @@ import useAuth from "@/hooks/useAuth"
 import {
   getGradesQueryOptions,
   getSubjectsQueryOptions,
+  queryKeys,
 } from "@/hooks/useQueryOptions"
 import { studentsApi, teachersApi } from "@/lib/api"
 
@@ -45,8 +46,10 @@ function Dashboard() {
 }
 
 function AdminCards() {
+  // Share the students/teachers prefix so the sync mutation invalidates these
+  // dashboard counts alongside the full lists.
   const { data: studentsData, isLoading: loadingStudents } = useQuery({
-    queryKey: ["dashboard-students"],
+    queryKey: [...queryKeys.students, "count"],
     queryFn: async () => {
       const { data } = await studentsApi.list({ limit: 1 })
       return data
@@ -54,15 +57,19 @@ function AdminCards() {
   })
 
   const { data: teachersData, isLoading: loadingTeachers } = useQuery({
-    queryKey: ["dashboard-teachers"],
+    queryKey: [...queryKeys.teachers, "count"],
     queryFn: async () => {
       const { data } = await teachersApi.list({ limit: 1 })
       return data
     },
   })
 
-  const { data: gradesData, isLoading: loadingGrades } = useQuery(getGradesQueryOptions())
-  const { data: subjectsData, isLoading: loadingSubjects } = useQuery(getSubjectsQueryOptions())
+  const { data: gradesData, isLoading: loadingGrades } = useQuery(
+    getGradesQueryOptions(),
+  )
+  const { data: subjectsData, isLoading: loadingSubjects } = useQuery(
+    getSubjectsQueryOptions(),
+  )
 
   const cards = [
     {
@@ -131,7 +138,9 @@ function StatsGrid({ cards }: { cards: StatCard[] }) {
                 className={`text-2xl font-bold ${card.color}`}
               />
             )}
-            <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {card.description}
+            </p>
           </PatternCardContent>
         </PatternCard>
       ))}

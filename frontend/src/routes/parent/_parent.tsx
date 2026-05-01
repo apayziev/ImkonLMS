@@ -1,28 +1,28 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { ErrorBoundary } from "react-error-boundary";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { ErrorBoundary } from "react-error-boundary"
 
-import { ErrorComponent } from "@/components/Common/ErrorComponent";
-import { Footer } from "@/components/Common/Footer";
-import { ParentSidebar } from "@/components/Sidebar/ParentSidebar";
+import { ErrorComponent } from "@/components/Common/ErrorComponent"
+import { Footer } from "@/components/Common/Footer"
+import { ParentSidebar } from "@/components/Sidebar/ParentSidebar"
 import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { AUTH } from "@/config";
-import { isParentLoggedIn } from "@/hooks/useParentAuth";
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import { AUTH } from "@/config"
+import { isParentLoggedIn } from "@/hooks/useParentAuth"
 
 export const Route = createFileRoute("/parent/_parent")({
   component: ParentLayout,
   beforeLoad: async () => {
     if (!isParentLoggedIn()) {
-      throw redirect({ to: AUTH.parentLoginPath });
+      throw redirect({ to: AUTH.parentLoginPath })
     }
   },
   errorComponent: ({ error }) => (
     <ErrorComponent error={error} homePath="/parent" />
   ),
-});
+})
 
 function ParentLayout() {
   return (
@@ -43,5 +43,5 @@ function ParentLayout() {
         <Footer />
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
 }

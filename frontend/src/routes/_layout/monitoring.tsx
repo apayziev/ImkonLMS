@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Activity } from "lucide-react"
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AttendanceTab, TeacherStatsTab } from "@/components/Monitoring"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { requireAdmin } from "@/lib/routeGuards"
 
 export const Route = createFileRoute("/_layout/monitoring")({

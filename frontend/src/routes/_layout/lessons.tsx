@@ -6,7 +6,10 @@ import { toast } from "sonner"
 
 import { SessionView } from "@/components/Lessons"
 import { AttendanceHistoryView } from "@/components/Lessons/AttendanceHistoryView"
-import { toDateString as toDateStr, todayStr } from "@/components/Lessons/formatters"
+import {
+  toDateString as toDateStr,
+  todayStr,
+} from "@/components/Lessons/formatters"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -17,7 +20,10 @@ import {
   getTodayLessonsQueryOptions,
   queryKeys,
 } from "@/hooks/useQueryOptions"
-import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
+import {
+  getEffectiveWeekDate,
+  useWeekNavigation,
+} from "@/hooks/useWeekNavigation"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { UZ_MONTHS_SHORT } from "@/lib/locale"
@@ -55,7 +61,7 @@ function generateLessonDates(
       }
     }
   }
-  return result.sort((a, b) => a.ds < b.ds ? -1 : a.ds > b.ds ? 1 : 0)
+  return result.sort((a, b) => (a.ds < b.ds ? -1 : a.ds > b.ds ? 1 : 0))
 }
 
 export const Route = createFileRoute("/_layout/lessons")({
@@ -71,13 +77,23 @@ export const Route = createFileRoute("/_layout/lessons")({
 
 type View =
   | { type: "timetable" }
-  | { type: "quarter"; scheduleEntries: { id: number; dow: number }[]; grade: string; subject: string; selectedDate: Date; clickedEntryId: number }
+  | {
+      type: "quarter"
+      scheduleEntries: { id: number; dow: number }[]
+      grade: string
+      subject: string
+      selectedDate: Date
+      clickedEntryId: number
+    }
   | { type: "session"; sessionId: number }
 
 function LessonsPage() {
   const [view, setView] = useState<View>({ type: "timetable" })
   const [selectedDate, setSelectedDate] = useState<Date>(getEffectiveWeekDate)
-  const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, setSelectedDate)
+  const { weekDays, prevWeek, nextWeek } = useWeekNavigation(
+    selectedDate,
+    setSelectedDate,
+  )
 
   if (view.type === "session") {
     return (
@@ -117,21 +133,72 @@ function LessonsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Dars jadvali</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8" aria-label="Oldingi hafta">
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={prevWeek}
+            className="h-8 w-8"
+            aria-label="Oldingi hafta"
+          >
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
           </Button>
           <span className="text-sm font-semibold min-w-[130px] text-center">
             {formatWeekRange(weekDays)}
           </span>
-          <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8" aria-label="Keyingi hafta">
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={nextWeek}
+            className="h-8 w-8"
+            aria-label="Keyingi hafta"
+          >
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
           </Button>
         </div>
       </div>
       <TeacherWeeklyTimetable
         selectedDate={selectedDate}
-        onDaySelect={(date, scheduleEntries, grade, subject, clickedEntryId) => {
-          setView({ type: "quarter", scheduleEntries, grade, subject, selectedDate: date, clickedEntryId })
+        onDaySelect={(
+          date,
+          scheduleEntries,
+          grade,
+          subject,
+          clickedEntryId,
+        ) => {
+          setView({
+            type: "quarter",
+            scheduleEntries,
+            grade,
+            subject,
+            selectedDate: date,
+            clickedEntryId,
+          })
         }}
       />
     </div>
@@ -152,31 +219,37 @@ function QuarterDatesView({
   clickedEntryId: number
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; entryId: number } | null>(null)
-  const [activeTab, setActiveTab] = useState<"session" | "attendance">("session")
+  const [selectedCard, setSelectedCard] = useState<{
+    ds: string
+    lessonNumber: number
+    entryId: number
+  } | null>(null)
+  const [activeTab, setActiveTab] = useState<"session" | "attendance">(
+    "session",
+  )
   const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
-  const { data: currentQuarter, isLoading: quarterLoading } = useQuery(getCurrentQuarterQueryOptions())
+  const { data: currentQuarter, isLoading: quarterLoading } = useQuery(
+    getCurrentQuarterQueryOptions(),
+  )
 
   const isLoading = quarterLoading || !currentYear
   const today = todayStr()
   // Use workingDays-aware week range (matches timetable's week display)
   const weekStart = weekDays.length > 0 ? toDateStr(weekDays[0]) : ""
-  const weekEnd = weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
+  const weekEnd =
+    weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
 
-  const allIndexed = useMemo(
-    () => {
-      if (!currentQuarter || scheduleEntries.length === 0) return []
-      return generateLessonDates(
-        currentQuarter.start_date,
-        currentQuarter.end_date,
-        scheduleEntries,
-        currentQuarter.holidays,
-      ).map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
-    },
-    [currentQuarter, scheduleEntries],
-  )
+  const allIndexed = useMemo(() => {
+    if (!currentQuarter || scheduleEntries.length === 0) return []
+    return generateLessonDates(
+      currentQuarter.start_date,
+      currentQuarter.end_date,
+      scheduleEntries,
+      currentQuarter.holidays,
+    ).map(({ ds, entryId }, i) => ({ ds, entryId, lessonNumber: i + 1 }))
+  }, [currentQuarter, scheduleEntries])
 
   const entryIds = scheduleEntries.map((e) => e.id)
   const { data: statusesData } = useQuery(
@@ -188,17 +261,24 @@ function QuarterDatesView({
   )
   // Map: `${entryId}-${ds}` → status
   const sessionStatusMap = new Map<string, string>(
-    statusesData?.data.map((s) => [`${s.schedule_entry_id}-${s.session_date}`, s.status]) ?? [],
+    statusesData?.data.map((s) => [
+      `${s.schedule_entry_id}-${s.session_date}`,
+      s.status,
+    ]) ?? [],
   )
 
   const clickedDs = toDateStr(selectedDate)
   useEffect(() => {
     if (allIndexed.length === 0) return
-    const match = allIndexed.find((c) => c.ds === clickedDs && c.entryId === clickedEntryId)
+    const match = allIndexed.find(
+      (c) => c.ds === clickedDs && c.entryId === clickedEntryId,
+    )
     if (match) setSelectedCard(match)
   }, [allIndexed, clickedEntryId, clickedDs])
 
-  const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
+  const weekGroups = allIndexed.filter(
+    ({ ds }) => ds >= weekStart && ds <= weekEnd,
+  )
   const visibleGroups = expanded ? allIndexed : weekGroups
 
   if (isLoading) {
@@ -222,20 +302,27 @@ function QuarterDatesView({
   return (
     <div className="space-y-4">
       <div className="flex items-baseline gap-2 flex-wrap">
-        <h2 className="text-lg font-semibold">{grade} · {subject}</h2>
-        <span className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allIndexed.length} ta dars</span>
+        <h2 className="text-lg font-semibold">
+          {grade} · {subject}
+        </h2>
+        <span className="text-sm text-muted-foreground">
+          {currentQuarter.number}-chorak · {allIndexed.length} ta dars
+        </span>
       </div>
 
-      <div className={cn(
-        expanded
-          ? "grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2"
-          : "flex gap-2 overflow-x-auto pb-1 -mx-1 px-1",
-      )}>
+      <div
+        className={cn(
+          expanded
+            ? "grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2"
+            : "flex gap-2 overflow-x-auto pb-1 -mx-1 px-1",
+        )}
+      >
         {visibleGroups.map(({ ds, lessonNumber, entryId }) => {
           const isToday = ds === today
           const isPast = ds < today
           const date = new Date(`${ds}T00:00:00`)
-          const isSelected = selectedCard?.ds === ds && selectedCard?.entryId === entryId
+          const isSelected =
+            selectedCard?.ds === ds && selectedCard?.entryId === entryId
           const sessionStatus = sessionStatusMap.get(`${entryId}-${ds}`)
           const isCompleted = sessionStatus === "completed"
           const isInProgress = sessionStatus === "in_progress"
@@ -263,26 +350,37 @@ function QuarterDatesView({
                           : "bg-card border-border hover:bg-accent",
               )}
             >
-              <span className={cn(
-                "text-sm font-bold",
-                !isSelected && isCompleted && "text-[var(--imkon-teal-dark)]",
-                !isSelected && isInProgress && "text-amber-700 dark:text-amber-400",
-                !isSelected && !isCompleted && !isInProgress && isPast && !isToday && "text-muted-foreground",
-              )}>
+              <span
+                className={cn(
+                  "text-sm font-bold",
+                  !isSelected && isCompleted && "text-[var(--imkon-teal-dark)]",
+                  !isSelected &&
+                    isInProgress &&
+                    "text-amber-700 dark:text-amber-400",
+                  !isSelected &&
+                    !isCompleted &&
+                    !isInProgress &&
+                    isPast &&
+                    !isToday &&
+                    "text-muted-foreground",
+                )}
+              >
                 {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]}
               </span>
-              <span className={cn(
-                "text-xs mt-0.5",
-                isSelected
-                  ? "text-primary-foreground/80"
-                  : isCompleted
-                    ? "text-[var(--imkon-teal)]"
-                    : isInProgress
-                      ? "text-amber-600 dark:text-amber-500"
-                      : isToday
-                        ? "text-primary"
-                        : "text-muted-foreground",
-              )}>
+              <span
+                className={cn(
+                  "text-xs mt-0.5",
+                  isSelected
+                    ? "text-primary-foreground/80"
+                    : isCompleted
+                      ? "text-[var(--imkon-teal)]"
+                      : isInProgress
+                        ? "text-amber-600 dark:text-amber-500"
+                        : isToday
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                )}
+              >
                 {lessonNumber}-dars
               </span>
             </button>
@@ -349,7 +447,9 @@ function QuarterDatesView({
               entryIds={entryIds}
               startDate={currentQuarter?.start_date ?? ""}
               endDate={currentQuarter?.end_date ?? ""}
-              dateLessonMap={Object.fromEntries(allIndexed.map(({ ds, lessonNumber }) => [ds, lessonNumber]))}
+              dateLessonMap={Object.fromEntries(
+                allIndexed.map(({ ds, lessonNumber }) => [ds, lessonNumber]),
+              )}
             />
           )}
         </div>
@@ -368,16 +468,22 @@ function DayAttendanceView({
   const queryClient = useQueryClient()
   const [activeSessionId, setActiveSessionId] = useState<number>(0)
 
-  const { data: lessonsData, isLoading: lessonsLoading } = useQuery(getTodayLessonsQueryOptions(dateStr))
+  const { data: lessonsData, isLoading: lessonsLoading } = useQuery(
+    getTodayLessonsQueryOptions(dateStr),
+  )
 
-  const matchedLesson = lessonsData?.data.find((l) => l.schedule_entry_id === entryId)
+  const matchedLesson = lessonsData?.data.find(
+    (l) => l.schedule_entry_id === entryId,
+  )
   const sessionId = activeSessionId || (matchedLesson?.session_id ?? 0)
 
   const startMutation = useMutation({
     mutationFn: () => lessonsApi.startSession(entryId, dateStr),
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.lessonsForDate(dateStr),
+      })
       queryClient.invalidateQueries({ queryKey: ["session-statuses"] })
       setActiveSessionId(response.data.id)
     },
@@ -405,9 +511,11 @@ function DayAttendanceView({
           onClick={() => startMutation.mutate()}
           disabled={startMutation.isPending}
         >
-          {startMutation.isPending
-            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            : <Play className="mr-2 h-4 w-4" />}
+          {startMutation.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-4 w-4" />
+          )}
           Darsni boshlash
         </Button>
       </div>

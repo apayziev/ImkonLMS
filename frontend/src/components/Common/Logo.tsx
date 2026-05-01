@@ -1,14 +1,14 @@
-import { cn } from "@/lib/utils";
-import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router"
+import { cn } from "@/lib/utils"
 
-const logoWhite = "/images/logo/imkon-logo-white-red.png";
-const logoIcon = "/images/icons/red-icon.png";
+const logoWhite = "/images/logo/imkon-logo-white-red.png"
+const logoIcon = "/images/icons/red-icon.png"
 
 interface LogoProps {
-  variant?: "full" | "icon" | "responsive";
-  className?: string;
-  asLink?: boolean;
-  linkTo?: string;
+  variant?: "full" | "icon" | "responsive"
+  className?: string
+  asLink?: boolean
+  linkTo?: string
 }
 
 export function Logo({
@@ -41,9 +41,9 @@ export function Logo({
       <img src={logoIcon} alt="IMKON" className={cn("h-8 w-8", className)} />
     ) : (
       <img src={logoWhite} alt="IMKON" className={cn("w-auto", className)} />
-    );
+    )
 
-  if (!asLink) return content;
+  if (!asLink) return content
 
-  return <Link to={linkTo}>{content}</Link>;
+  return <Link to={linkTo}>{content}</Link>
 }

@@ -1,5 +1,13 @@
 import { todayStr } from "@/components/Lessons/formatters"
-import { academicYearsApi, gradesApi, lessonsApi, quartersApi, subjectsApi, teachersApi, timetableApi } from "@/lib/api"
+import {
+  academicYearsApi,
+  gradesApi,
+  lessonsApi,
+  quartersApi,
+  subjectsApi,
+  teachersApi,
+  timetableApi,
+} from "@/lib/api"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
@@ -19,8 +27,10 @@ export const queryKeys = {
   lessonsForDate: (date: string) => ["lessons-for-date", date] as const,
   lessonSession: (id: number) => ["lesson-session", id] as const,
   lessonPlan: (id: number) => ["lesson-plan", id] as const,
-  quarters: (academicYearId?: number) => ["quarters", academicYearId ?? null] as const,
-  attendance: (gradeId: number, date: string) => ["attendance", gradeId, date] as const,
+  quarters: (academicYearId?: number) =>
+    ["quarters", academicYearId ?? null] as const,
+  attendance: (gradeId: number, date: string) =>
+    ["attendance", gradeId, date] as const,
   sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
     ["session-statuses", entryIds.join(","), startDate, endDate] as const,
   attendanceHistory: (entryIds: number[], startDate: string, endDate: string) =>
@@ -128,7 +138,11 @@ export function getSessionStatusesQueryOptions(
   return {
     queryKey: queryKeys.sessionStatuses(entryIds, startDate, endDate),
     queryFn: async () => {
-      const { data } = await lessonsApi.sessionStatuses(entryIds, startDate, endDate)
+      const { data } = await lessonsApi.sessionStatuses(
+        entryIds,
+        startDate,
+        endDate,
+      )
       return data
     },
     enabled: entryIds.length > 0 && !!startDate && !!endDate,
@@ -144,7 +158,11 @@ export function getAttendanceHistoryQueryOptions(
   return {
     queryKey: queryKeys.attendanceHistory(entryIds, startDate, endDate),
     queryFn: async () => {
-      const { data } = await lessonsApi.attendanceHistory(entryIds, startDate, endDate)
+      const { data } = await lessonsApi.attendanceHistory(
+        entryIds,
+        startDate,
+        endDate,
+      )
       return data
     },
     enabled: entryIds.length > 0 && !!startDate && !!endDate,
@@ -186,7 +204,7 @@ export function getAttendanceQueryOptions(gradeId: number, date: string) {
     },
     enabled: gradeId > 0,
     // Auto-refresh every 30s on today's date for live attendance updates
-    refetchInterval: isToday ? 30_000 : false as const,
+    refetchInterval: isToday ? 30_000 : (false as const),
   }
 }
 
@@ -211,7 +229,10 @@ export function getCurrentQuarterQueryOptions() {
   }
 }
 
-export function getTeacherStatsQueryOptions(startDate: string, endDate: string) {
+export function getTeacherStatsQueryOptions(
+  startDate: string,
+  endDate: string,
+) {
   return {
     queryKey: queryKeys.teacherStats(startDate, endDate),
     queryFn: async () => {
@@ -223,11 +244,23 @@ export function getTeacherStatsQueryOptions(startDate: string, endDate: string) 
   }
 }
 
-export function getTeacherDetailQueryOptions(teacherId: number, startDate: string, endDate: string) {
+export function getTeacherDetailQueryOptions(
+  teacherId: number,
+  startDate: string,
+  endDate: string,
+) {
   return {
-    queryKey: [...queryKeys.teacherStats(startDate, endDate), "detail", teacherId],
+    queryKey: [
+      ...queryKeys.teacherStats(startDate, endDate),
+      "detail",
+      teacherId,
+    ],
     queryFn: async () => {
-      const { data } = await lessonsApi.teacherDetail(teacherId, startDate, endDate)
+      const { data } = await lessonsApi.teacherDetail(
+        teacherId,
+        startDate,
+        endDate,
+      )
       return data
     },
     enabled: !!teacherId && !!startDate && !!endDate,

@@ -4,18 +4,23 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
-  Clock,
   ClipboardList,
+  Clock,
   GraduationCap,
   XCircle,
 } from "lucide-react"
-
+import { ChildSelector } from "@/components/Common/ChildSelector"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChildSelector } from "@/components/Common/ChildSelector"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
-import { parentApi, type ParentChildRead } from "@/lib/api"
+import { type ParentChildRead, parentApi } from "@/lib/api"
 import { getInitials } from "@/lib/utils"
 
 export const Route = createFileRoute("/parent/_parent/")({
@@ -26,7 +31,13 @@ export const Route = createFileRoute("/parent/_parent/")({
 })
 
 function ParentDashboard() {
-  const { children, selectedChildId, setSelectedChildId, selectedChild, parent } = useSelectedChild()
+  const {
+    children,
+    selectedChildId,
+    setSelectedChildId,
+    selectedChild,
+    parent,
+  } = useSelectedChild()
 
   if (!parent) return null
 
@@ -42,7 +53,13 @@ function ParentDashboard() {
         </p>
       </div>
 
-      <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} showGrade className="w-full sm:w-72" />
+      <ChildSelector
+        items={children}
+        selectedChildId={selectedChildId}
+        onSelect={setSelectedChildId}
+        showGrade
+        className="w-full sm:w-72"
+      />
 
       {selectedChild && <ChildOverview child={selectedChild} />}
     </div>
@@ -90,8 +107,20 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
                   {child.grade_display}
                 </Badge>
               )}
-              <Badge variant={child.is_frozen ? "destructive" : child.is_active ? "default" : "secondary"}>
-                {child.is_frozen ? "Muzlatilgan" : child.is_active ? "Faol" : "Nofaol"}
+              <Badge
+                variant={
+                  child.is_frozen
+                    ? "destructive"
+                    : child.is_active
+                      ? "default"
+                      : "secondary"
+                }
+              >
+                {child.is_frozen
+                  ? "Muzlatilgan"
+                  : child.is_active
+                    ? "Faol"
+                    : "Nofaol"}
               </Badge>
             </div>
           </div>
@@ -109,7 +138,9 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">{summary?.present ?? 0}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {summary?.present ?? 0}
+              </p>
             </CardContent>
           </Card>
         </Link>
@@ -123,7 +154,9 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-yellow-600">{summary?.late ?? 0}</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {summary?.late ?? 0}
+              </p>
             </CardContent>
           </Card>
         </Link>
@@ -137,7 +170,9 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-red-600">{summary?.absent ?? 0}</p>
+              <p className="text-2xl font-bold text-red-600">
+                {summary?.absent ?? 0}
+              </p>
             </CardContent>
           </Card>
         </Link>
@@ -180,9 +215,7 @@ function ChildOverview({ child }: { child: ParentChildRead }) {
                 <CalendarDays className="size-5 text-primary" />
                 Dars jadvali
               </CardTitle>
-              <CardDescription>
-                Haftalik dars jadvali
-              </CardDescription>
+              <CardDescription>Haftalik dars jadvali</CardDescription>
             </CardHeader>
           </Card>
         </Link>

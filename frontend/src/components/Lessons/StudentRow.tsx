@@ -1,9 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, Clock, Eye, Loader2, Plus, TriangleAlert, X } from "lucide-react"
+import {
+  Check,
+  Clock,
+  Eye,
+  Loader2,
+  Plus,
+  TriangleAlert,
+  X,
+} from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { queryKeys } from "@/hooks/useQueryOptions"
 import type {
   AttendanceStatus,

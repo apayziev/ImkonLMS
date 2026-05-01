@@ -6,7 +6,8 @@ import { getSchoolSettingsQueryOptions } from "@/hooks/useQueryOptions"
 export function getEffectiveWeekDate(): Date {
   const today = new Date()
   const day = today.getDay() // 0=Sun, 6=Sat
-  if (day === 0) today.setDate(today.getDate() + 1) // Sun → Mon
+  if (day === 0)
+    today.setDate(today.getDate() + 1) // Sun → Mon
   else if (day === 6) today.setDate(today.getDate() + 2) // Sat → Mon
   return today
 }

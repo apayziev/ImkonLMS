@@ -32,8 +32,12 @@ export function ParentUser() {
   const displayName = parent.name || parent.phone
 
   return (
-    <SidebarMenu className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}>
-      <SidebarMenuItem className={isCollapsed ? "flex justify-center w-full" : ""}>
+    <SidebarMenu
+      className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}
+    >
+      <SidebarMenuItem
+        className={isCollapsed ? "flex justify-center w-full" : ""}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
@@ -60,10 +64,7 @@ export function ParentUser() {
               <SidebarUserCard name={displayName} />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              variant="destructive"
-            >
+            <DropdownMenuItem onClick={handleLogout} variant="destructive">
               <LogOut />
               Chiqish
             </DropdownMenuItem>

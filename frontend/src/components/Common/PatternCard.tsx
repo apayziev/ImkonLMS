@@ -18,9 +18,17 @@ interface PatternCardProps {
   pattern?: PatternType
 }
 
-export function PatternCard({ children, className, onClick, pattern = "green" }: PatternCardProps) {
+export function PatternCard({
+  children,
+  className,
+  onClick,
+  pattern = "green",
+}: PatternCardProps) {
   return (
-    <Card className={cn("relative overflow-hidden", className)} onClick={onClick}>
+    <Card
+      className={cn("relative overflow-hidden", className)}
+      onClick={onClick}
+    >
       <div
         className="absolute -top-4 -right-4 w-28 h-28 opacity-[0.08] pointer-events-none"
         style={{
@@ -41,7 +49,11 @@ export function PatternCardHeader({
   children: ReactNode
   className?: string
 }) {
-  return <CardHeader className={cn("relative z-10", className)}>{children}</CardHeader>
+  return (
+    <CardHeader className={cn("relative z-10", className)}>
+      {children}
+    </CardHeader>
+  )
 }
 
 export function PatternCardContent({
@@ -51,7 +63,11 @@ export function PatternCardContent({
   children: ReactNode
   className?: string
 }) {
-  return <CardContent className={cn("relative z-10", className)}>{children}</CardContent>
+  return (
+    <CardContent className={cn("relative z-10", className)}>
+      {children}
+    </CardContent>
+  )
 }
 
 export function PatternCardTitle({

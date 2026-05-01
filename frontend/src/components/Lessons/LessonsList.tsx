@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { BookOpen, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
-
-import { lessonsApi } from "@/lib/api"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -14,7 +11,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { getTodayLessonsQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { useWeekNavigation } from "@/hooks/useWeekNavigation"
-import { UZ_MONTHS, UZ_WEEKDAYS_SHORT } from "./constants"
+import { lessonsApi } from "@/lib/api"
+import { UZ_MONTHS, UZ_WEEKDAYS_SHORT } from "@/lib/locale"
+import { cn } from "@/lib/utils"
 import { toDateString, todayStr } from "./formatters"
 import { LessonCard } from "./LessonCard"
 
@@ -28,7 +27,10 @@ export function LessonsList({
   onSessionOpen: (sessionId: number) => void
 }) {
   const queryClient = useQueryClient()
-  const { weekDays, prevWeek, nextWeek } = useWeekNavigation(selectedDate, onDateChange)
+  const { weekDays, prevWeek, nextWeek } = useWeekNavigation(
+    selectedDate,
+    onDateChange,
+  )
   const dateStr = toDateString(selectedDate)
   const today = todayStr()
   const isToday = dateStr === today
@@ -37,24 +39,35 @@ export function LessonsList({
   const isFutureDate = dateStr > today
 
   const startMutation = useMutation({
-    mutationFn: (scheduleEntryId: number) => lessonsApi.startSession(scheduleEntryId, dateStr),
+    mutationFn: (scheduleEntryId: number) =>
+      lessonsApi.startSession(scheduleEntryId, dateStr),
     onSuccess: (response) => {
       toast.success("Dars boshlandi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.lessonsForDate(dateStr),
+      })
       onSessionOpen(response.data.id)
     },
     onError: () => {
       toast.error("Darsni boshlashda xatolik")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonsForDate(dateStr) })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.lessonsForDate(dateStr),
+      })
     },
   })
 
   const lessons = data?.data ?? []
-  const hasInProgressLesson = lessons.some((l) => l.session_status === "in_progress")
+  const hasInProgressLesson = lessons.some(
+    (l) => l.session_status === "in_progress",
+  )
   const visibleLessons = hasInProgressLesson
-    ? lessons.filter((l) => l.session_status === "in_progress" || l.session_status === "completed")
+    ? lessons.filter(
+        (l) =>
+          l.session_status === "in_progress" ||
+          l.session_status === "completed",
+      )
     : lessons
 
   return (
@@ -88,7 +101,12 @@ export function LessonsList({
 
       {/* Week day selector */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={prevWeek} className="shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={prevWeek}
+          className="shrink-0"
+        >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="flex gap-1.5 flex-1 justify-center">
@@ -116,7 +134,12 @@ export function LessonsList({
             )
           })}
         </div>
-        <Button variant="ghost" size="icon" onClick={nextWeek} className="shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={nextWeek}
+          className="shrink-0"
+        >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -142,7 +165,10 @@ export function LessonsList({
               lesson={lesson}
               onStart={() => startMutation.mutate(lesson.schedule_entry_id)}
               onContinue={() => onSessionOpen(lesson.session_id!)}
-              isStarting={startMutation.isPending && startMutation.variables === lesson.schedule_entry_id}
+              isStarting={
+                startMutation.isPending &&
+                startMutation.variables === lesson.schedule_entry_id
+              }
               canStart={!isFutureDate}
             />
           ))}

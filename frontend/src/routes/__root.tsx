@@ -1,5 +1,9 @@
-import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router"
 import type { QueryClient } from "@tanstack/react-query"
+import {
+  createRootRouteWithContext,
+  HeadContent,
+  Outlet,
+} from "@tanstack/react-router"
 import { lazy } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 
@@ -47,17 +51,21 @@ function RootErrorFallback({
   )
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  component: () => (
-    <ErrorBoundary FallbackComponent={RootErrorFallback}>
-      <TooltipProvider>
-        <HeadContent />
-        <Outlet />
-        {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      </TooltipProvider>
-    </ErrorBoundary>
-  ),
-  notFoundComponent: () => <NotFound />,
-  errorComponent: ({ error }) => <ErrorComponent error={error} />,
-})
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+  {
+    component: () => (
+      <ErrorBoundary FallbackComponent={RootErrorFallback}>
+        <TooltipProvider>
+          <HeadContent />
+          <Outlet />
+          {import.meta.env.DEV && (
+            <TanStackRouterDevtools position="bottom-right" />
+          )}
+          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        </TooltipProvider>
+      </ErrorBoundary>
+    ),
+    notFoundComponent: () => <NotFound />,
+    errorComponent: ({ error }) => <ErrorComponent error={error} />,
+  },
+)

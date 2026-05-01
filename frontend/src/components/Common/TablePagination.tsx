@@ -120,7 +120,11 @@ export function TablePagination({
                 e.preventDefault()
                 if (currentPage > 1) onPageChange(currentPage - 1)
               }}
-              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              className={
+                currentPage === 1
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
+              }
             />
           </PaginationItem>
 
@@ -151,7 +155,11 @@ export function TablePagination({
                 e.preventDefault()
                 if (currentPage < totalPages) onPageChange(currentPage + 1)
               }}
-              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              className={
+                currentPage === totalPages
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
+              }
             />
           </PaginationItem>
         </PaginationContent>

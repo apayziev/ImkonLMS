@@ -4,12 +4,7 @@ import { toast } from "sonner"
 
 import { AUTH } from "@/config"
 import { queryKeys } from "@/hooks/useQueryOptions"
-import {
-  type UserRead,
-  loginApi,
-  logoutApi,
-  usersApi,
-} from "@/lib/api"
+import { loginApi, logoutApi, type UserRead, usersApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { tokenStore } from "@/lib/tokenStore"
 
@@ -35,7 +30,7 @@ const useAuth = () => {
     })
   }
 
-  const persistTokenAndNavigate = async <T,>(
+  const persistTokenAndNavigate = async <T>(
     loginFn: (data: T) => Promise<{ data: { access_token: string } }>,
     data: T,
   ) => {

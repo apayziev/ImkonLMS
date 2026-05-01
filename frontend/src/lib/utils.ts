@@ -13,7 +13,9 @@ function toDate(date: string | Date | null | undefined): Date | null {
   // per ECMA-262, which displays as the previous day in zones west of UTC.
   const d =
     typeof date === "string"
-      ? /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00`) : new Date(date)
+      ? /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? new Date(`${date}T00:00:00`)
+        : new Date(date)
       : date
   return Number.isNaN(d.getTime()) ? null : d
 }
@@ -35,7 +37,9 @@ export function formatDateUz(date: string | Date | null | undefined): string {
 }
 
 /** "5-iyn" — short Uzbek form, used where year is implicit. */
-export function formatDateShortUz(date: string | Date | null | undefined): string {
+export function formatDateShortUz(
+  date: string | Date | null | undefined,
+): string {
   const d = toDate(date)
   if (!d) return "—"
   return `${d.getDate()}-${UZ_MONTHS_SHORT[d.getMonth()].toLowerCase()}`
@@ -51,8 +55,12 @@ export function getInitials(name: string): string {
 }
 
 /** Sort grades by level ascending, then section alphabetically (1-A, 1-B, 2-A...). */
-export function sortGrades<T extends { level: number; section: string }>(grades: readonly T[]): T[] {
+export function sortGrades<T extends { level: number; section: string }>(
+  grades: readonly T[],
+): T[] {
   return [...grades].sort((a, b) =>
-    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
+    a.level !== b.level
+      ? a.level - b.level
+      : a.section.localeCompare(b.section),
   )
 }
