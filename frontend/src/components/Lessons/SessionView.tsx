@@ -98,12 +98,20 @@ export function SessionView({
             </Button>
           )}
           <div>
-            <h1 className="text-2xl font-bold">
-              {session.grade_display} — {session.subject_name}
-              <span className="text-base font-normal text-muted-foreground ml-2">
+            {hideBack ? (
+              // Embedded mode — the parent route already shows class · subject · quarter,
+              // so the header here only carries the session-specific bits.
+              <h1 className="text-xl font-semibold text-muted-foreground">
                 {session.period_number}-soat · {session.start_time} – {session.end_time}
-              </span>
-            </h1>
+              </h1>
+            ) : (
+              <h1 className="text-2xl font-bold">
+                {session.grade_display} — {session.subject_name}
+                <span className="text-base font-normal text-muted-foreground ml-2">
+                  {session.period_number}-soat · {session.start_time} – {session.end_time}
+                </span>
+              </h1>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
