@@ -67,3 +67,28 @@ export const UZ_WEEKDAYS_SHORT_MON_FIRST = [
   "Sha",
   "Ya",
 ] as const
+
+/**
+ * Backend `day_of_week` (1=Mon … 7=Sun) → full Uzbek name.
+ * Use this instead of redefining `{ 1: "Dushanba", … }` in components.
+ */
+export const UZ_WEEKDAY_BY_DOW: Record<number, string> = {
+  1: "Dushanba",
+  2: "Seshanba",
+  3: "Chorshanba",
+  4: "Payshanba",
+  5: "Juma",
+  6: "Shanba",
+  7: "Yakshanba",
+}
+
+/** Backend `day_of_week` (1=Mon … 7=Sun) → short Uzbek name. */
+export const UZ_WEEKDAY_SHORT_BY_DOW: Record<number, string> = {
+  1: "Dush",
+  2: "Sesh",
+  3: "Chor",
+  4: "Pay",
+  5: "Jum",
+  6: "Shan",
+  7: "Yak",
+}

@@ -1,4 +1,3 @@
-import { todayStr } from "@/components/Lessons/formatters"
 import {
   academicYearsApi,
   gradesApi,
@@ -8,9 +7,15 @@ import {
   teachersApi,
   timetableApi,
 } from "@/lib/api"
+import { todayStr } from "@/lib/utils"
 
 const MAX_GRADES = 100
 const MAX_SUBJECTS = 500
+
+const MINUTE = 60_000
+const TWO_MINUTES = 2 * MINUTE
+const FIVE_MINUTES = 5 * MINUTE
+const THIRTY_SECONDS = 30_000
 
 export const queryKeys = {
   currentUser: ["currentUser"] as const,
@@ -76,7 +81,7 @@ export function getCurrentAcademicYearQueryOptions() {
       const { data } = await academicYearsApi.current()
       return data
     },
-    staleTime: 5 * 60 * 1000, // 5 min — changes very rarely
+    staleTime: FIVE_MINUTES, // academic year changes very rarely
     retry: false,
   }
 }
@@ -88,7 +93,7 @@ export function getSchoolSettingsQueryOptions() {
       const { data } = await timetableApi.getSettings()
       return data
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: FIVE_MINUTES,
   }
 }
 
@@ -100,7 +105,7 @@ export function getTimeSlotsQueryOptions(academicYearId: number) {
       return data
     },
     enabled: academicYearId > 0,
-    staleTime: 5 * 60 * 1000,
+    staleTime: FIVE_MINUTES,
   }
 }
 
@@ -116,7 +121,7 @@ export function getScheduleQueryOptions(params: {
       return data
     },
     enabled: params.academic_year_id > 0,
-    staleTime: 5 * 60 * 1000,
+    staleTime: FIVE_MINUTES,
   }
 }
 
@@ -146,7 +151,7 @@ export function getSessionStatusesQueryOptions(
       return data
     },
     enabled: entryIds.length > 0 && !!startDate && !!endDate,
-    staleTime: 60 * 1000,
+    staleTime: MINUTE,
   }
 }
 
@@ -166,7 +171,7 @@ export function getAttendanceHistoryQueryOptions(
       return data
     },
     enabled: entryIds.length > 0 && !!startDate && !!endDate,
-    staleTime: 5 * 60 * 1000,
+    staleTime: FIVE_MINUTES,
   }
 }
 
@@ -204,7 +209,7 @@ export function getAttendanceQueryOptions(gradeId: number, date: string) {
     },
     enabled: gradeId > 0,
     // Auto-refresh every 30s on today's date for live attendance updates
-    refetchInterval: isToday ? 30_000 : (false as const),
+    refetchInterval: isToday ? THIRTY_SECONDS : (false as const),
   }
 }
 
@@ -225,7 +230,7 @@ export function getCurrentQuarterQueryOptions() {
       const { data } = await quartersApi.current()
       return data
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: FIVE_MINUTES,
   }
 }
 
@@ -240,7 +245,7 @@ export function getTeacherStatsQueryOptions(
       return data
     },
     enabled: !!startDate && !!endDate,
-    staleTime: 2 * 60 * 1000,
+    staleTime: TWO_MINUTES,
   }
 }
 
@@ -264,6 +269,6 @@ export function getTeacherDetailQueryOptions(
       return data
     },
     enabled: !!teacherId && !!startDate && !!endDate,
-    staleTime: 2 * 60 * 1000,
+    staleTime: TWO_MINUTES,
   }
 }

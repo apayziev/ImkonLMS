@@ -6,10 +6,6 @@ import { toast } from "sonner"
 
 import { SessionView } from "@/components/Lessons"
 import { AttendanceHistoryView } from "@/components/Lessons/AttendanceHistoryView"
-import {
-  toDateString as toDateStr,
-  todayStr,
-} from "@/components/Lessons/formatters"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -27,7 +23,7 @@ import {
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { UZ_MONTHS_SHORT } from "@/lib/locale"
-import { cn } from "@/lib/utils"
+import { cn, toDateString as toDateStr, todayStr } from "@/lib/utils"
 
 function formatWeekRange(days: Date[]): string {
   if (days.length === 0) return ""

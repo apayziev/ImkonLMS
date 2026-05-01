@@ -69,8 +69,6 @@ export const BLOOM_LEVELS = [
   },
 ] as const
 
-export const GRADES = [5, 4, 3, 2, 1] as const
-
 export const SUGGESTED_KEYWORDS = [
   "nazariya",
   "amaliyot",

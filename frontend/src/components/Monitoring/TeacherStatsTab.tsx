@@ -19,12 +19,7 @@ import {
   PLAN_TOTAL_FIELDS,
   RESOURCE_TYPES,
 } from "@/components/Lessons/constants"
-import {
-  durationMin,
-  formatTime,
-  toDateString,
-  todayStr,
-} from "@/components/Lessons/formatters"
+import { durationMin, formatTime } from "@/components/Lessons/formatters"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -55,7 +50,7 @@ import {
 } from "@/hooks/useWeekNavigation"
 import type { TeacherSessionDetail, TeacherStatRead } from "@/lib/api"
 import { UZ_MONTHS, UZ_WEEKDAYS_FULL } from "@/lib/locale"
-import { cn, getInitials } from "@/lib/utils"
+import { cn, getInitials, toDateString, todayStr } from "@/lib/utils"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

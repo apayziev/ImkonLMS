@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { SubjectRead, TeacherRead, TimeSlotRead } from "@/lib/api"
-import { DAY_NAMES, type EntryDialogState } from "./helpers"
+import { UZ_WEEKDAY_BY_DOW } from "@/lib/locale"
+import type { EntryDialogState } from "./helpers"
 
 export function EntryDialog({
   state,
@@ -85,7 +86,7 @@ export function EntryDialog({
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-muted-foreground text-xs">Kun</span>
-              <p className="font-medium">{DAY_NAMES[state.day]}</p>
+              <p className="font-medium">{UZ_WEEKDAY_BY_DOW[state.day]}</p>
             </div>
             <div>
               <span className="text-muted-foreground text-xs">Vaqt</span>

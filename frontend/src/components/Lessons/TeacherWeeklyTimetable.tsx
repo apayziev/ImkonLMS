@@ -3,17 +3,6 @@ import { CalendarDays, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { buildGrid } from "@/components/timetable/helpers"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const DAY_FULL: Record<number, string> = {
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
-  7: "Yakshanba",
-}
-
 import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
@@ -26,8 +15,9 @@ import {
   getEffectiveWeekDate,
   useWeekNavigation,
 } from "@/hooks/useWeekNavigation"
+import { UZ_WEEKDAY_BY_DOW } from "@/lib/locale"
 
-import { toDateString, todayStr } from "./formatters"
+import { toDateString, todayStr } from "@/lib/utils"
 
 /** "day_of_week" (1=Dush…7=Yak) mos keladigan kunlar sonini hisoblaydi, dam kunlari ayiriladi */
 function countDayInRange(
@@ -220,7 +210,7 @@ export function TeacherWeeklyTimetable({
                         <div
                           className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}
                         >
-                          {DAY_FULL[day]}
+                          {UZ_WEEKDAY_BY_DOW[day]}
                         </div>
                         {date && (
                           <div className="flex items-center justify-center mt-0.5">

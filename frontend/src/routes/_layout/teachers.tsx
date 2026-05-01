@@ -4,7 +4,6 @@ import { GraduationCap, Users } from "lucide-react"
 import { useMemo, useState } from "react"
 import { SearchInput } from "@/components/Common/SearchInput"
 import { TablePagination } from "@/components/Common/TablePagination"
-import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -18,7 +17,7 @@ import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 import type { GradeRead, TeacherRead } from "@/lib/api"
 import { teachersApi } from "@/lib/api"
 import { requireAdmin } from "@/lib/routeGuards"
-import { formatDate, getInitials } from "@/lib/utils"
+import { formatDate, getInitials, getPhotoUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/teachers")({
   beforeLoad: requireAdmin,
