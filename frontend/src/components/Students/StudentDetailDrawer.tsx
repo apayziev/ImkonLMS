@@ -18,8 +18,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import type { StudentRead } from "@/lib/api"
-import { formatDate, getInitials } from "@/lib/utils"
-import { getPhotoUrl } from "./studentSchema"
+import { formatDate, getInitials, getPhotoUrl } from "@/lib/utils"
 
 interface StudentDetailDrawerProps {
   student: StudentRead | null

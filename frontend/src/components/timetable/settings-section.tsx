@@ -23,8 +23,8 @@ import type {
   SchoolSettingsUpdate,
 } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
+import { UZ_WEEKDAY_SHORT_BY_DOW } from "@/lib/locale"
 import {
-  DAY_SHORT,
   formatTimeInput,
   generatePreviewSlots,
   isValidTime,
@@ -352,7 +352,7 @@ export function SettingsSection({
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
-                {DAY_SHORT[day]}
+                {UZ_WEEKDAY_SHORT_BY_DOW[day]}
               </button>
             ))}
           </div>

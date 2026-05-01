@@ -6,7 +6,8 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
+const MAX_FILE_SIZE_MB = 20
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 
 export interface FileItem {
   id: number
@@ -78,7 +79,9 @@ export function FileUploadSection({
     // Sequential — parallel mutations clobber each other's progress/name state.
     for (const file of Array.from(selected)) {
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`"${file.name}" hajmi 20MB dan oshib ketdi`)
+        toast.error(
+          `"${file.name}" hajmi ${MAX_FILE_SIZE_MB}MB dan oshib ketdi`,
+        )
         continue
       }
       // Continue on error so one bad file doesn't abort the rest.

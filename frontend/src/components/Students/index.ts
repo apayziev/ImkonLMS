@@ -1,1 +1,0 @@
-export { StudentDetailDrawer } from "./StudentDetailDrawer"

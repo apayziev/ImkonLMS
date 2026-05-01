@@ -13,7 +13,6 @@ import { toast } from "sonner"
 import { EntryDialog } from "@/components/timetable/entry-dialog"
 import {
   buildGrid,
-  DAY_NAMES,
   type EntryDialogState,
   getBreakAfter,
   getBreakBefore,
@@ -43,6 +42,7 @@ import {
 import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
+import { UZ_WEEKDAY_BY_DOW } from "@/lib/locale"
 import { requireAdmin } from "@/lib/routeGuards"
 import { sortGrades } from "@/lib/utils"
 
@@ -426,7 +426,7 @@ function TimetablePage() {
                         key={day}
                         className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                       >
-                        {DAY_NAMES[day]}
+                        {UZ_WEEKDAY_BY_DOW[day]}
                       </th>
                     ))}
                   </tr>

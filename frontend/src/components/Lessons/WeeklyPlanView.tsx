@@ -28,9 +28,9 @@ import { useWeekNavigation } from "@/hooks/useWeekNavigation"
 import type { TodayLessonRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { UZ_MONTHS, UZ_WEEKDAYS_FULL } from "@/lib/locale"
-import { cn } from "@/lib/utils"
+import { cn, toDateString, todayStr } from "@/lib/utils"
 import { PLAN_TOTAL_FIELDS } from "./constants"
-import { lessonStatusFlags, toDateString, todayStr } from "./formatters"
+import { lessonStatusFlags } from "./formatters"
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
 
 export type EditingTarget =

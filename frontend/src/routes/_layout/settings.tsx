@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router"
 import { AlertTriangle, Loader2, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-import { todayStr } from "@/components/Lessons/formatters"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +34,7 @@ import type { QuarterRead } from "@/lib/api"
 import { quartersApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { requireAdmin } from "@/lib/routeGuards"
-import { formatDateShortUz } from "@/lib/utils"
+import { formatDateShortUz, todayStr } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/settings")({
   beforeLoad: requireAdmin,

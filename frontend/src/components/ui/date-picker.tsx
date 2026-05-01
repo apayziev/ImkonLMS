@@ -10,14 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { cn, formatDateUz, toLocalDate } from "@/lib/utils"
-
-function formatLocalDate(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  return `${y}-${m}-${d}`
-}
+import { cn, formatDateUz, toDateString, toLocalDate } from "@/lib/utils"
 
 interface DatePickerProps {
   value?: string | null
@@ -46,7 +39,7 @@ export function DatePicker({
   )
 
   const handleSelect = (date: Date | undefined) => {
-    onChange?.(date ? formatLocalDate(date) : "")
+    onChange?.(date ? toDateString(date) : "")
     setOpen(false)
   }
 

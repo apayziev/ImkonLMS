@@ -8,7 +8,6 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { ATTENDANCE_OPTIONS } from "@/components/Lessons/constants"
-import { toDateString } from "@/components/Lessons/formatters"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -38,7 +37,7 @@ import type {
   GradeRead,
 } from "@/lib/api"
 import { UZ_MONTHS, UZ_WEEKDAYS_SHORT } from "@/lib/locale"
-import { cn, formatDateShortUz, getInitials } from "@/lib/utils"
+import { cn, formatDateShortUz, getInitials, toDateString } from "@/lib/utils"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

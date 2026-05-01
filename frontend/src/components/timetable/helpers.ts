@@ -1,27 +1,5 @@
 import type { BreakItem, ScheduleEntryRead, TimeSlotRead } from "@/lib/api"
 
-// ─── Constants ──────────────────────────────────────────────────────────────
-
-export const DAY_NAMES: Record<number, string> = {
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
-  7: "Yakshanba",
-}
-
-export const DAY_SHORT: Record<number, string> = {
-  1: "Dush",
-  2: "Sesh",
-  3: "Chor",
-  4: "Pay",
-  5: "Jum",
-  6: "Shan",
-  7: "Yak",
-}
-
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface EntryDialogState {

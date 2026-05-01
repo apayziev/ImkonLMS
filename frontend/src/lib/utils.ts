@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+import { API } from "@/config"
 import {
   UZ_MONTHS_LOWER,
   UZ_MONTHS_SHORT,
@@ -10,6 +11,26 @@ import {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+/** Resolve a possibly-relative photo URL against the configured API host. */
+export function getPhotoUrl(
+  url: string | null | undefined,
+): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith("http")) return url
+  return `${API.baseUrl}${url}`
+}
+
+/** Format a Date as `YYYY-MM-DD` in the local timezone (matches backend date format). */
+export function toDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+/** Today's date as `YYYY-MM-DD` in the local timezone. */
+export const todayStr = (): string => toDateString(new Date())
 
 /**
  * Parse a date string/Date into a local-zone Date, or null if invalid.

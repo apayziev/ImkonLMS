@@ -5,7 +5,6 @@ import { useCallback, useState } from "react"
 import { SearchInput } from "@/components/Common/SearchInput"
 import { TablePagination } from "@/components/Common/TablePagination"
 import { StudentDetailDrawer } from "@/components/Students/StudentDetailDrawer"
-import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Select,
@@ -20,7 +19,7 @@ import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 import type { GradeRead, StudentRead } from "@/lib/api"
 import { studentsApi } from "@/lib/api"
 import { requireAdmin } from "@/lib/routeGuards"
-import { formatDate, getInitials, sortGrades } from "@/lib/utils"
+import { formatDate, getInitials, getPhotoUrl, sortGrades } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
   beforeLoad: requireAdmin,

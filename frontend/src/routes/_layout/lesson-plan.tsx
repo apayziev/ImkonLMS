@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { WeeklyPlanView } from "@/components/Lessons"
-import { toDateString } from "@/components/Lessons/formatters"
 import type { EditingTarget } from "@/components/Lessons/WeeklyPlanView"
+import { toDateString } from "@/lib/utils"
 
 type LessonPlanSearch = {
   date?: string
