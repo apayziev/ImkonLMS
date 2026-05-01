@@ -241,7 +241,7 @@ function QuarterDatesView({
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              Hozirgi dars
+              Darsdagi faollik
             </button>
             <button
               type="button"
@@ -253,7 +253,7 @@ function QuarterDatesView({
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              Davomat tarixi
+              Davomat
             </button>
           </div>
           {activeTab === "session" ? (

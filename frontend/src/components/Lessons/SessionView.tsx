@@ -1,17 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
-  Check,
   CheckCircle2,
   ChevronRight,
-  CircleDashed,
-  Clock,
   FileText,
   Loader2,
   Square,
   TriangleAlert,
   UserX,
-  X,
 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -137,8 +133,6 @@ export function SessionView({
           )}
         </div>
       </div>
-
-      <SessionStatsBar students={session.students} />
 
       {/* Dars rejasi */}
       <Button
@@ -334,56 +328,5 @@ function EndSessionDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  Session Stats Bar                                                 */
-/* ------------------------------------------------------------------ */
-
-const STATUS_CONFIG = [
-  { key: "present", label: "Kelgan", icon: Check, color: "var(--imkon-teal)" },
-  { key: "late", label: "Kechikkan", icon: Clock, color: "var(--imkon-purple)" },
-  { key: "absent", label: "Kelmagan", icon: X, color: "var(--imkon-red)" },
-  { key: "unmarked", label: "Belgilanmagan", icon: CircleDashed, color: "var(--muted-foreground)" },
-] as const
-
-function SessionStatsBar({ students }: { students: SessionStudentRead[] }) {
-  const counts = { present: 0, late: 0, absent: 0, unmarked: 0 }
-  for (const s of students) counts[s.status as keyof typeof counts]++
-  const total = students.length
-  const marked = total - counts.unmarked
-  const pct = total === 0 ? 0 : Math.round((marked / total) * 100)
-
-  return (
-    <div className="rounded-lg border bg-muted/20 px-4 py-3 space-y-2.5">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
-        {STATUS_CONFIG.map(({ key, label, icon: Icon, color }) => (
-          <span key={key} className="flex items-center gap-1.5">
-            <Icon className="h-4 w-4" style={{ color }} aria-hidden="true" />
-            <span className="font-bold tabular-nums" style={{ color }}>
-              {counts[key]}
-            </span>
-            <span className="text-muted-foreground">{label}</span>
-          </span>
-        ))}
-      </div>
-      <div className="flex items-center gap-2">
-        {/* Stacked progress: present / late / absent / unmarked, in that order */}
-        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden flex">
-          {STATUS_CONFIG.map(({ key, color }) =>
-            counts[key] > 0 ? (
-              <div
-                key={key}
-                style={{ flex: counts[key], background: color, opacity: key === "unmarked" ? 0.25 : 1 }}
-              />
-            ) : null,
-          )}
-        </div>
-        <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
-          {marked}/{total} ({pct}%)
-        </span>
-      </div>
-    </div>
   )
 }
