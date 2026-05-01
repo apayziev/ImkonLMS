@@ -1,6 +1,4 @@
 import { ChevronsUpDown, LogOut } from "lucide-react"
-
-import type { UserRead } from "@/lib/api"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +14,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
+import type { UserRead } from "@/lib/api"
 import { SidebarUserAvatar, SidebarUserCard } from "./UserCard"
 
 export function User({ user }: { user: UserRead }) {
@@ -31,8 +30,12 @@ export function User({ user }: { user: UserRead }) {
   const name = user.full_name || "User"
 
   return (
-    <SidebarMenu className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}>
-      <SidebarMenuItem className={isCollapsed ? "flex justify-center w-full" : ""}>
+    <SidebarMenu
+      className={isCollapsed ? "px-0 pb-2 items-center" : "px-2 pb-2"}
+    >
+      <SidebarMenuItem
+        className={isCollapsed ? "flex justify-center w-full" : ""}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
@@ -59,10 +62,7 @@ export function User({ user }: { user: UserRead }) {
               <SidebarUserCard name={name} photoUrl={user.photo_url} />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              variant="destructive"
-            >
+            <DropdownMenuItem onClick={handleLogout} variant="destructive">
               <LogOut />
               Chiqish
             </DropdownMenuItem>

@@ -10,7 +10,12 @@ interface SearchInputProps {
   className?: string
 }
 
-export function SearchInput({ value, onChange, placeholder = "Qidirish...", className }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Qidirish...",
+  className,
+}: SearchInputProps) {
   return (
     <div className={cn("relative", className)}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

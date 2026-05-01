@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { CalendarDays, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
-
-import { Skeleton } from "@/components/ui/skeleton"
 import { buildGrid } from "@/components/timetable/helpers"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const DAY_FULL: Record<number, string> = {
   1: "Dushanba",
@@ -14,6 +13,7 @@ const DAY_FULL: Record<number, string> = {
   6: "Shanba",
   7: "Yakshanba",
 }
+
 import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
@@ -22,16 +22,25 @@ import {
   getSessionStatusesQueryOptions,
   getTimeSlotsQueryOptions,
 } from "@/hooks/useQueryOptions"
-import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
+import {
+  getEffectiveWeekDate,
+  useWeekNavigation,
+} from "@/hooks/useWeekNavigation"
 
 import { toDateString, todayStr } from "./formatters"
 
 /** "day_of_week" (1=Dush…7=Yak) mos keladigan kunlar sonini hisoblaydi, dam kunlari ayiriladi */
-function countDayInRange(dayOfWeek: number, start: string, end: string, holidays: string[] = []): number {
+function countDayInRange(
+  dayOfWeek: number,
+  start: string,
+  end: string,
+  holidays: string[] = [],
+): number {
   const jsDow = dayOfWeek === 7 ? 0 : dayOfWeek
   const startDate = new Date(`${start}T00:00:00`)
   const endDate = new Date(`${end}T00:00:00`)
-  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1
+  const totalDays =
+    Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1
   const offset = (jsDow - startDate.getDay() + 7) % 7
   if (offset >= totalDays) return 0
   const count = Math.floor((totalDays - offset - 1) / 7) + 1
@@ -47,7 +56,13 @@ export function TeacherWeeklyTimetable({
   onDaySelect,
 }: {
   selectedDate: Date
-  onDaySelect: (date: Date, scheduleEntries: { id: number; dow: number }[], grade: string, subject: string, clickedEntryId: number) => void
+  onDaySelect: (
+    date: Date,
+    scheduleEntries: { id: number; dow: number }[],
+    grade: string,
+    subject: string,
+    clickedEntryId: number,
+  ) => void
 }) {
   const { user } = useAuth()
   const [loadingCell, setLoadingCell] = useState<number | null>(null)
@@ -61,16 +76,22 @@ export function TeacherWeeklyTimetable({
     copy.setDate(d.getDate() - ((d.getDay() + 6) % 7))
     return toDateString(copy)
   }
-  const isCurrentWeek = getMonday(selectedDate) === getMonday(getEffectiveWeekDate())
+  const isCurrentWeek =
+    getMonday(selectedDate) === getMonday(getEffectiveWeekDate())
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id ?? 0
 
   const { data: currentQuarter } = useQuery(getCurrentQuarterQueryOptions())
 
-  const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
+  const { data: timeSlotsData } = useQuery(
+    getTimeSlotsQueryOptions(academicYearId),
+  )
   const { data: scheduleData, isLoading } = useQuery(
-    getScheduleQueryOptions({ academic_year_id: academicYearId, teacher_id: user?.id }),
+    getScheduleQueryOptions({
+      academic_year_id: academicYearId,
+      teacher_id: user?.id,
+    }),
   )
 
   const timeSlots = timeSlotsData?.data ?? []
@@ -96,13 +117,17 @@ export function TeacherWeeklyTimetable({
 
   // Fetch session statuses for the visible week
   const weekStart = weekDays.length > 0 ? toDateString(weekDays[0]) : ""
-  const weekEnd = weekDays.length > 0 ? toDateString(weekDays[weekDays.length - 1]) : ""
+  const weekEnd =
+    weekDays.length > 0 ? toDateString(weekDays[weekDays.length - 1]) : ""
   const allEntryIds = entries.map((e) => e.id)
   const { data: statusesData } = useQuery(
     getSessionStatusesQueryOptions(allEntryIds, weekStart, weekEnd),
   )
   const sessionStatusMap = new Map<string, string>(
-    statusesData?.data.map((s) => [`${s.schedule_entry_id}-${s.session_date}`, s.status]) ?? [],
+    statusesData?.data.map((s) => [
+      `${s.schedule_entry_id}-${s.session_date}`,
+      s.status,
+    ]) ?? [],
   )
 
   // Only show columns that have at least one lesson entry for this teacher
@@ -139,7 +164,13 @@ export function TeacherWeeklyTimetable({
             )
             .map((e) => ({ id: e.id, dow: e.day_of_week }))
         : [{ id: scheduleEntryId, dow: dayOfWeek }]
-      onDaySelect(date, matchingEntries, clickedEntry?.grade_display ?? "", clickedEntry?.subject_name ?? "", scheduleEntryId)
+      onDaySelect(
+        date,
+        matchingEntries,
+        clickedEntry?.grade_display ?? "",
+        clickedEntry?.subject_name ?? "",
+        scheduleEntryId,
+      )
     } finally {
       setLoadingCell(null)
     }
@@ -152,7 +183,10 @@ export function TeacherWeeklyTimetable({
         <div className="rounded-xl border overflow-hidden">
           <div className="bg-muted/50 h-14 border-b" />
           {Array.from({ length: 5 }).map((_, r) => (
-            <div key={r} className="flex gap-2 px-3 py-2 border-b last:border-0">
+            <div
+              key={r}
+              className="flex gap-2 px-3 py-2 border-b last:border-0"
+            >
               <Skeleton className="h-16 w-24 shrink-0" />
               {Array.from({ length: activeDays.length || 5 }).map((_, d) => (
                 <Skeleton key={d} className="h-16 flex-1 rounded-lg" />
@@ -168,7 +202,10 @@ export function TeacherWeeklyTimetable({
       ) : (
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed" style={{ minWidth: `${activeDays.length * 120 + 110}px` }}>
+            <table
+              className="w-full table-fixed"
+              style={{ minWidth: `${activeDays.length * 120 + 110}px` }}
+            >
               <thead>
                 <tr className="bg-muted/50 border-b">
                   <th className="h-14 px-3 text-center w-[110px] text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -179,16 +216,17 @@ export function TeacherWeeklyTimetable({
                     const isToday = dateStr === today
                     const date = dateForDay(day)
                     return (
-                      <th
-                        key={day}
-                        className="h-14 px-2 text-center"
-                      >
-                        <div className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                      <th key={day} className="h-14 px-2 text-center">
+                        <div
+                          className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}
+                        >
                           {DAY_FULL[day]}
                         </div>
                         {date && (
                           <div className="flex items-center justify-center mt-0.5">
-                            <span className={`text-lg font-bold leading-tight ${isToday ? "text-primary" : "text-foreground"}`}>
+                            <span
+                              className={`text-lg font-bold leading-tight ${isToday ? "text-primary" : "text-foreground"}`}
+                            >
                               {date.getDate()}
                             </span>
                           </div>
@@ -217,9 +255,12 @@ export function TeacherWeeklyTimetable({
                       const dateStr = dateStrForDay(day)
                       const isPast = dateStr < today
                       const isClickable = isCurrentWeek
-                      const isThisLoading = entry !== undefined && loadingCell === entry.id
+                      const isThisLoading =
+                        entry !== undefined && loadingCell === entry.id
 
-                      const sessionStatus = entry ? sessionStatusMap.get(`${entry.id}-${dateStr}`) : undefined
+                      const sessionStatus = entry
+                        ? sessionStatusMap.get(`${entry.id}-${dateStr}`)
+                        : undefined
                       const isCompleted = sessionStatus === "completed"
                       const isInProgress = sessionStatus === "in_progress"
 
@@ -231,31 +272,45 @@ export function TeacherWeeklyTimetable({
                           {entry ? (
                             <button
                               type="button"
-                              onClick={() => isClickable && !isThisLoading && handleCellClick(entry.id, day)}
+                              onClick={() =>
+                                isClickable &&
+                                !isThisLoading &&
+                                handleCellClick(entry.id, day)
+                              }
                               disabled={!isClickable || isThisLoading}
                               className={`w-full min-h-[96px] rounded-lg px-2.5 py-3 text-left flex flex-col justify-center relative overflow-hidden transition-all
-                                ${isCompleted
-                                  ? "bg-[var(--imkon-teal)]/10 border border-[var(--imkon-teal)]/30"
-                                  : isInProgress
-                                    ? "bg-amber-50 border border-amber-300 dark:bg-amber-950/20 dark:border-amber-700"
-                                    : "bg-primary/10 border border-primary/20"}
+                                ${
+                                  isCompleted
+                                    ? "bg-[var(--imkon-teal)]/10 border border-[var(--imkon-teal)]/30"
+                                    : isInProgress
+                                      ? "bg-amber-50 border border-amber-300 dark:bg-amber-950/20 dark:border-amber-700"
+                                      : "bg-primary/10 border border-primary/20"
+                                }
                                 ${isClickable ? "hover:shadow-md hover:-translate-y-px active:translate-y-0 cursor-pointer" : "cursor-default opacity-50"}
                                 ${isClickable && isPast && !isCompleted && !isInProgress ? "opacity-50" : ""}
                                 ${isThisLoading ? "opacity-60 cursor-wait" : ""}
                               `}
                             >
-                              <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg ${isCompleted ? "bg-[var(--imkon-teal)]" : isInProgress ? "bg-amber-400" : "bg-primary"}`} />
+                              <div
+                                className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg ${isCompleted ? "bg-[var(--imkon-teal)]" : isInProgress ? "bg-amber-400" : "bg-primary"}`}
+                              />
                               {isThisLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />
                               ) : (
                                 <>
                                   <div className="flex items-baseline justify-between gap-1">
-                                    <p className="text-sm font-bold truncate">{entry.grade_display}</p>
+                                    <p className="text-sm font-bold truncate">
+                                      {entry.grade_display}
+                                    </p>
                                     {entry.room && (
-                                      <p className="text-[11px] text-muted-foreground shrink-0">#{entry.room}</p>
+                                      <p className="text-[11px] text-muted-foreground shrink-0">
+                                        #{entry.room}
+                                      </p>
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{entry.subject_name}</p>
+                                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                    {entry.subject_name}
+                                  </p>
                                   {currentQuarter && (
                                     <p className="text-[10px] text-muted-foreground mt-1.5">
                                       {currentQuarter.number}-chorak ·{" "}
@@ -270,7 +325,9 @@ export function TeacherWeeklyTimetable({
                             </button>
                           ) : (
                             <div className="min-h-[96px] flex items-center justify-center">
-                              <span className="text-[11px] text-muted-foreground/50">Dars yo'q</span>
+                              <span className="text-[11px] text-muted-foreground/50">
+                                Dars yo'q
+                              </span>
                             </div>
                           )}
                         </td>

@@ -16,11 +16,13 @@ export function AnimatedNumber({
   prefix = "",
 }: AnimatedNumberProps) {
   const [displayValue, setDisplayValue] = useState(0)
-  const previousValue = useRef(0)
+  // Tracks the currently-rendered value so a value change mid-animation
+  // resumes from where we are (not from the last *completed* value).
+  const currentValueRef = useRef(0)
   const animationRef = useRef<number | null>(null)
 
   useEffect(() => {
-    const startValue = previousValue.current
+    const startValue = currentValueRef.current
     const endValue = value
     const startTime = performance.now()
 
@@ -35,11 +37,10 @@ export function AnimatedNumber({
         startValue + (endValue - startValue) * easeOut,
       )
       setDisplayValue(currentValue)
+      currentValueRef.current = currentValue
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate)
-      } else {
-        previousValue.current = endValue
       }
     }
 

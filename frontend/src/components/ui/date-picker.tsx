@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { cn, formatDateUz } from "@/lib/utils"
+import { cn, formatDateUz, toLocalDate } from "@/lib/utils"
 
 function formatLocalDate(date: Date): string {
   const y = date.getFullYear()
@@ -40,11 +40,10 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
-  const dateValue = React.useMemo(() => {
-    if (!value) return undefined
-    const parsed = new Date(value)
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed
-  }, [value])
+  const dateValue = React.useMemo(
+    () => toLocalDate(value) ?? undefined,
+    [value],
+  )
 
   const handleSelect = (date: Date | undefined) => {
     onChange?.(date ? formatLocalDate(date) : "")

@@ -8,7 +8,7 @@ interface SidebarUserAvatarProps {
 
 export function SidebarUserAvatar({ name, photoUrl }: SidebarUserAvatarProps) {
   return (
-    <Avatar className="size-8 ring-2 ring-white/20">
+    <Avatar className="ring-2 ring-white/20">
       {photoUrl && <AvatarImage src={photoUrl} alt={name} />}
       <AvatarFallback className="bg-white/20 text-white font-semibold">
         {getInitials(name)}

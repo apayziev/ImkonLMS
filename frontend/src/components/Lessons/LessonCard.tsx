@@ -1,16 +1,10 @@
-import {
-  CheckCircle2,
-  Clock,
-  Loader2,
-  Play,
-} from "lucide-react"
-
+import { CheckCircle2, Clock, Loader2, Play } from "lucide-react"
+import { PatternCard } from "@/components/Common/PatternCard"
+import { Button } from "@/components/ui/button"
 import type { TodayLessonRead } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { PatternCard } from "@/components/Common/PatternCard"
-import { lessonStatusFlags } from "./formatters"
 import { PLAN_TOTAL_FIELDS } from "./constants"
+import { lessonStatusFlags } from "./formatters"
 
 export function LessonCard({
   lesson,
@@ -32,7 +26,8 @@ export function LessonCard({
       pattern={isCompleted ? "green" : "purple"}
       className={cn(
         "rounded-xl border-2 p-5 transition-colors",
-        isInProgress && "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
+        isInProgress &&
+          "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
         isCompleted && "border-[var(--imkon-teal)]/30 bg-[var(--imkon-teal)]/5",
         !isInProgress && !isCompleted && "border-border",
       )}
@@ -50,25 +45,45 @@ export function LessonCard({
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {lesson.period_number}-soat{lesson.room ? ` · Xona ${lesson.room}` : ""}
+            {lesson.period_number}-soat
+            {lesson.room ? ` · Xona ${lesson.room}` : ""}
           </p>
         </div>
       </div>
 
       {isCompleted ? (
-        <Button size="lg" className="w-full text-lg h-12" variant="outline" onClick={onContinue}>
+        <Button
+          size="lg"
+          className="w-full text-lg h-12"
+          variant="outline"
+          onClick={onContinue}
+        >
           <CheckCircle2 className="mr-2 h-5 w-5 text-[var(--imkon-teal)]" />
           Tugallangan — Ko'rish
         </Button>
       ) : isInProgress ? (
-        <Button size="lg" className="w-full text-lg h-12" variant="default" onClick={onContinue}>
+        <Button
+          size="lg"
+          className="w-full text-lg h-12"
+          variant="default"
+          onClick={onContinue}
+        >
           <Play className="mr-2 h-5 w-5" />
           Davom etish
         </Button>
       ) : (
         <div className="space-y-2">
-          <Button size="lg" className="w-full text-lg h-12" onClick={onStart} disabled={!canStart || isStarting}>
-            {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5" />}
+          <Button
+            size="lg"
+            className="w-full text-lg h-12"
+            onClick={onStart}
+            disabled={!canStart || isStarting}
+          >
+            {isStarting ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-5 w-5" />
+            )}
             Darsni boshlash
           </Button>
           {hasPlan && (

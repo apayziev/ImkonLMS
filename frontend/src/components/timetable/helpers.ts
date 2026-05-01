@@ -60,16 +60,18 @@ export function formatTimeInput(raw: string): string {
 }
 
 export function buildGrid(
-  timeSlots: TimeSlotRead[],
-  entries: ScheduleEntryRead[],
-  workingDays: number[],
+  timeSlots: readonly TimeSlotRead[],
+  entries: readonly ScheduleEntryRead[],
+  workingDays: readonly number[],
 ) {
   const cellMap = new Map<string, ScheduleEntryRead>()
   for (const entry of entries) {
     const key = `${entry.day_of_week}-${entry.time_slot_id}`
     cellMap.set(key, entry)
   }
-  const sorted = [...timeSlots].sort((a, b) => a.period_number - b.period_number)
+  const sorted = [...timeSlots].sort(
+    (a, b) => a.period_number - b.period_number,
+  )
   return { sorted, cellMap, days: workingDays }
 }
 
@@ -127,13 +129,21 @@ export function generatePreviewSlots(
   breaks: BreakItem[],
 ): { period_number: number; start_time: string; end_time: string }[] {
   const parsed = breaks
-    .map((b) => ({ start: parseHHMM(b.start_time), end: parseHHMM(b.end_time), name: b.name }))
+    .map((b) => ({
+      start: parseHHMM(b.start_time),
+      end: parseHHMM(b.end_time),
+      name: b.name,
+    }))
     .sort((a, b) => a.start - b.start)
 
   let cursor = parseHHMM(dayStart)
   const endMin = parseHHMM(dayEnd)
 
-  const result: { period_number: number; start_time: string; end_time: string }[] = []
+  const result: {
+    period_number: number
+    start_time: string
+    end_time: string
+  }[] = []
   let period = 1
 
   while (cursor + lessonDur <= endMin) {
@@ -159,7 +169,11 @@ export function generatePreviewSlots(
       continue
     }
 
-    result.push({ period_number: period, start_time: fmtHHMM(cursor), end_time: fmtHHMM(slotEnd) })
+    result.push({
+      period_number: period,
+      start_time: fmtHHMM(cursor),
+      end_time: fmtHHMM(slotEnd),
+    })
     cursor = slotEnd + (overlaps ? 0 : defaultBreak)
     period++
   }

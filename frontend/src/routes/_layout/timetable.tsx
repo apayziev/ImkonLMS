@@ -1,17 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { CalendarDays, ChevronDown, Info, Loader2, Settings, Trash2 } from "lucide-react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import {
+  CalendarDays,
+  ChevronDown,
+  Info,
+  Loader2,
+  Settings,
+  Trash2,
+} from "lucide-react"
 import { Fragment, type ReactNode, useMemo, useState } from "react"
 import { toast } from "sonner"
-
-import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
-import { timetableApi } from "@/lib/api"
-import { getErrorDetail } from "@/lib/apiError"
-import { sortGrades } from "@/lib/utils"
-import useAuth from "@/hooks/useAuth"
+import { EntryDialog } from "@/components/timetable/entry-dialog"
+import {
+  buildGrid,
+  DAY_NAMES,
+  type EntryDialogState,
+  getBreakAfter,
+  getBreakBefore,
+  getBreakInfo,
+} from "@/components/timetable/helpers"
+import { SettingsSection } from "@/components/timetable/settings-section"
 import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
   getGradesQueryOptions,
@@ -22,10 +40,11 @@ import {
   getTimeSlotsQueryOptions,
   queryKeys,
 } from "@/hooks/useQueryOptions"
-import { EntryDialog } from "@/components/timetable/entry-dialog"
-import { DAY_NAMES, buildGrid, getBreakAfter, getBreakBefore, getBreakInfo, type EntryDialogState } from "@/components/timetable/helpers"
-import { SettingsSection } from "@/components/timetable/settings-section"
+import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
+import { timetableApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
 import { requireAdmin } from "@/lib/routeGuards"
+import { sortGrades } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/timetable")({
   beforeLoad: requireAdmin,
@@ -59,12 +78,13 @@ function TimetablePage() {
   const { data: teachersData } = useQuery(getTeachersQueryOptions())
   const academicYearId = currentYear?.id ?? 0
 
-  const { data: timeSlotsData } = useQuery(getTimeSlotsQueryOptions(academicYearId))
+  const { data: timeSlotsData } = useQuery(
+    getTimeSlotsQueryOptions(academicYearId),
+  )
 
   const grades: GradeRead[] = sortGrades(gradesData?.data ?? [])
-  const allowedGradeIds = isTeacher && teacherGradeIds.length > 0
-    ? new Set(teacherGradeIds)
-    : null
+  const allowedGradeIds =
+    isTeacher && teacherGradeIds.length > 0 ? new Set(teacherGradeIds) : null
   const defaultGrade = allowedGradeIds
     ? grades.find((g) => allowedGradeIds.has(g.id))
     : grades[0]
@@ -85,8 +105,12 @@ function TimetablePage() {
   const settingsBreaks = settings?.breaks ?? []
 
   const { sorted, cellMap, days } = buildGrid(timeSlots, entries, workingDays)
-  const preBreak = sorted.length > 0 ? getBreakBefore(sorted[0], settingsBreaks) : null
-  const postBreak = sorted.length > 0 ? getBreakAfter(sorted[sorted.length - 1], settingsBreaks) : null
+  const preBreak =
+    sorted.length > 0 ? getBreakBefore(sorted[0], settingsBreaks) : null
+  const postBreak =
+    sorted.length > 0
+      ? getBreakAfter(sorted[sorted.length - 1], settingsBreaks)
+      : null
 
   // ─── Stats (all grades) ───────────────────────────────────────────
   const { data: allScheduleData } = useQuery({
@@ -98,7 +122,13 @@ function TimetablePage() {
   const statsData = useMemo(() => {
     if (!allEntries.length) return null
 
-    const gradeMap = new Map<string, { total: number; subjects: Map<string, { count: number; teacher: string }> }>()
+    const gradeMap = new Map<
+      string,
+      {
+        total: number
+        subjects: Map<string, { count: number; teacher: string }>
+      }
+    >()
     const teacherSet = new Set<string>()
 
     for (const e of allEntries) {
@@ -124,7 +154,11 @@ function TimetablePage() {
         total,
         subjects: [...subjects.entries()]
           .sort((a, b) => b[1].count - a[1].count)
-          .map(([sName, { count, teacher }]) => ({ name: sName, count, teacher })),
+          .map(([sName, { count, teacher }]) => ({
+            name: sName,
+            count,
+            teacher,
+          })),
       }))
 
     return {
@@ -149,8 +183,13 @@ function TimetablePage() {
   })
 
   const updateEntryMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { subject_id?: number; teacher_id?: number; room?: string | null } }) =>
-      timetableApi.updateEntry(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number
+      data: { subject_id?: number; teacher_id?: number; room?: string | null }
+    }) => timetableApi.updateEntry(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedule })
       toast.success("Dars yangilandi")
@@ -203,7 +242,8 @@ function TimetablePage() {
             Dars jadvali
           </h1>
           <p className="text-muted-foreground text-sm">
-            Haftalik dars jadvali — {currentYear?.name ?? "O'quv yili tanlanmagan"}
+            Haftalik dars jadvali —{" "}
+            {currentYear?.name ?? "O'quv yili tanlanmagan"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -223,13 +263,20 @@ function TimetablePage() {
             >
               <Settings className="h-4 w-4 mr-1.5" />
               Sozlamalar
-              <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`h-4 w-4 ml-1 transition-transform ${settingsOpen ? "rotate-180" : ""}`}
+              />
             </Button>
           )}
-          {isAdmin && sorted.length > 0 && (
-            confirmClear ? (
+          {isAdmin &&
+            sorted.length > 0 &&
+            (confirmClear ? (
               <div className="flex gap-1.5">
-                <Button variant="outline" size="sm" onClick={() => setConfirmClear(false)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmClear(false)}
+                >
                   Bekor
                 </Button>
                 <Button
@@ -238,7 +285,9 @@ function TimetablePage() {
                   onClick={() => clearSlotsMutation.mutate()}
                   disabled={clearSlotsMutation.isPending}
                 >
-                  {clearSlotsMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  {clearSlotsMutation.isPending && (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  )}
                   Ha, tozalash
                 </Button>
               </div>
@@ -252,8 +301,7 @@ function TimetablePage() {
                 <Trash2 className="h-4 w-4 mr-1.5" />
                 Tozalash
               </Button>
-            )
-          )}
+            ))}
         </div>
       </div>
 
@@ -284,7 +332,10 @@ function TimetablePage() {
 
       {/* ─── Batafsil Sheet ─── */}
       <Sheet open={statsOpen} onOpenChange={setStatsOpen}>
-        <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
+        <SheetContent
+          side="right"
+          className="sm:max-w-lg w-full overflow-y-auto"
+        >
           <SheetHeader>
             <SheetTitle>Haftalik dars jadvali</SheetTitle>
             <SheetDescription>
@@ -297,18 +348,27 @@ function TimetablePage() {
           {statsData ? (
             <div className="space-y-4">
               {statsData.gradeRows.map((grade) => (
-                <div key={grade.name} className="rounded-lg border overflow-hidden">
+                <div
+                  key={grade.name}
+                  className="rounded-lg border overflow-hidden"
+                >
                   <div className="bg-muted/40 px-3 py-2 flex items-center justify-between border-b">
                     <span className="text-sm font-semibold">{grade.name}</span>
-                    <span className="text-xs text-muted-foreground">{grade.total} ta dars</span>
+                    <span className="text-xs text-muted-foreground">
+                      {grade.total} ta dars
+                    </span>
                   </div>
                   <table className="w-full text-sm">
                     <tbody>
                       {grade.subjects.map((s) => (
                         <tr key={s.name} className="border-b last:border-0">
                           <td className="px-3 py-1.5">{s.name}</td>
-                          <td className="px-3 py-1.5 text-muted-foreground text-right">{s.teacher}</td>
-                          <td className="px-3 py-1.5 text-center font-medium w-14">{s.count}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground text-right">
+                            {s.teacher}
+                          </td>
+                          <td className="px-3 py-1.5 text-center font-medium w-14">
+                            {s.count}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -338,131 +398,176 @@ function TimetablePage() {
       ) : sorted.length === 0 ? (
         <EmptyState
           message="Dars vaqtlari hali kiritilmagan."
-          action={isAdmin ? (
-            <Button size="sm" className="mt-3" onClick={() => setSettingsOpen(true)}>
-              <Settings className="h-4 w-4 mr-1.5" />
-              Sozlamalar
-            </Button>
-          ) : undefined}
+          action={
+            isAdmin ? (
+              <Button
+                size="sm"
+                className="mt-3"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings className="h-4 w-4 mr-1.5" />
+                Sozlamalar
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="space-y-3">
-
           <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] table-fixed">
-            <thead>
-              <tr className="bg-muted/50 border-b">
-                <th className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[130px]">
-                  Vaqt
-                </th>
-                {days.map((day) => (
-                  <th
-                    key={day}
-                    className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                  >
-                    {DAY_NAMES[day]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {preBreak && (
-                <tr className="border-b bg-muted/30">
-                  <td className="px-3 py-1.5 text-center border-r bg-muted/30">
-                    <div className="text-xs font-medium text-muted-foreground">{preBreak.name}</div>
-                    <div className="text-xs text-muted-foreground/70">{preBreak.minutes} min</div>
-                  </td>
-                  {days.map((day) => (
-                    <td key={day} className="border-r last:border-r-0 bg-muted/30" />
-                  ))}
-                </tr>
-              )}
-              {sorted.map((slot, idx) => {
-                const brk = getBreakInfo(slot, sorted[idx + 1], settingsBreaks)
-
-                return (
-                  <Fragment key={slot.id}>
-                    <tr className="border-b last:border-0">
-                      {/* Period + Time */}
-                      <td className="px-3 py-2 align-middle border-r bg-muted/30" style={{ minHeight: 76 }}>
-                        <div className="text-sm font-semibold text-primary">
-                          {slot.period_number}-soat
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px] table-fixed">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[130px]">
+                      Vaqt
+                    </th>
+                    {days.map((day) => (
+                      <th
+                        key={day}
+                        className="h-11 px-3 text-center align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                      >
+                        {DAY_NAMES[day]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preBreak && (
+                    <tr className="border-b bg-muted/30">
+                      <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          {preBreak.name}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-0.5">
-                          {slot.start_time} – {slot.end_time}
+                        <div className="text-xs text-muted-foreground/70">
+                          {preBreak.minutes} min
                         </div>
                       </td>
-
-                      {/* Day cells */}
-                      {days.map((day) => {
-                        const key = `${day}-${slot.id}`
-                        const canClick = isAdmin
-
-                        const entry = cellMap.get(key)
-                        return (
-                          <td key={day} className="px-1.5 py-1.5 align-top border-r last:border-r-0">
-                            {entry ? (
-                              <ScheduleCell
-                                entry={entry}
-                                subtitle={entry.teacher_name}
-                                onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
-                              />
-                            ) : (
-                              <button
-                                type="button"
-                                className={`h-16 w-full rounded-lg flex items-center justify-center transition-colors ${
-                                  canClick
-                                    ? "hover:bg-primary/5 cursor-pointer group"
-                                    : "cursor-default"
-                                }`}
-                                onClick={canClick ? () => handleCellClick(day, slot.id) : undefined}
-                                disabled={!canClick}
-                              >
-                                {canClick && (
-                                  <span className="text-xl text-muted-foreground/30 group-hover:text-primary transition-colors">+</span>
-                                )}
-                              </button>
-                            )}
-                          </td>
-                        )
-                      })}
+                      {days.map((day) => (
+                        <td
+                          key={day}
+                          className="border-r last:border-r-0 bg-muted/30"
+                        />
+                      ))}
                     </tr>
+                  )}
+                  {sorted.map((slot, idx) => {
+                    const brk = getBreakInfo(
+                      slot,
+                      sorted[idx + 1],
+                      settingsBreaks,
+                    )
 
-                    {/* Break row */}
-                    {brk && (
-                      <tr key={`brk-${slot.id}`} className="border-b bg-muted/30">
-                        <td className="px-3 py-1.5 text-center border-r bg-muted/30">
-                          <div className="text-xs font-medium text-muted-foreground">
-                            {brk.name || "Tanaffus"}
-                          </div>
-                          <div className="text-xs text-muted-foreground/70">
-                            {brk.minutes} min
-                          </div>
-                        </td>
-                        {days.map((day) => (
-                          <td key={day} className="border-r last:border-r-0 bg-muted/30" />
-                        ))}
-                      </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-              {postBreak && (
-                <tr className="border-b bg-muted/30">
-                  <td className="px-3 py-1.5 text-center border-r bg-muted/30">
-                    <div className="text-xs font-medium text-muted-foreground">{postBreak.name}</div>
-                    <div className="text-xs text-muted-foreground/70">{postBreak.minutes} min</div>
-                  </td>
-                  {days.map((day) => (
-                    <td key={day} className="border-r last:border-r-0 bg-muted/30" />
-                  ))}
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    return (
+                      <Fragment key={slot.id}>
+                        <tr className="border-b last:border-0">
+                          {/* Period + Time */}
+                          <td
+                            className="px-3 py-2 align-middle border-r bg-muted/30"
+                            style={{ minHeight: 76 }}
+                          >
+                            <div className="text-sm font-semibold text-primary">
+                              {slot.period_number}-soat
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-0.5">
+                              {slot.start_time} – {slot.end_time}
+                            </div>
+                          </td>
+
+                          {/* Day cells */}
+                          {days.map((day) => {
+                            const key = `${day}-${slot.id}`
+                            const canClick = isAdmin
+
+                            const entry = cellMap.get(key)
+                            return (
+                              <td
+                                key={day}
+                                className="px-1.5 py-1.5 align-top border-r last:border-r-0"
+                              >
+                                {entry ? (
+                                  <ScheduleCell
+                                    entry={entry}
+                                    subtitle={entry.teacher_name}
+                                    onClick={
+                                      canClick
+                                        ? () => handleCellClick(day, slot.id)
+                                        : undefined
+                                    }
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={`h-16 w-full rounded-lg flex items-center justify-center transition-colors ${
+                                      canClick
+                                        ? "hover:bg-primary/5 cursor-pointer group"
+                                        : "cursor-default"
+                                    }`}
+                                    onClick={
+                                      canClick
+                                        ? () => handleCellClick(day, slot.id)
+                                        : undefined
+                                    }
+                                    disabled={!canClick}
+                                  >
+                                    {canClick && (
+                                      <span className="text-xl text-muted-foreground/30 group-hover:text-primary transition-colors">
+                                        +
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+
+                        {/* Break row */}
+                        {brk && (
+                          <tr
+                            key={`brk-${slot.id}`}
+                            className="border-b bg-muted/30"
+                          >
+                            <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                {brk.name || "Tanaffus"}
+                              </div>
+                              <div className="text-xs text-muted-foreground/70">
+                                {brk.minutes} min
+                              </div>
+                            </td>
+                            {days.map((day) => (
+                              <td
+                                key={day}
+                                className="border-r last:border-r-0 bg-muted/30"
+                              />
+                            ))}
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                  {postBreak && (
+                    <tr className="border-b bg-muted/30">
+                      <td className="px-3 py-1.5 text-center border-r bg-muted/30">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          {postBreak.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground/70">
+                          {postBreak.minutes} min
+                        </div>
+                      </td>
+                      {days.map((day) => (
+                        <td
+                          key={day}
+                          className="border-r last:border-r-0 bg-muted/30"
+                        />
+                      ))}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         </div>
       )}
 
@@ -495,9 +600,12 @@ function TimetablePage() {
             }
           }}
           onDelete={() => {
-            if (entryDialog.entry) deleteEntryMutation.mutate(entryDialog.entry.id)
+            if (entryDialog.entry)
+              deleteEntryMutation.mutate(entryDialog.entry.id)
           }}
-          isPending={createEntryMutation.isPending || updateEntryMutation.isPending}
+          isPending={
+            createEntryMutation.isPending || updateEntryMutation.isPending
+          }
           isDeleting={deleteEntryMutation.isPending}
         />
       )}
@@ -517,14 +625,20 @@ function ScheduleCell({
   onClick?: () => void
 }) {
   const className = `min-h-[60px] rounded-lg relative overflow-hidden px-2.5 py-1.5 flex flex-col justify-center transition-all text-left bg-primary/5 border border-primary/15 ${
-    onClick ? "hover:shadow-sm hover:-translate-y-px cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring" : ""
+    onClick
+      ? "hover:shadow-sm hover:-translate-y-px cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+      : ""
   }`
 
   const inner = (
     <>
       <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" />
-      <div className="text-sm font-semibold truncate">{entry.subject_name ?? "—"}</div>
-      <div className="text-xs text-muted-foreground truncate mt-0.5">{subtitle ?? "—"}</div>
+      <div className="text-sm font-semibold truncate">
+        {entry.subject_name ?? "—"}
+      </div>
+      <div className="text-xs text-muted-foreground truncate mt-0.5">
+        {subtitle ?? "—"}
+      </div>
       {entry.room && (
         <div className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
           Xona: {entry.room}
@@ -542,7 +656,13 @@ function ScheduleCell({
   )
 }
 
-function EmptyState({ message, action }: { message: string; action?: ReactNode }) {
+function EmptyState({
+  message,
+  action,
+}: {
+  message: string
+  action?: ReactNode
+}) {
   return (
     <div className="rounded-lg border border-dashed p-12 text-center">
       <CalendarDays className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
@@ -562,7 +682,10 @@ function GridSkeleton({ days, rows }: { days: number; rows: number }) {
         ))}
       </div>
       {Array.from({ length: rows }, (_, r) => (
-        <div key={r} className="flex items-center px-3 py-2 gap-4 border-b last:border-0">
+        <div
+          key={r}
+          className="flex items-center px-3 py-2 gap-4 border-b last:border-0"
+        >
           <Skeleton className="h-10 w-16" />
           {Array.from({ length: days }, (_, d) => (
             <Skeleton key={d} className="h-14 flex-1 rounded-md" />

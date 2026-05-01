@@ -36,7 +36,9 @@ export function MultiSelectChips<V extends string>({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">{label}</label>
+      <label className="text-sm font-medium text-muted-foreground">
+        {label}
+      </label>
       <div className="flex flex-wrap gap-1.5">
         {options.map((opt) => {
           const isSelected = selected.includes(opt.value)

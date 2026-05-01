@@ -1,20 +1,23 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { requireAdmin } from "@/lib/routeGuards"
 import { GraduationCap, Users } from "lucide-react"
 import { useMemo, useState } from "react"
-
-import type { GradeRead, TeacherRead } from "@/lib/api"
-import { teachersApi } from "@/lib/api"
 import { SearchInput } from "@/components/Common/SearchInput"
 import { TablePagination } from "@/components/Common/TablePagination"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
+import type { GradeRead, TeacherRead } from "@/lib/api"
+import { teachersApi } from "@/lib/api"
+import { requireAdmin } from "@/lib/routeGuards"
 import { formatDate, getInitials } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/teachers")({
@@ -138,20 +141,39 @@ function TeachersPage() {
             {isLoading ? (
               Array.from({ length: 5 }, (_, i) => (
                 <tr key={i} className="border-b">
-                  <td className="p-4"><Skeleton className="h-4 w-8" /></td>
-                  <td className="p-4"><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-32" /></div></td>
-                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-20" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-20" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-8" />
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-24" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-20" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-20" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-24" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </td>
                 </tr>
               ))
             ) : teachers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-12">
                   <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">O'qituvchilar topilmadi</p>
+                  <p className="text-muted-foreground">
+                    O'qituvchilar topilmadi
+                  </p>
                 </td>
               </tr>
             ) : (
@@ -163,7 +185,10 @@ function TeachersPage() {
                   <td className="p-4 align-middle">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={getPhotoUrl(teacher.photo_url)} alt={teacher.full_name} />
+                        <AvatarImage
+                          src={getPhotoUrl(teacher.photo_url)}
+                          alt={teacher.full_name}
+                        />
                         <AvatarFallback className="bg-[var(--imkon-purple)] text-white text-sm">
                           {getInitials(teacher.full_name)}
                         </AvatarFallback>
@@ -171,7 +196,9 @@ function TeachersPage() {
                       <div>
                         <p className="font-medium">{teacher.full_name}</p>
                         {teacher.phone_number && (
-                          <span className="text-xs text-muted-foreground">{teacher.phone_number}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {teacher.phone_number}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -183,7 +210,11 @@ function TeachersPage() {
                     {teacher.subjects && teacher.subjects.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-1">
                         {teacher.subjects.slice(0, 2).map((name, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {name}
                           </Badge>
                         ))}
@@ -198,7 +229,8 @@ function TeachersPage() {
                     )}
                   </td>
                   <td className="p-4 align-middle">
-                    {teacher.teaching_grade_ids && teacher.teaching_grade_ids.length > 0 ? (
+                    {teacher.teaching_grade_ids &&
+                    teacher.teaching_grade_ids.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-1">
                         {teacher.teaching_grade_ids.slice(0, 3).map((id) => (
                           <Badge key={id} variant="outline" className="text-xs">
@@ -208,17 +240,29 @@ function TeachersPage() {
                         {teacher.teaching_grade_ids.length > 3 && (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-muted">
+                              <Badge
+                                variant="outline"
+                                className="text-xs cursor-pointer hover:bg-muted"
+                              >
                                 +{teacher.teaching_grade_ids.length - 3} ta
                               </Badge>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-2" align="start">
+                            <PopoverContent
+                              className="w-auto p-2"
+                              align="start"
+                            >
                               <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                {teacher.teaching_grade_ids.slice(3).map((id) => (
-                                  <Badge key={id} variant="outline" className="text-xs">
-                                    {gradeMap.get(id) || id}
-                                  </Badge>
-                                ))}
+                                {teacher.teaching_grade_ids
+                                  .slice(3)
+                                  .map((id) => (
+                                    <Badge
+                                      key={id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {gradeMap.get(id) || id}
+                                    </Badge>
+                                  ))}
                               </div>
                             </PopoverContent>
                           </Popover>

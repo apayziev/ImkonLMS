@@ -1,9 +1,6 @@
 import { Loader2, Trash2 } from "lucide-react"
 import { useState } from "react"
-
-import type { SubjectRead, TeacherRead, TimeSlotRead } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -11,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -19,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { SubjectRead, TeacherRead, TimeSlotRead } from "@/lib/api"
 import { DAY_NAMES, type EntryDialogState } from "./helpers"
 
 export function EntryDialog({
@@ -45,8 +44,12 @@ export function EntryDialog({
   isDeleting: boolean
 }) {
   const slot = timeSlots.find((s) => s.id === state.slotId)
-  const [subjectId, setSubjectId] = useState(state.entry?.subject_id?.toString() ?? "")
-  const [teacherId, setTeacherId] = useState(state.entry?.teacher_id?.toString() ?? "")
+  const [subjectId, setSubjectId] = useState(
+    state.entry?.subject_id?.toString() ?? "",
+  )
+  const [teacherId, setTeacherId] = useState(
+    state.entry?.teacher_id?.toString() ?? "",
+  )
   const [room, setRoom] = useState(state.entry?.room ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -55,12 +58,18 @@ export function EntryDialog({
     (t) => !t.teaching_grade_ids || t.teaching_grade_ids.includes(gradeId),
   )
 
-  const selectedSubjectName = subjects.find((s) => s.id.toString() === subjectId)?.name
+  const selectedSubjectName = subjects.find(
+    (s) => s.id.toString() === subjectId,
+  )?.name
   const bySubject = selectedSubjectName
     ? byGrade.filter((t) => t.subjects?.includes(selectedSubjectName))
     : []
   // Fallback to grade-filtered teachers if none match the selected subject
-  const filteredTeachers = subjectId ? (bySubject.length > 0 ? bySubject : byGrade) : byGrade
+  const filteredTeachers = subjectId
+    ? bySubject.length > 0
+      ? bySubject
+      : byGrade
+    : byGrade
 
   return (
     <Dialog open={state.open} onOpenChange={onOpenChange}>
@@ -81,7 +90,9 @@ export function EntryDialog({
             <div>
               <span className="text-muted-foreground text-xs">Vaqt</span>
               <p className="font-medium">
-                {slot ? `${slot.period_number}-soat (${slot.start_time}–${slot.end_time})` : "—"}
+                {slot
+                  ? `${slot.period_number}-soat (${slot.start_time}–${slot.end_time})`
+                  : "—"}
               </p>
             </div>
           </div>
@@ -89,7 +100,13 @@ export function EntryDialog({
           {/* Subject */}
           <div className="space-y-1.5">
             <Label>Fan</Label>
-            <Select value={subjectId} onValueChange={(v) => { setSubjectId(v); setTeacherId("") }}>
+            <Select
+              value={subjectId}
+              onValueChange={(v) => {
+                setSubjectId(v)
+                setTeacherId("")
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Fan tanlang" />
               </SelectTrigger>
@@ -106,9 +123,17 @@ export function EntryDialog({
           {/* Teacher */}
           <div className="space-y-1.5">
             <Label>O'qituvchi</Label>
-            <Select value={teacherId} onValueChange={setTeacherId} disabled={!subjectId}>
+            <Select
+              value={teacherId}
+              onValueChange={setTeacherId}
+              disabled={!subjectId}
+            >
               <SelectTrigger>
-                <SelectValue placeholder={subjectId ? "O'qituvchi tanlang" : "Avval fan tanlang"} />
+                <SelectValue
+                  placeholder={
+                    subjectId ? "O'qituvchi tanlang" : "Avval fan tanlang"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredTeachers.map((t) => (
@@ -133,14 +158,25 @@ export function EntryDialog({
         </div>
 
         <DialogFooter className="flex gap-2 sm:justify-between">
-          {state.mode === "edit" && (
-            confirmDelete ? (
+          {state.mode === "edit" &&
+            (confirmDelete ? (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmDelete(false)}
+                >
                   Yo'q
                 </Button>
-                <Button variant="destructive" size="sm" onClick={onDelete} disabled={isDeleting}>
-                  {isDeleting && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={onDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting && (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  )}
                   Ha, o'chirish
                 </Button>
               </div>
@@ -154,11 +190,15 @@ export function EntryDialog({
                 <Trash2 className="h-4 w-4 mr-1" />
                 O'chirish
               </Button>
-            )
-          )}
+            ))}
           <Button
             onClick={() => {
-              if (subjectId && teacherId) onSave(Number(subjectId), Number(teacherId), room.trim() || null)
+              if (subjectId && teacherId)
+                onSave(
+                  Number(subjectId),
+                  Number(teacherId),
+                  room.trim() || null,
+                )
             }}
             disabled={!subjectId || !teacherId || isPending}
           >

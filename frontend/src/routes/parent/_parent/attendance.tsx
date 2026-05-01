@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CheckCircle2, ClipboardList, Clock, XCircle } from "lucide-react"
 import { useState } from "react"
-
+import { ChildSelector } from "@/components/Common/ChildSelector"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -15,9 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ChildSelector } from "@/components/Common/ChildSelector"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
-import { parentApi, type ChildAttendanceRecord } from "@/lib/api"
+import { type ChildAttendanceRecord, parentApi } from "@/lib/api"
+import { formatDateWithWeekdayUz } from "@/lib/utils"
 
 export const Route = createFileRoute("/parent/_parent/attendance")({
   component: AttendancePage,
@@ -26,10 +26,33 @@ export const Route = createFileRoute("/parent/_parent/attendance")({
   }),
 })
 
-const statusConfig: Record<string, { icon: typeof CheckCircle2; label: string; color: string; badgeVariant: "default" | "secondary" | "destructive" }> = {
-  present: { icon: CheckCircle2, label: "Kelgan", color: "text-green-600", badgeVariant: "default" },
-  late: { icon: Clock, label: "Kechikkan", color: "text-yellow-600", badgeVariant: "secondary" },
-  absent: { icon: XCircle, label: "Kelmagan", color: "text-red-600", badgeVariant: "destructive" },
+const statusConfig: Record<
+  string,
+  {
+    icon: typeof CheckCircle2
+    label: string
+    color: string
+    badgeVariant: "default" | "secondary" | "destructive"
+  }
+> = {
+  present: {
+    icon: CheckCircle2,
+    label: "Kelgan",
+    color: "text-green-600",
+    badgeVariant: "default",
+  },
+  late: {
+    icon: Clock,
+    label: "Kechikkan",
+    color: "text-yellow-600",
+    badgeVariant: "secondary",
+  },
+  absent: {
+    icon: XCircle,
+    label: "Kelmagan",
+    color: "text-red-600",
+    badgeVariant: "destructive",
+  },
 }
 
 function AttendancePage() {
@@ -45,21 +68,23 @@ function AttendancePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["parent-attendance-full", selectedChildId, startDate, endDate],
     queryFn: async () => {
-      const { data } = await parentApi.attendance(selectedChildId, Object.keys(params).length ? params : undefined)
+      const { data } = await parentApi.attendance(
+        selectedChildId,
+        Object.keys(params).length ? params : undefined,
+      )
       return data
     },
     enabled: selectedChildId > 0,
   })
 
   // Group records by date
-  const grouped = (data?.records ?? []).reduce<Record<string, ChildAttendanceRecord[]>>(
-    (acc, record) => {
-      if (!acc[record.date]) acc[record.date] = []
-      acc[record.date].push(record)
-      return acc
-    },
-    {},
-  )
+  const grouped = (data?.records ?? []).reduce<
+    Record<string, ChildAttendanceRecord[]>
+  >((acc, record) => {
+    if (!acc[record.date]) acc[record.date] = []
+    acc[record.date].push(record)
+    return acc
+  }, {})
   const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a))
   const summary = data?.summary
 
@@ -68,18 +93,41 @@ function AttendancePage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Davomat</h1>
-          <p className="text-muted-foreground text-sm">Farzandingizning davomat tarixi</p>
+          <p className="text-muted-foreground text-sm">
+            Farzandingizning davomat tarixi
+          </p>
         </div>
 
-        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector
+          items={children}
+          selectedChildId={selectedChildId}
+          onSelect={setSelectedChildId}
+        />
       </div>
 
       {/* Date filter */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <DatePicker value={startDate || null} onChange={setStartDate} placeholder="Boshlanish sanasi" className="w-full sm:w-48" />
-        <DatePicker value={endDate || null} onChange={setEndDate} placeholder="Tugash sanasi" className="w-full sm:w-48" />
+        <DatePicker
+          value={startDate || null}
+          onChange={setStartDate}
+          placeholder="Boshlanish sanasi"
+          className="w-full sm:w-48"
+        />
+        <DatePicker
+          value={endDate || null}
+          onChange={setEndDate}
+          placeholder="Tugash sanasi"
+          className="w-full sm:w-48"
+        />
         {(startDate || endDate) && (
-          <button type="button" onClick={() => { setStartDate(""); setEndDate("") }} className="text-sm text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={() => {
+              setStartDate("")
+              setEndDate("")
+            }}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             Tozalash
           </button>
         )}
@@ -96,19 +144,25 @@ function AttendancePage() {
           </Card>
           <Card>
             <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-green-600">{summary.present}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {summary.present}
+              </p>
               <p className="text-xs text-muted-foreground">Kelgan</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-yellow-600">{summary.late}</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {summary.late}
+              </p>
               <p className="text-xs text-muted-foreground">Kechikkan</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-red-600">{summary.absent}</p>
+              <p className="text-2xl font-bold text-red-600">
+                {summary.absent}
+              </p>
               <p className="text-xs text-muted-foreground">Kelmagan</p>
             </CardContent>
           </Card>
@@ -130,7 +184,9 @@ function AttendancePage() {
           </div>
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader className="pb-2"><Skeleton className="h-5 w-48" /></CardHeader>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-5 w-48" />
+              </CardHeader>
               <CardContent className="space-y-2">
                 {Array.from({ length: 3 }).map((_, j) => (
                   <Skeleton key={j} className="h-10 w-full" />
@@ -152,12 +208,7 @@ function AttendancePage() {
             <Card key={date}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  {new Date(date).toLocaleDateString("uz-UZ", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {formatDateWithWeekdayUz(date)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -176,10 +227,13 @@ function AttendancePage() {
                       const Icon = config?.icon ?? CheckCircle2
                       return (
                         <TableRow key={i}>
-                          <TableCell className="font-medium">{record.subject_name}</TableCell>
+                          <TableCell className="font-medium">
+                            {record.subject_name}
+                          </TableCell>
                           <TableCell>{record.period_number}-dars</TableCell>
                           <TableCell className="text-muted-foreground">
-                            {record.start_time.slice(0, 5)} - {record.end_time.slice(0, 5)}
+                            {record.start_time.slice(0, 5)} -{" "}
+                            {record.end_time.slice(0, 5)}
                           </TableCell>
                           <TableCell>
                             <Badge

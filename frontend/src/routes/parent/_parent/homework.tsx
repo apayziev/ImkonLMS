@@ -1,13 +1,19 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { BookOpen, Calendar, User } from "lucide-react"
-
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { ChildSelector } from "@/components/Common/ChildSelector"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi } from "@/lib/api"
+import { formatDate, isPastDate } from "@/lib/utils"
 
 export const Route = createFileRoute("/parent/_parent/homework")({
   component: HomeworkPage,
@@ -30,20 +36,21 @@ function HomeworkPage() {
 
   const items = data?.items ?? []
 
-  const isOverdue = (deadline: string | null) => {
-    if (!deadline) return false
-    return new Date(deadline) < new Date(new Date().toDateString())
-  }
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Uyga vazifa</h1>
-          <p className="text-muted-foreground text-sm">Farzandingizga berilgan vazifalar</p>
+          <p className="text-muted-foreground text-sm">
+            Farzandingizga berilgan vazifalar
+          </p>
         </div>
 
-        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector
+          items={children}
+          selectedChildId={selectedChildId}
+          onSelect={setSelectedChildId}
+        />
       </div>
 
       {isLoading ? (
@@ -81,12 +88,17 @@ function HomeworkPage() {
                   <div className="flex items-center gap-2">
                     {item.homework_deadline && (
                       <Badge
-                        variant={isOverdue(item.homework_deadline) ? "destructive" : "secondary"}
+                        variant={
+                          isPastDate(item.homework_deadline)
+                            ? "destructive"
+                            : "secondary"
+                        }
                         className="gap-1"
                       >
                         <Calendar className="size-3" />
-                        {new Date(item.homework_deadline).toLocaleDateString("uz-UZ")}
-                        {isOverdue(item.homework_deadline) && " (muddati o'tgan)"}
+                        {formatDate(item.homework_deadline)}
+                        {isPastDate(item.homework_deadline) &&
+                          " (muddati o'tgan)"}
                       </Badge>
                     )}
                   </div>
@@ -94,7 +106,7 @@ function HomeworkPage() {
                 <CardDescription className="flex items-center gap-3 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Calendar className="size-3" />
-                    {new Date(item.plan_date).toLocaleDateString("uz-UZ")}
+                    {formatDate(item.plan_date)}
                   </span>
                   {item.teacher_name && (
                     <span className="flex items-center gap-1">

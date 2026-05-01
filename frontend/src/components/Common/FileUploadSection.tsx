@@ -1,5 +1,5 @@
-import axios from "axios"
 import { useMutation } from "@tanstack/react-query"
+import axios from "axios"
 import { Loader2, Paperclip, Trash2, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
@@ -32,7 +32,10 @@ export function FileUploadSection({
 }: {
   files: FileItem[]
   disabled: boolean
-  onUpload: (file: File, onProgress?: (percent: number) => void) => Promise<unknown>
+  onUpload: (
+    file: File,
+    onProgress?: (percent: number) => void,
+  ) => Promise<unknown>
   onDelete: (fileId: number) => Promise<unknown>
   label?: string
   accept?: string
@@ -55,9 +58,10 @@ export function FileUploadSection({
     },
     onSuccess: () => toast.success("Fayl yuklandi"),
     onError: (err) => {
-      const message = axios.isAxiosError(err) && err.response?.data?.detail
-        ? err.response.data.detail
-        : "Fayl yuklashda xatolik"
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.detail
+          ? err.response.data.detail
+          : "Fayl yuklashda xatolik"
       toast.error(message)
     },
   })
@@ -68,15 +72,17 @@ export function FileUploadSection({
     onError: () => toast.error("Fayl o'chirishda xatolik"),
   })
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files
     if (!selected) return
+    // Sequential — parallel mutations clobber each other's progress/name state.
     for (const file of Array.from(selected)) {
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`"${file.name}" hajmi 20MB dan oshib ketdi`)
         continue
       }
-      uploadMutation.mutate(file)
+      // Continue on error so one bad file doesn't abort the rest.
+      await uploadMutation.mutateAsync(file).catch(() => {})
     }
     e.target.value = ""
   }
@@ -118,7 +124,9 @@ export function FileUploadSection({
       {uploadMutation.isPending && (
         <div className="flex items-center gap-3 rounded-lg border border-dashed px-3 py-2 text-sm animate-in fade-in">
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
-          <span className="flex-1 truncate text-muted-foreground">{uploadingName}</span>
+          <span className="flex-1 truncate text-muted-foreground">
+            {uploadingName}
+          </span>
           <div className="flex items-center gap-2 shrink-0">
             <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
@@ -126,7 +134,9 @@ export function FileUploadSection({
                 style={{ width: `${uploadProgress ?? 0}%` }}
               />
             </div>
-            <span className="text-xs text-muted-foreground w-8 text-right">{uploadProgress ?? 0}%</span>
+            <span className="text-xs text-muted-foreground w-8 text-right">
+              {uploadProgress ?? 0}%
+            </span>
           </div>
         </div>
       )}

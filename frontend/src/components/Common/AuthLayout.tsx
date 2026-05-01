@@ -8,8 +8,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 100)
-    return () => clearTimeout(timer)
+    // Wait one frame so the initial styles paint, then trigger the transition.
+    const id = requestAnimationFrame(() => setIsVisible(true))
+    return () => cancelAnimationFrame(id)
   }, [])
 
   return (
@@ -38,7 +39,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           className="h-8 sm:h-10"
         />
         <div className="bg-white text-[var(--imkon-red)] px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg">
-          <span className="text-xs sm:text-sm font-bold tracking-wide">LMS</span>
+          <span className="text-xs sm:text-sm font-bold tracking-wide">
+            LMS
+          </span>
         </div>
       </div>
 

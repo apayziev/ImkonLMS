@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { Check, Clock, Loader2, Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
-
+import { getAttendanceHistoryQueryOptions } from "@/hooks/useQueryOptions"
 import type { AttendanceStatus } from "@/lib/api"
 import { UZ_MONTHS_SHORT } from "@/lib/locale"
 import { cn } from "@/lib/utils"
-import { getAttendanceHistoryQueryOptions } from "@/hooks/useQueryOptions"
 
 const STATUS_CELL: Record<AttendanceStatus, { icon: ReactNode; bg: string }> = {
   present: {
@@ -73,8 +72,13 @@ export function AttendanceHistoryView({
               F.I.O
             </th>
             {dates.map((ds) => (
-              <th key={ds} className="text-center py-2 px-2 font-medium text-muted-foreground whitespace-nowrap min-w-[52px]">
-                <div className="text-xs font-bold text-foreground">{dateLessonMap[ds] ?? "?"}-dars</div>
+              <th
+                key={ds}
+                className="text-center py-2 px-2 font-medium text-muted-foreground whitespace-nowrap min-w-[52px]"
+              >
+                <div className="text-xs font-bold text-foreground">
+                  {dateLessonMap[ds] ?? "?"}-dars
+                </div>
                 <div className="text-[10px]">{formatShortDate(ds)}</div>
               </th>
             ))}
@@ -83,10 +87,15 @@ export function AttendanceHistoryView({
         <tbody>
           {students.map((student) => {
             return (
-              <tr key={student.student_id} className="border-b last:border-b-0 hover:bg-muted/30">
+              <tr
+                key={student.student_id}
+                className="border-b last:border-b-0 hover:bg-muted/30"
+              >
                 <td className="py-2.5 px-3 sticky left-0 bg-background z-10">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium truncate max-w-[180px]">{student.full_name}</span>
+                    <span className="font-medium truncate max-w-[180px]">
+                      {student.full_name}
+                    </span>
                   </div>
                 </td>
                 {dates.map((ds) => {
@@ -94,7 +103,12 @@ export function AttendanceHistoryView({
                   const cell = STATUS_CELL[status]
                   return (
                     <td key={ds} className="text-center py-2.5 px-2">
-                      <div className={cn("inline-flex items-center justify-center h-6 w-6 rounded-full", cell.bg)}>
+                      <div
+                        className={cn(
+                          "inline-flex items-center justify-center h-6 w-6 rounded-full",
+                          cell.bg,
+                        )}
+                      >
                         {cell.icon}
                       </div>
                     </td>
@@ -110,15 +124,23 @@ export function AttendanceHistoryView({
               Jami
             </td>
             {dates.map((ds) => {
-              const present = students.filter((s) => s.records[ds] === "present").length
-              const total = students.filter((s) => s.records[ds] && s.records[ds] !== "unmarked").length
+              const present = students.filter(
+                (s) => s.records[ds] === "present",
+              ).length
+              const total = students.filter(
+                (s) => s.records[ds] && s.records[ds] !== "unmarked",
+              ).length
               return (
                 <td key={ds} className="text-center py-2 px-2">
                   {total > 0 ? (
-                    <span className={cn(
-                      "text-xs font-medium",
-                      present === total ? "text-[var(--imkon-teal)]" : "text-muted-foreground",
-                    )}>
+                    <span
+                      className={cn(
+                        "text-xs font-medium",
+                        present === total
+                          ? "text-[var(--imkon-teal)]"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {present}/{total}
                     </span>
                   ) : (
