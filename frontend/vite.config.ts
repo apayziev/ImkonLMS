@@ -32,4 +32,22 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+
+  build: {
+    rollupOptions: {
+      // Pin TanStack and Radix to their own chunks so an app-only change
+      // doesn't invalidate them in the user's cache on next deploy. React
+      // itself is left in the main bundle — Rollup keeps it next to the JSX
+      // factory it serves anyway, so a separate "react" chunk just adds
+      // network overhead. zod / react-hook-form are also not split: zod is
+      // needed at bootstrap by the auth schemas, react-hook-form ships with
+      // the LoginForm route chunk, neither benefits from a vendor chunk.
+      output: {
+        manualChunks: {
+          tanstack: ["@tanstack/react-query", "@tanstack/react-router"],
+          radix: ["radix-ui"],
+        },
+      },
+    },
+  },
 })
