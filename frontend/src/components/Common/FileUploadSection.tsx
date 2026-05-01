@@ -72,15 +72,17 @@ export function FileUploadSection({
     onError: () => toast.error("Fayl o'chirishda xatolik"),
   })
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files
     if (!selected) return
+    // Sequential — parallel mutations clobber each other's progress/name state.
     for (const file of Array.from(selected)) {
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`"${file.name}" hajmi 20MB dan oshib ketdi`)
         continue
       }
-      uploadMutation.mutate(file)
+      // Continue on error so one bad file doesn't abort the rest.
+      await uploadMutation.mutateAsync(file).catch(() => {})
     }
     e.target.value = ""
   }

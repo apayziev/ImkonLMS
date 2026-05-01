@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { type ChildAttendanceRecord, parentApi } from "@/lib/api"
+import { formatDateWithWeekdayUz } from "@/lib/utils"
 
 export const Route = createFileRoute("/parent/_parent/attendance")({
   component: AttendancePage,
@@ -207,12 +208,7 @@ function AttendancePage() {
             <Card key={date}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  {new Date(date).toLocaleDateString("uz-UZ", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {formatDateWithWeekdayUz(date)}
                 </CardTitle>
               </CardHeader>
               <CardContent>

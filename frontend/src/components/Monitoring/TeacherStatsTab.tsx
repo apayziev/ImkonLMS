@@ -307,8 +307,16 @@ function TeacherRow({
 }) {
   return (
     <tr
-      className="border-b last:border-b-0 hover:bg-muted/10 transition-colors cursor-pointer"
+      className="border-b last:border-b-0 hover:bg-muted/10 transition-colors cursor-pointer focus-visible:bg-muted/20 focus-visible:outline-none"
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick()
+        }
+      }}
     >
       <td className="py-3 px-4 text-muted-foreground">{index}</td>
       <td className="py-3 px-4">
@@ -609,14 +617,24 @@ function SessionTableRow({
   const dur =
     s.started_at && s.ended_at ? durationMin(s.started_at, s.ended_at) : null
 
+  const toggle = () => setExpanded((v) => !v)
   return (
     <>
       <tr
         className={cn(
-          "hover:bg-muted/10 transition-colors cursor-pointer",
+          "hover:bg-muted/10 transition-colors cursor-pointer focus-visible:bg-muted/20 focus-visible:outline-none",
           isToday && "bg-primary/5",
         )}
-        onClick={() => setExpanded(!expanded)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            toggle()
+          }
+        }}
       >
         <td
           className={cn(

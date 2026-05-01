@@ -8,11 +8,13 @@ export function useSelectedChild() {
   const children = parent?.children ?? []
   const [selectedChildId, setSelectedChildId] = useState<number>(0)
 
-  // Default to first child once children load (parent.me is async).
+  // Sync the selection to the current children list:
+  //   - on first load, default to the first child;
+  //   - if the selected child disappears (deleted/moved), fall back to the
+  //     first remaining one (or 0 if the list is empty).
   useEffect(() => {
-    if (selectedChildId !== 0) return
-    const first = children[0]?.id
-    if (first) setSelectedChildId(first)
+    const exists = children.some((c) => c.id === selectedChildId)
+    if (!exists) setSelectedChildId(children[0]?.id ?? 0)
   }, [children, selectedChildId])
 
   const selectedChild: ParentChildRead | null =

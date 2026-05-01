@@ -25,7 +25,7 @@ import type {
 } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
-import { cn } from "@/lib/utils"
+import { cn, getInitials } from "@/lib/utils"
 import { ATTENDANCE_OPTIONS } from "./constants"
 import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
@@ -141,9 +141,14 @@ export function StudentRow({
       await queryClient.cancelQueries({
         queryKey: queryKeys.lessonSession(sessionId),
       })
-      const previous = queryClient.getQueryData<SessionDetailRead>(
+      // Snapshot only THIS student's assessment so a concurrent mutation on
+      // another row isn't wiped if we have to roll back.
+      const current = queryClient.getQueryData<SessionDetailRead>(
         queryKeys.lessonSession(sessionId),
       )
+      const previousAssessment = current?.students.find(
+        (s) => s.student_id === student.student_id,
+      )?.assessment
       queryClient.setQueryData(
         queryKeys.lessonSession(sessionId),
         (old: SessionDetailRead | undefined) => {
@@ -158,7 +163,7 @@ export function StudentRow({
           }
         },
       )
-      return { previous }
+      return { previousAssessment }
     },
     onSuccess: (response) => {
       flashSaved()
@@ -178,10 +183,20 @@ export function StudentRow({
       )
     },
     onError: (error, _data, context) => {
-      if (context?.previous) {
+      if (context?.previousAssessment) {
         queryClient.setQueryData(
           queryKeys.lessonSession(sessionId),
-          context.previous,
+          (old: SessionDetailRead | undefined) => {
+            if (!old) return old
+            return {
+              ...old,
+              students: old.students.map((s) =>
+                s.student_id === student.student_id
+                  ? { ...s, assessment: context.previousAssessment! }
+                  : s,
+              ),
+            }
+          },
         )
       }
       onSaveError(error, "Baholashda xatolik")
@@ -250,8 +265,7 @@ export function StudentRow({
                 alt={student.full_name}
               />
               <AvatarFallback className="text-xs">
-                {student.first_name[0]}
-                {student.last_name[0]}
+                {getInitials(student.full_name)}
               </AvatarFallback>
             </Avatar>
             {student.photo_url && (

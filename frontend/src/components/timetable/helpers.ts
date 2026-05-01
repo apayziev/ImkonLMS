@@ -60,9 +60,9 @@ export function formatTimeInput(raw: string): string {
 }
 
 export function buildGrid(
-  timeSlots: TimeSlotRead[],
-  entries: ScheduleEntryRead[],
-  workingDays: number[],
+  timeSlots: readonly TimeSlotRead[],
+  entries: readonly ScheduleEntryRead[],
+  workingDays: readonly number[],
 ) {
   const cellMap = new Map<string, ScheduleEntryRead>()
   for (const entry of entries) {

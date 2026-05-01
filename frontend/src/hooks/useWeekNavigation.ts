@@ -3,6 +3,10 @@ import { useMemo } from "react"
 
 import { getSchoolSettingsQueryOptions } from "@/hooks/useQueryOptions"
 
+// Mon–Sat default; reused across renders so `useMemo` dependencies stay stable
+// when settings haven't loaded yet.
+const DEFAULT_WORKING_DAYS: readonly number[] = [1, 2, 3, 4, 5, 6]
+
 export function getEffectiveWeekDate(): Date {
   const today = new Date()
   const day = today.getDay() // 0=Sun, 6=Sat
@@ -12,7 +16,10 @@ export function getEffectiveWeekDate(): Date {
   return today
 }
 
-export function getWeekDays(baseDate: Date, workingDays: number[]): Date[] {
+export function getWeekDays(
+  baseDate: Date,
+  workingDays: readonly number[],
+): Date[] {
   const day = baseDate.getDay() // 0=Sun
   const monday = new Date(baseDate)
   monday.setDate(baseDate.getDate() - ((day + 6) % 7))
@@ -28,7 +35,7 @@ export function useWeekNavigation(
   onDateChange: (d: Date) => void,
 ) {
   const { data: settings } = useQuery(getSchoolSettingsQueryOptions())
-  const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
+  const workingDays = settings?.working_days ?? DEFAULT_WORKING_DAYS
   const weekDays = useMemo(
     () => getWeekDays(selectedDate, workingDays),
     [selectedDate, workingDays],

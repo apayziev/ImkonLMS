@@ -31,7 +31,7 @@ import {
 import type { SessionStudentRead } from "@/lib/api"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
-import { cn } from "@/lib/utils"
+import { cn, getInitials } from "@/lib/utils"
 import { ATTENDANCE_OPTIONS } from "./constants"
 import { lessonStatusFlags } from "./formatters"
 import { StudentRow } from "./StudentRow"
@@ -314,8 +314,7 @@ function EndSessionDialog({
                     alt={student.full_name}
                   />
                   <AvatarFallback className="text-xs">
-                    {student.first_name[0]}
-                    {student.last_name[0]}
+                    {getInitials(student.full_name)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium min-w-0 truncate flex-1">
