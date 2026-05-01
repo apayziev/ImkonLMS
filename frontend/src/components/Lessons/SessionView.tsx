@@ -36,7 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getLessonSessionQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
 import { TopicHomeworkSection } from "./TopicHomeworkSection"
 import { StudentRow } from "./StudentRow"
-import { ATTENDANCE_OPTIONS } from "./constants"
+import { ATTENDANCE_OPTIONS, PLAN_TOTAL_FIELDS } from "./constants"
 import { lessonStatusFlags } from "./formatters"
 
 export function SessionView({
@@ -93,8 +93,9 @@ export function SessionView({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — sticky so the Yakunlash button stays reachable while
+          scrolling a 30-student class. */}
+      <div className="sticky top-16 z-10 -mx-6 md:-mx-8 px-6 md:px-8 py-3 bg-background/95 backdrop-blur-sm border-b flex items-center justify-between">
         <div className="flex items-center gap-3">
           {!hideBack && (
             <Button variant="ghost" size="icon" onClick={onBack}>
@@ -140,18 +141,36 @@ export function SessionView({
 
       <SessionStatsBar students={session.students} />
 
-      {/* Dars rejasi */}
-      <Button
-        variant="outline"
-        className="w-full justify-between h-12 text-base"
+      {/* Dars rejasi — collapsed summary opens the full editor */}
+      <button
+        type="button"
         onClick={() => setShowPlan(!showPlan)}
+        className="w-full flex items-center gap-3 rounded-lg border bg-muted/20 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
       >
-        <span className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          Dars rejasi
-        </span>
-        <ChevronRight className={cn("h-4 w-4 transition-transform", showPlan && "rotate-90")} />
-      </Button>
+        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold truncate">
+            {session.plan?.topic || "Dars rejasi"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {session.plan ? (
+              <>
+                {session.plan.plan_filled_count}/{PLAN_TOTAL_FIELDS} to'ldirilgan
+                {session.plan.objectives?.length ? ` · ${session.plan.objectives.length} maqsad` : ""}
+                {session.plan.stages?.length ? ` · ${session.plan.stages.length} bosqich` : ""}
+              </>
+            ) : (
+              "Reja yaratilmagan"
+            )}
+          </div>
+        </div>
+        <ChevronRight
+          className={cn(
+            "h-4 w-4 text-muted-foreground shrink-0 transition-transform",
+            showPlan && "rotate-90",
+          )}
+        />
+      </button>
       {showPlan && (
         <TopicHomeworkSection
           plan={session.plan}
@@ -260,13 +279,13 @@ function EndSessionDialog({
         </DialogHeader>
 
         {hasUnmarked && (
-          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/30">
-            <TriangleAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 rounded-lg border border-[var(--imkon-purple)]/30 bg-[var(--imkon-purple)]/5 px-4 py-3">
+            <TriangleAlert className="h-5 w-5 text-[var(--imkon-purple)] shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-semibold text-amber-800 dark:text-amber-300">
+              <p className="font-semibold text-[var(--imkon-purple-dark)]">
                 {unmarkedStudents.length} o'quvchi belgilanmagan.
               </p>
-              <p className="text-amber-700 dark:text-amber-400">
+              <p className="text-[var(--imkon-purple)]">
                 Darsni tugatishdan oldin ularning holatini belgilang.
               </p>
             </div>
