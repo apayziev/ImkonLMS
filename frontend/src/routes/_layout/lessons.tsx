@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Play } from "lucide-react"
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, Loader2, Play } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
@@ -9,6 +9,8 @@ import { AttendanceHistoryView } from "@/components/Lessons/AttendanceHistoryVie
 import { toDateString as toDateStr, todayStr } from "@/components/Lessons/formatters"
 import { TeacherWeeklyTimetable } from "@/components/Lessons/TeacherWeeklyTimetable"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCurrentAcademicYearQueryOptions,
@@ -20,7 +22,7 @@ import {
 import { getEffectiveWeekDate, useWeekNavigation } from "@/hooks/useWeekNavigation"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
-import { UZ_MONTHS_SHORT } from "@/lib/locale"
+import { UZ_MONTHS_SHORT, UZ_WEEKDAYS_FULL } from "@/lib/locale"
 import { cn } from "@/lib/utils"
 
 function formatWeekRange(days: Date[]): string {
@@ -151,19 +153,14 @@ function QuarterDatesView({
   selectedDate: Date
   clickedEntryId: number
 }) {
-  const [expanded, setExpanded] = useState(false)
   const [selectedCard, setSelectedCard] = useState<{ ds: string; lessonNumber: number; entryId: number } | null>(null)
   const [activeTab, setActiveTab] = useState<"session" | "attendance">("session")
-  const { weekDays } = useWeekNavigation(selectedDate, () => {})
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const { data: currentQuarter, isLoading: quarterLoading } = useQuery(getCurrentQuarterQueryOptions())
 
   const isLoading = quarterLoading || !currentYear
   const today = todayStr()
-  // Use workingDays-aware week range (matches timetable's week display)
-  const weekStart = weekDays.length > 0 ? toDateStr(weekDays[0]) : ""
-  const weekEnd = weekDays.length > 0 ? toDateStr(weekDays[weekDays.length - 1]) : ""
 
   const allIndexed = useMemo(
     () => {
@@ -198,9 +195,6 @@ function QuarterDatesView({
     if (match) setSelectedCard(match)
   }, [allIndexed, clickedEntryId, clickedDs])
 
-  const weekGroups = allIndexed.filter(({ ds }) => ds >= weekStart && ds <= weekEnd)
-  const visibleGroups = expanded ? allIndexed : weekGroups
-
   if (isLoading) {
     return (
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
@@ -226,89 +220,13 @@ function QuarterDatesView({
         <span className="text-sm text-muted-foreground">{currentQuarter.number}-chorak · {allIndexed.length} ta dars</span>
       </div>
 
-      <div className={cn(
-        expanded
-          ? "grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2"
-          : "flex gap-2 overflow-x-auto pb-1 -mx-1 px-1",
-      )}>
-        {visibleGroups.map(({ ds, lessonNumber, entryId }) => {
-          const isToday = ds === today
-          const isPast = ds < today
-          const date = new Date(`${ds}T00:00:00`)
-          const isSelected = selectedCard?.ds === ds && selectedCard?.entryId === entryId
-          const sessionStatus = sessionStatusMap.get(`${entryId}-${ds}`)
-          const isCompleted = sessionStatus === "completed"
-          const isInProgress = sessionStatus === "in_progress"
-          return (
-            <button
-              key={`${ds}-${entryId}`}
-              type="button"
-              onClick={() => {
-                setSelectedCard({ ds, lessonNumber, entryId })
-                setExpanded(false)
-              }}
-              className={cn(
-                "flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors",
-                expanded ? "w-full" : "shrink-0 w-28",
-                isSelected
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : isCompleted
-                    ? "bg-[var(--imkon-teal)]/10 border-[var(--imkon-teal)] hover:border-[var(--imkon-teal-dark)]"
-                    : isInProgress
-                      ? "bg-amber-50 border-amber-400 hover:border-amber-500 dark:bg-amber-950/30 dark:border-amber-700"
-                      : isToday
-                        ? "bg-primary/10 border-primary/40 hover:border-primary"
-                        : isPast
-                          ? "bg-muted/30 border-border hover:bg-muted/50"
-                          : "bg-card border-border hover:bg-accent",
-              )}
-            >
-              <span className={cn(
-                "text-sm font-bold",
-                !isSelected && isCompleted && "text-[var(--imkon-teal-dark)]",
-                !isSelected && isInProgress && "text-amber-700 dark:text-amber-400",
-                !isSelected && !isCompleted && !isInProgress && isPast && !isToday && "text-muted-foreground",
-              )}>
-                {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]}
-              </span>
-              <span className={cn(
-                "text-xs mt-0.5",
-                isSelected
-                  ? "text-primary-foreground/80"
-                  : isCompleted
-                    ? "text-[var(--imkon-teal)]"
-                    : isInProgress
-                      ? "text-amber-600 dark:text-amber-500"
-                      : isToday
-                        ? "text-primary"
-                        : "text-muted-foreground",
-              )}>
-                {lessonNumber}-dars
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {allIndexed.length > weekGroups.length && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {expanded ? (
-            <>
-              <ChevronUp className="h-4 w-4" />
-              Yig'ish
-            </>
-          ) : (
-            <>
-              <ChevronDown className="h-4 w-4" />
-              Barcha {allIndexed.length} ta darsni ko'rish
-            </>
-          )}
-        </button>
-      )}
+      <LessonDateNavigator
+        lessons={allIndexed}
+        selected={selectedCard}
+        onSelect={setSelectedCard}
+        sessionStatusMap={sessionStatusMap}
+        today={today}
+      />
 
       {selectedCard && (
         <div className="border-t pt-4">
@@ -415,4 +333,170 @@ function DayAttendanceView({
   }
 
   return <SessionView sessionId={sessionId} onBack={() => {}} hideBack />
+}
+
+type LessonCard = { ds: string; lessonNumber: number; entryId: number }
+
+const STATUS_TONE: Record<string, { dot: string; label: string; tint: string }> = {
+  completed: {
+    dot: "bg-[var(--imkon-teal)]",
+    label: "Tugatilgan",
+    tint: "border-[var(--imkon-teal)]/40 bg-[var(--imkon-teal)]/5",
+  },
+  in_progress: {
+    dot: "bg-[var(--imkon-purple)]",
+    label: "Davom etmoqda",
+    tint: "border-[var(--imkon-purple)]/40 bg-[var(--imkon-purple)]/5",
+  },
+}
+
+function LessonDateNavigator({
+  lessons,
+  selected,
+  onSelect,
+  sessionStatusMap,
+  today,
+}: {
+  lessons: LessonCard[]
+  selected: LessonCard | null
+  onSelect: (card: LessonCard) => void
+  sessionStatusMap: Map<string, string>
+  today: string
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const idx = selected
+    ? lessons.findIndex((l) => l.ds === selected.ds && l.entryId === selected.entryId)
+    : -1
+  const canPrev = idx > 0
+  const canNext = idx >= 0 && idx < lessons.length - 1
+
+  const status = selected ? sessionStatusMap.get(`${selected.entryId}-${selected.ds}`) : undefined
+  const tone = status ? STATUS_TONE[status] : undefined
+
+  const date = selected ? new Date(`${selected.ds}T00:00:00`) : null
+  const isToday = selected?.ds === today
+
+  // Map lesson dates → card so the calendar can resolve a picked date back
+  // to a lesson row (date alone is not enough — same date can host two
+  // schedule entries, but for one teacher within a quarter that's rare).
+  const lessonsByDs = useMemo(() => {
+    const m = new Map<string, LessonCard>()
+    for (const l of lessons) m.set(l.ds, l)
+    return m
+  }, [lessons])
+
+  const lessonDates = useMemo(
+    () => lessons.map((l) => new Date(`${l.ds}T00:00:00`)),
+    [lessons],
+  )
+  const completedDates = useMemo(
+    () =>
+      lessons
+        .filter((l) => sessionStatusMap.get(`${l.entryId}-${l.ds}`) === "completed")
+        .map((l) => new Date(`${l.ds}T00:00:00`)),
+    [lessons, sessionStatusMap],
+  )
+  const inProgressDates = useMemo(
+    () =>
+      lessons
+        .filter((l) => sessionStatusMap.get(`${l.entryId}-${l.ds}`) === "in_progress")
+        .map((l) => new Date(`${l.ds}T00:00:00`)),
+    [lessons, sessionStatusMap],
+  )
+
+  return (
+    <div className="flex items-stretch gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={() => canPrev && onSelect(lessons[idx - 1])}
+        disabled={!canPrev}
+        aria-label="Oldingi dars"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+
+      <div
+        className={cn(
+          "flex-1 flex items-center justify-between gap-3 rounded-md border px-4 py-2",
+          isToday && !tone && "border-[var(--imkon-red)]/40 bg-[var(--imkon-red)]/5",
+          tone?.tint,
+        )}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span
+            className={cn(
+              "size-2.5 rounded-full shrink-0",
+              tone?.dot ?? (isToday ? "bg-[var(--imkon-red)]" : "bg-muted-foreground/30"),
+            )}
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold truncate">
+              {date && (
+                <>
+                  {date.getDate()} {UZ_MONTHS_SHORT[date.getMonth()]} ·{" "}
+                  <span className="text-muted-foreground font-medium">
+                    {UZ_WEEKDAYS_FULL[date.getDay()]}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {selected?.lessonNumber}-dars
+              {tone && <> · {tone.label}</>}
+              {!tone && isToday && <> · Bugun</>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="icon" aria-label="Sana tanlash">
+            <CalendarDays className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={date ?? undefined}
+            onSelect={(d) => {
+              if (!d) return
+              const ds = toDateStr(d)
+              const card = lessonsByDs.get(ds)
+              if (card) {
+                onSelect(card)
+                setPickerOpen(false)
+              }
+            }}
+            disabled={(d) => !lessonsByDs.has(toDateStr(d))}
+            modifiers={{
+              hasLesson: lessonDates,
+              completed: completedDates,
+              inProgress: inProgressDates,
+            }}
+            modifiersClassNames={{
+              hasLesson: "font-bold",
+              completed: "text-[var(--imkon-teal-dark)]",
+              inProgress: "text-[var(--imkon-purple-dark)]",
+            }}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={() => canNext && onSelect(lessons[idx + 1])}
+        disabled={!canNext}
+        aria-label="Keyingi dars"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 }
