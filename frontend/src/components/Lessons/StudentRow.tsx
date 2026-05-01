@@ -207,7 +207,7 @@ export function StudentRow({
     <tr
       className={cn(
         "transition-colors hover:bg-muted/50",
-        isLate && "bg-[var(--imkon-purple)]/5",
+        isLate && "bg-amber-50/50 dark:bg-amber-950/10",
         (attendanceMutation.isPending || assessmentMutation.isPending) &&
           "opacity-70",
       )}
@@ -257,10 +257,10 @@ export function StudentRow({
               {student.last_name} {student.first_name}
             </span>
             {isLate && (
-              <span className="flex items-center gap-1.5 text-xs text-[var(--imkon-purple)] mt-0.5">
+              <span className="flex items-center gap-1.5 text-xs text-amber-500 dark:text-amber-400 mt-0.5">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--imkon-purple)] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--imkon-purple)]" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
                 </span>
                 Kechikmoqda
               </span>
@@ -279,45 +279,25 @@ export function StudentRow({
 
       {/* Attendance Buttons */}
       <td className="py-3 px-3">
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex gap-3 justify-center">
-            {ATTENDANCE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={disabled}
-                title={opt.label}
-                onClick={() => handleStatusChange(opt.value)}
-                className={cn(
-                  "h-7 w-7 rounded-full border flex items-center justify-center transition-all",
-                  student.status === opt.value
-                    ? opt.color
-                    : "bg-background text-muted-foreground/40 border-border hover:text-muted-foreground hover:bg-accent",
-                  disabled && "cursor-not-allowed opacity-60",
-                )}
-              >
-                {ATTENDANCE_ICONS[opt.value]}
-              </button>
-            ))}
-          </div>
-          {/* Current state in plain words — icons alone leave teachers
-              counting which color is which. */}
-          {(() => {
-            const opt = ATTENDANCE_OPTIONS.find((o) => o.value === student.status)
-            const colorClass =
-              student.status === "present"
-                ? "text-[var(--imkon-teal-dark)]"
-                : student.status === "late"
-                  ? "text-[var(--imkon-purple)]"
-                  : student.status === "absent"
-                    ? "text-[var(--imkon-red)]"
-                    : "text-muted-foreground/60"
-            return (
-              <span className={cn("text-[11px] font-medium", colorClass)}>
-                {opt?.fullLabel ?? "Belgilanmagan"}
-              </span>
-            )
-          })()}
+        <div className="flex gap-3 justify-center">
+          {ATTENDANCE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              disabled={disabled}
+              title={opt.label}
+              onClick={() => handleStatusChange(opt.value)}
+              className={cn(
+                "h-7 w-7 rounded-full border flex items-center justify-center transition-all",
+                student.status === opt.value
+                  ? opt.color
+                  : "bg-background text-muted-foreground/40 border-border hover:text-muted-foreground hover:bg-accent",
+                disabled && "cursor-not-allowed opacity-60",
+              )}
+            >
+              {ATTENDANCE_ICONS[opt.value]}
+            </button>
+          ))}
         </div>
       </td>
 
