@@ -16,9 +16,17 @@ export function ErrorComponent({ error, homePath = "/" }: ErrorComponentProps) {
         <span className="text-6xl md:text-8xl font-bold leading-none mb-4">Xatolik</span>
         <span className="text-2xl font-bold mb-2">Afsuski!</span>
       </div>
-      <p className="text-lg text-muted-foreground mb-4 text-center">
+      <p className="text-lg text-muted-foreground mb-4 text-center max-w-2xl">
         {errorMessage || "Nimadir xato ketdi. Iltimos, qaytadan urinib ko'ring."}
       </p>
+      {error instanceof Error && error.stack && (
+        <details className="max-w-3xl w-full mb-4 text-xs">
+          <summary className="cursor-pointer text-muted-foreground">Stack</summary>
+          <pre className="mt-2 p-3 rounded bg-muted overflow-x-auto whitespace-pre-wrap break-all">
+            {error.stack}
+          </pre>
+        </details>
+      )}
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => router.invalidate()}>
           Qayta urinish

@@ -115,7 +115,9 @@ function Layout() {
           </div>
         </header>
         <main className="flex-1 p-6 md:p-8 relative z-[1]">
-          <ErrorBoundary fallback={<ErrorComponent />}>
+          <ErrorBoundary
+            FallbackComponent={({ error }) => <ErrorComponent error={error} />}
+          >
             <Outlet />
           </ErrorBoundary>
         </main>
