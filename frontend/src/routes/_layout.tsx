@@ -116,7 +116,16 @@ function Layout() {
         </header>
         <main className="flex-1 p-6 md:p-8 relative z-[1]">
           <ErrorBoundary
-            FallbackComponent={({ error }) => <ErrorComponent error={error} />}
+            FallbackComponent={({ error }) => (
+              <ErrorComponent
+                error={error}
+                componentStack={(error as { componentStack?: string })?.componentStack ?? null}
+              />
+            )}
+            onError={(error, info) => {
+              ;(error as { componentStack?: string }).componentStack = info.componentStack ?? undefined
+              console.error('[ErrorBoundary]', error, info)
+            }}
           >
             <Outlet />
           </ErrorBoundary>

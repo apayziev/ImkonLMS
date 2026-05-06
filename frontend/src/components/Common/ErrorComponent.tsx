@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button"
 interface ErrorComponentProps {
   error?: Error | unknown
   homePath?: string
+  componentStack?: string | null
 }
 
-export function ErrorComponent({ error, homePath = "/" }: ErrorComponentProps) {
+export function ErrorComponent({ error, homePath = "/", componentStack }: ErrorComponentProps) {
   const router = useRouter()
   const errorMessage = error instanceof Error ? error.message : undefined
 
@@ -24,6 +25,14 @@ export function ErrorComponent({ error, homePath = "/" }: ErrorComponentProps) {
           <summary className="cursor-pointer text-muted-foreground">Stack</summary>
           <pre className="mt-2 p-3 rounded bg-muted overflow-x-auto whitespace-pre-wrap break-all">
             {error.stack}
+          </pre>
+        </details>
+      )}
+      {componentStack && (
+        <details className="max-w-3xl w-full mb-4 text-xs">
+          <summary className="cursor-pointer text-muted-foreground">Component stack</summary>
+          <pre className="mt-2 p-3 rounded bg-muted overflow-x-auto whitespace-pre-wrap break-all">
+            {componentStack}
           </pre>
         </details>
       )}
