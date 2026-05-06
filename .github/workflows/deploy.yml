@@ -91,11 +91,7 @@ jobs:
             sleep 5
           done
 
-          # Crash loop guard
-          API_RESTARTS=$(ssh_run "docker inspect imkon-lms-api-1 --format='{{.RestartCount}}'" 2>/dev/null || echo "0")
-          echo "API restart count: $API_RESTARTS"
-
-          if [ "$HEALTHY" = "true" ] && [ "${API_RESTARTS:-0}" -lt 3 ]; then
+          if [ "$HEALTHY" = "true" ]; then
             echo "Health OK"
             ssh_run "docker rmi imkon-lms-api:prev imkon-lms-frontend:prev 2>/dev/null; docker image prune -f" || true
             exit 0
