@@ -32,3 +32,4 @@ node_modules/
 backups/*.sql
 backups/*.sql.gz
 jadval.html
+.claude/
