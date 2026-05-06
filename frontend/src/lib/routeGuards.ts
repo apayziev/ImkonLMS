@@ -21,7 +21,8 @@ type GuardCtx = { context: { queryClient: QueryClient } }
  * Unauthenticated/fetch-failure cases fall through to the parent /_layout
  * login redirect.
  */
-const requireRoles = (allowed: ReadonlyArray<string>, fallback = DEFAULT_HOME) =>
+const requireRoles =
+  (allowed: ReadonlyArray<string>, fallback = DEFAULT_HOME) =>
   async ({ context }: GuardCtx) => {
     const user = await fetchCurrentUser(context.queryClient).catch(() => null)
     if (!user) return

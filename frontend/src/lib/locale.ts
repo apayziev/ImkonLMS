@@ -7,26 +7,63 @@
  */
 
 export const UZ_MONTHS = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+  "Yanvar",
+  "Fevral",
+  "Mart",
+  "Aprel",
+  "May",
+  "Iyun",
+  "Iyul",
+  "Avgust",
+  "Sentabr",
+  "Oktabr",
+  "Noyabr",
+  "Dekabr",
 ] as const
 
 export const UZ_MONTHS_SHORT = [
-  "Yan", "Fev", "Mar", "Apr", "May", "Iyn",
-  "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek",
+  "Yan",
+  "Fev",
+  "Mar",
+  "Apr",
+  "May",
+  "Iyn",
+  "Iyl",
+  "Avg",
+  "Sen",
+  "Okt",
+  "Noy",
+  "Dek",
 ] as const
 
 export const UZ_MONTHS_LOWER = UZ_MONTHS.map((m) => m.toLowerCase())
 
 export const UZ_WEEKDAYS_FULL = [
-  "Yakshanba", "Dushanba", "Seshanba", "Chorshanba",
-  "Payshanba", "Juma", "Shanba",
+  "Yakshanba",
+  "Dushanba",
+  "Seshanba",
+  "Chorshanba",
+  "Payshanba",
+  "Juma",
+  "Shanba",
 ] as const
 
 export const UZ_WEEKDAYS_SHORT = [
-  "Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha",
+  "Ya",
+  "Du",
+  "Se",
+  "Cho",
+  "Pa",
+  "Ju",
+  "Sha",
 ] as const
 
 export const UZ_WEEKDAYS_SHORT_MON_FIRST = [
-  "Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya",
+  "Du",
+  "Se",
+  "Cho",
+  "Pa",
+  "Ju",
+  "Sha",
+  "Ya",
 ] as const

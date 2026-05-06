@@ -265,6 +265,9 @@ async def _sync_users(
     pms_base = settings.PAYMENT_API_URL.rstrip("/")
     created = updated = 0
     errors: list[str] = []
+    pending_hash: list[tuple[str, dict]] = (
+        []
+    )  # (doc_id, user_data) for non-students needing bcrypt
 
     for record in payment_users:
         doc_id = record.get("document_id")
@@ -306,29 +309,66 @@ async def _sync_users(
                 # Use PMS role when allowed, otherwise default
                 if allowed_roles:
                     pms_role = record.get("role", role.value)
-                    user_data["role"] = pms_role if pms_role in query_roles else role.value
+                    user_data["role"] = (
+                        pms_role if pms_role in query_roles else role.value
+                    )
                 else:
                     user_data["role"] = role.value
                 if not user_data.get("hashed_password"):
                     if role == UserRole.STUDENT:
                         # Students authenticate passwordless via document_id;
-                        # skip the (slow) bcrypt entirely. ~100 ms per student
-                        # × thousands at first sync = minutes saved.
+                        # skip the (slow) bcrypt entirely.
                         user_data["hashed_password"] = None
+                        new_user = User(**user_data)
+                        db.add(new_user)
+                        user_map[doc_id] = new_user
+                        created += 1
                     else:
-                        loop = asyncio.get_running_loop()
-                        user_data["hashed_password"] = await loop.run_in_executor(
-                            None,
-                            get_password_hash,
-                            doc_id,
-                        )
-                new_user = User(**user_data)
-                db.add(new_user)
-                user_map[doc_id] = new_user
-                created += 1
+                        # Defer creation until all bcrypt hashes are computed
+                        # in parallel after this loop — see below.
+                        pending_hash.append((doc_id, user_data))
+                else:
+                    new_user = User(**user_data)
+                    db.add(new_user)
+                    user_map[doc_id] = new_user
+                    created += 1
         except Exception as e:
-            logger.warning("Sync %s failed for %s: %s", role.value, mask_document_id(doc_id), e)
+            logger.warning(
+                "Sync %s failed for %s: %s", role.value, mask_document_id(doc_id), e
+            )
             errors.append(f"{doc_id}: {e}")
+
+    # ── Batched bcrypt for non-student creates ───────────────────────────
+    # bcrypt is CPU-bound (~100 ms per hash). Running them sequentially
+    # serialises the whole sync loop. asyncio.gather + run_in_executor lets
+    # the default ThreadPoolExecutor parallelise across cores. Chunk size of
+    # 50 keeps the executor queue short on small machines.
+    if pending_hash:
+        loop = asyncio.get_running_loop()
+        BATCH = 50
+        for i in range(0, len(pending_hash), BATCH):
+            chunk = pending_hash[i : i + BATCH]
+            hashes = await asyncio.gather(
+                *(
+                    loop.run_in_executor(None, get_password_hash, doc_id)
+                    for doc_id, _ in chunk
+                )
+            )
+            for (doc_id, user_data), hashed in zip(chunk, hashes, strict=True):
+                user_data["hashed_password"] = hashed
+                try:
+                    new_user = User(**user_data)
+                    db.add(new_user)
+                    user_map[doc_id] = new_user
+                    created += 1
+                except Exception as e:
+                    logger.warning(
+                        "Sync %s failed for %s: %s",
+                        role.value,
+                        mask_document_id(doc_id),
+                        e,
+                    )
+                    errors.append(f"{doc_id}: {e}")
 
     # Detect hard-deleted users (no longer in Payment)
     deactivated = 0

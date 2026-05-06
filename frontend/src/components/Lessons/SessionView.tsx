@@ -11,11 +11,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-
-import type { SessionStudentRead } from "@/lib/api"
-import { lessonsApi } from "@/lib/api"
-import { getErrorDetail } from "@/lib/apiError"
-import { cn } from "@/lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -28,12 +24,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getLessonSessionQueryOptions, queryKeys } from "@/hooks/useQueryOptions"
-import { TopicHomeworkSection } from "./TopicHomeworkSection"
-import { StudentRow } from "./StudentRow"
+import {
+  getLessonSessionQueryOptions,
+  queryKeys,
+} from "@/hooks/useQueryOptions"
+import type { SessionStudentRead } from "@/lib/api"
+import { lessonsApi } from "@/lib/api"
+import { getErrorDetail } from "@/lib/apiError"
+import { cn } from "@/lib/utils"
 import { ATTENDANCE_OPTIONS } from "./constants"
 import { lessonStatusFlags } from "./formatters"
+import { StudentRow } from "./StudentRow"
+import { TopicHomeworkSection } from "./TopicHomeworkSection"
 
 export function SessionView({
   sessionId,
@@ -54,8 +56,14 @@ export function SessionView({
     onSuccess: () => {
       toast.success("Dars tugatildi")
       queryClient.invalidateQueries({ queryKey: queryKeys.todayLessons })
-      queryClient.invalidateQueries({ queryKey: queryKeys.lessonSession(sessionId) })
-      queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === "lessons-for-date" || q.queryKey[0] === "session-statuses" })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.lessonSession(sessionId),
+      })
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "lessons-for-date" ||
+          q.queryKey[0] === "session-statuses",
+      })
     },
     onError: (error) => {
       toast.error(getErrorDetail(error, "Darsni tugatishda xatolik"))
@@ -79,10 +87,12 @@ export function SessionView({
   const { isCompleted, isInProgress } = lessonStatusFlags(session)
 
   // Late warning: 5+ minutes since session started, student still unmarked
-  const showLateWarning = isInProgress && (() => {
-    const started = new Date(session.started_at).getTime()
-    return Date.now() - started >= 5 * 60 * 1000
-  })()
+  const showLateWarning =
+    isInProgress &&
+    (() => {
+      const started = new Date(session.started_at).getTime()
+      return Date.now() - started >= 5 * 60 * 1000
+    })()
 
   return (
     <div className="space-y-6">
@@ -98,7 +108,8 @@ export function SessionView({
             <h1 className="text-2xl font-bold">
               {session.grade_display} — {session.subject_name}
               <span className="text-base font-normal text-muted-foreground ml-2">
-                {session.period_number}-soat · {session.start_time} – {session.end_time}
+                {session.period_number}-soat · {session.start_time} –{" "}
+                {session.end_time}
               </span>
             </h1>
           </div>
@@ -108,7 +119,13 @@ export function SessionView({
             <div className="flex items-center gap-1.5 text-[var(--imkon-teal)] bg-[var(--imkon-teal)]/10 rounded-md px-3 py-1.5 text-sm">
               <CheckCircle2 className="h-4 w-4" />
               <span className="font-medium">
-                Dars tugatilgan · {session.ended_at ? new Date(session.ended_at).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }) : ""}
+                Dars tugatilgan ·{" "}
+                {session.ended_at
+                  ? new Date(session.ended_at).toLocaleTimeString("uz-UZ", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : ""}
               </span>
             </div>
           )}
@@ -133,7 +150,12 @@ export function SessionView({
           <FileText className="h-4 w-4" />
           Dars rejasi
         </span>
-        <ChevronRight className={cn("h-4 w-4 transition-transform", showPlan && "rotate-90")} />
+        <ChevronRight
+          className={cn(
+            "h-4 w-4 transition-transform",
+            showPlan && "rotate-90",
+          )}
+        />
       </Button>
       {showPlan && (
         <TopicHomeworkSection
@@ -150,7 +172,9 @@ export function SessionView({
             <th className="w-10 py-3 px-4 text-left font-medium">#</th>
             <th className="py-3 px-3 text-left font-medium">O'quvchi</th>
             <th className="py-3 px-3 text-center font-medium">Davomat</th>
-            <th className="py-3 px-3 text-center font-medium">Darsdagi faollik</th>
+            <th className="py-3 px-3 text-center font-medium">
+              Darsdagi faollik
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -187,19 +211,31 @@ function EndSessionDialog({
   endMutation,
   onBack,
 }: {
-  session: { grade_display: string; subject_name: string; period_number: number; students: SessionStudentRead[] }
+  session: {
+    grade_display: string
+    subject_name: string
+    period_number: number
+    students: SessionStudentRead[]
+  }
   sessionId: number
-  endMutation: { mutate: (vars?: undefined, options?: { onSuccess?: () => void }) => void; isPending: boolean }
+  endMutation: {
+    mutate: (vars?: undefined, options?: { onSuccess?: () => void }) => void
+    isPending: boolean
+  }
   onBack: () => void
 }) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
-  const unmarkedStudents = session.students.filter((s) => s.status === "unmarked")
+  const unmarkedStudents = session.students.filter(
+    (s) => s.status === "unmarked",
+  )
   const hasUnmarked = unmarkedStudents.length > 0
 
   const markMutation = useMutation({
-    mutationFn: (data: { student_id: number; status: import("@/lib/api").AttendanceStatus }) =>
-      lessonsApi.updateAttendance(sessionId, data),
+    mutationFn: (data: {
+      student_id: number
+      status: import("@/lib/api").AttendanceStatus
+    }) => lessonsApi.updateAttendance(sessionId, data),
     onSuccess: (response) => {
       queryClient.setQueryData(
         queryKeys.lessonSession(sessionId),
@@ -238,7 +274,8 @@ function EndSessionDialog({
         <DialogHeader>
           <DialogTitle>Darsni tugatish</DialogTitle>
           <DialogDescription>
-            {session.grade_display} · {session.subject_name} · {session.period_number}-soat
+            {session.grade_display} · {session.subject_name} ·{" "}
+            {session.period_number}-soat
           </DialogDescription>
         </DialogHeader>
 
@@ -259,11 +296,18 @@ function EndSessionDialog({
         {hasUnmarked && (
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {unmarkedStudents.map((student) => (
-              <div key={student.student_id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+              <div
+                key={student.student_id}
+                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              >
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+                  <AvatarImage
+                    src={student.photo_url ?? undefined}
+                    alt={student.full_name}
+                  />
                   <AvatarFallback className="text-xs">
-                    {student.first_name[0]}{student.last_name[0]}
+                    {student.first_name[0]}
+                    {student.last_name[0]}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium min-w-0 truncate flex-1">
@@ -275,11 +319,17 @@ function EndSessionDialog({
                       key={opt.value}
                       type="button"
                       disabled={markMutation.isPending}
-                      onClick={() => markMutation.mutate({ student_id: student.student_id, status: opt.value })}
+                      onClick={() =>
+                        markMutation.mutate({
+                          student_id: student.student_id,
+                          status: opt.value,
+                        })
+                      }
                       className={cn(
                         "rounded-md border px-3 py-1.5 text-sm font-medium transition-all",
                         "bg-background text-muted-foreground border-border hover:bg-accent",
-                        markMutation.isPending && "cursor-not-allowed opacity-60",
+                        markMutation.isPending &&
+                          "cursor-not-allowed opacity-60",
                       )}
                     >
                       {opt.label}
@@ -304,14 +354,18 @@ function EndSessionDialog({
           <Button
             variant="destructive"
             disabled={hasUnmarked || endMutation.isPending}
-            onClick={() => endMutation.mutate(undefined, {
-              onSuccess: () => {
-                setOpen(false)
-                onBack()
-              },
-            })}
+            onClick={() =>
+              endMutation.mutate(undefined, {
+                onSuccess: () => {
+                  setOpen(false)
+                  onBack()
+                },
+              })
+            }
           >
-            {endMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {endMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
             Darsni tugatish
           </Button>
         </DialogFooter>

@@ -5,7 +5,7 @@
 # Restore:  gpg --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" \
 #               imkon_lms_YYYYMMDD.sql.gz.gpg | gunzip | psql ...
 
-set -e
+set -euo pipefail
 
 BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)

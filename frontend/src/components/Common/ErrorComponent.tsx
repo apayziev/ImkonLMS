@@ -4,35 +4,32 @@ import { Button } from "@/components/ui/button"
 interface ErrorComponentProps {
   error?: Error | unknown
   homePath?: string
-  componentStack?: string | null
 }
 
-export function ErrorComponent({ error, homePath = "/", componentStack }: ErrorComponentProps) {
+export function ErrorComponent({ error, homePath = "/" }: ErrorComponentProps) {
   const router = useRouter()
   const errorMessage = error instanceof Error ? error.message : undefined
+  const isDev = import.meta.env.DEV
 
   return (
     <div className="flex min-h-screen items-center justify-center flex-col p-4">
       <div className="flex flex-col items-center justify-center p-4">
-        <span className="text-6xl md:text-8xl font-bold leading-none mb-4">Xatolik</span>
+        <span className="text-6xl md:text-8xl font-bold leading-none mb-4">
+          Xatolik
+        </span>
         <span className="text-2xl font-bold mb-2">Afsuski!</span>
       </div>
       <p className="text-lg text-muted-foreground mb-4 text-center max-w-2xl">
-        {errorMessage || "Nimadir xato ketdi. Iltimos, qaytadan urinib ko'ring."}
+        {errorMessage ||
+          "Nimadir xato ketdi. Iltimos, qaytadan urinib ko'ring."}
       </p>
-      {error instanceof Error && error.stack && (
+      {isDev && error instanceof Error && error.stack && (
         <details className="max-w-3xl w-full mb-4 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Stack</summary>
+          <summary className="cursor-pointer text-muted-foreground">
+            Stack (dev only)
+          </summary>
           <pre className="mt-2 p-3 rounded bg-muted overflow-x-auto whitespace-pre-wrap break-all">
             {error.stack}
-          </pre>
-        </details>
-      )}
-      {componentStack && (
-        <details className="max-w-3xl w-full mb-4 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Component stack</summary>
-          <pre className="mt-2 p-3 rounded bg-muted overflow-x-auto whitespace-pre-wrap break-all">
-            {componentStack}
           </pre>
         </details>
       )}

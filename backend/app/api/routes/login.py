@@ -12,6 +12,7 @@ from app.api.routes._shared import resolve_parent_name
 from app.core.config import settings
 from app.core.db import async_get_db
 from app.core.exceptions import UnauthorizedException
+from app.core.rate_limit import limiter
 from app.core.security import (
     TokenType,
     create_access_token,
@@ -25,7 +26,12 @@ from app.crud.users import crud_users
 from app.models.grade import Grade
 from app.models.parent_auth import ParentAuth
 from app.models.user import User, UserRole
-from app.schemas.parent import ParentChildRead, ParentLoginRequest, ParentMeRead, ParentTokenResponse
+from app.schemas.parent import (
+    ParentChildRead,
+    ParentLoginRequest,
+    ParentMeRead,
+    ParentTokenResponse,
+)
 from app.schemas.users import LoginRequest, StudentLoginRequest, TokenResponse, UserRead
 
 router = APIRouter(prefix="/login", tags=["login"])
@@ -70,22 +76,32 @@ async def _issue_session(
 
 
 async def _create_token_response(
-    db: AsyncSession, response: Response, user: User,
+    db: AsyncSession,
+    response: Response,
+    user: User,
 ) -> TokenResponse:
-    access = await _issue_session(db, response, subject=user.document_id, role=user.role)
+    access = await _issue_session(
+        db, response, subject=user.document_id, role=user.role
+    )
     return TokenResponse(
-        access_token=access, token_type="bearer", user=UserRead.model_validate(user),
+        access_token=access,
+        token_type="bearer",
+        user=UserRead.model_validate(user),
     )
 
 
 @router.post("/", response_model=TokenResponse)
+@limiter.limit("5/minute;30/hour")
 async def login(
+    request: Request,
     response: Response,
     login_data: LoginRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> TokenResponse:
     """Tizimga kirish (document_id va parol bilan)."""
-    user = await crud_users.authenticate(db=db, username=login_data.document_id, password=login_data.password)
+    user = await crud_users.authenticate(
+        db=db, username=login_data.document_id, password=login_data.password
+    )
     if not user:
         raise UnauthorizedException("Noto'g'ri hujjat raqami yoki parol.")
     if not user.is_active:
@@ -95,23 +111,30 @@ async def login(
 
 
 @router.post("/access-token")
+@limiter.limit("5/minute;30/hour")
 async def login_for_access_token(
+    request: Request,
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> dict[str, str]:
     """OAuth2 compatible token login (username = document_id)."""
-    user = await crud_users.authenticate(db=db, username=form_data.username, password=form_data.password)
+    user = await crud_users.authenticate(
+        db=db, username=form_data.username, password=form_data.password
+    )
     if not user:
         raise UnauthorizedException("Noto'g'ri hujjat raqami yoki parol.")
     if not user.is_active:
         raise UnauthorizedException("Foydalanuvchi faol emas.")
 
-    access = await _issue_session(db, response, subject=user.document_id, role=user.role)
+    access = await _issue_session(
+        db, response, subject=user.document_id, role=user.role
+    )
     return {"access_token": access, "token_type": "bearer"}
 
 
 @router.post("/refresh")
+@limiter.limit("30/minute")
 async def refresh_access_token(
     request: Request,
     response: Response,
@@ -134,7 +157,9 @@ async def refresh_access_token(
     try:
         rotated = await refresh_tokens.rotate(db, jti=jti)
     except RefreshRotationError as e:
-        response.delete_cookie(key="refresh_token", domain=settings.COOKIE_DOMAIN or None)
+        response.delete_cookie(
+            key="refresh_token", domain=settings.COOKIE_DOMAIN or None
+        )
         raise UnauthorizedException("Yaroqsiz refresh token.") from e
 
     refresh_payload: dict = {
@@ -155,13 +180,17 @@ async def refresh_access_token(
 
 
 @router.post("/student", response_model=TokenResponse)
+@limiter.limit("5/minute;30/hour")
 async def login_student(
+    request: Request,
     response: Response,
     login_data: StudentLoginRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> TokenResponse:
     """O'quvchi uchun tizimga kirish (PAROLSIZ)."""
-    user = await crud_users.authenticate_student(db=db, document_id=login_data.document_id)
+    user = await crud_users.authenticate_student(
+        db=db, document_id=login_data.document_id
+    )
     if not user:
         raise UnauthorizedException("O'quvchi topilmadi yoki siz o'quvchi emassiz.")
     if not user.is_active:
@@ -173,7 +202,9 @@ async def login_student(
 
 
 @router.post("/parent", response_model=ParentTokenResponse)
+@limiter.limit("5/minute;30/hour")
 async def login_parent(
+    request: Request,
     response: Response,
     login_data: ParentLoginRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
@@ -200,7 +231,9 @@ async def login_parent(
     children = list(children_result.scalars().all())
     name = resolve_parent_name(parent.phone, children)
 
-    access_token = await _issue_session(db, response, subject=parent.phone, role="parent")
+    access_token = await _issue_session(
+        db, response, subject=parent.phone, role="parent"
+    )
 
     # Batch load grades for all children (no N+1)
     grade_ids = {c.grade_id for c in children if c.grade_id}
@@ -211,10 +244,15 @@ async def login_parent(
 
     child_reads = [
         ParentChildRead(
-            id=c.id, first_name=c.first_name, last_name=c.last_name,
-            full_name=c.full_name, photo_url=c.photo_url,
-            grade_id=c.grade_id, grade_display=grade_map.get(c.grade_id),
-            is_active=c.is_active, is_frozen=c.is_frozen,
+            id=c.id,
+            first_name=c.first_name,
+            last_name=c.last_name,
+            full_name=c.full_name,
+            photo_url=c.photo_url,
+            grade_id=c.grade_id,
+            grade_display=grade_map.get(c.grade_id),
+            is_active=c.is_active,
+            is_frozen=c.is_frozen,
         )
         for c in children
     ]

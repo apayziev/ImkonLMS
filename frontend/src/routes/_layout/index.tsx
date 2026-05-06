@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Navigate, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Navigate } from "@tanstack/react-router"
 import { BookOpen, GraduationCap, Users, Users2 } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/Common/AnimatedNumber"
@@ -61,8 +61,12 @@ function AdminCards() {
     },
   })
 
-  const { data: gradesData, isLoading: loadingGrades } = useQuery(getGradesQueryOptions())
-  const { data: subjectsData, isLoading: loadingSubjects } = useQuery(getSubjectsQueryOptions())
+  const { data: gradesData, isLoading: loadingGrades } = useQuery(
+    getGradesQueryOptions(),
+  )
+  const { data: subjectsData, isLoading: loadingSubjects } = useQuery(
+    getSubjectsQueryOptions(),
+  )
 
   const cards = [
     {
@@ -131,7 +135,9 @@ function StatsGrid({ cards }: { cards: StatCard[] }) {
                 className={`text-2xl font-bold ${card.color}`}
               />
             )}
-            <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {card.description}
+            </p>
           </PatternCardContent>
         </PatternCard>
       ))}

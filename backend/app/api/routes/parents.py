@@ -16,23 +16,31 @@ router = APIRouter(prefix="/parents", tags=["parents"])
 
 def _children_count_subquery():
     """Subquery: count children per parent phone (single query, no N+1)."""
-    father = select(
-        User.father_phone.label("phone"),
-        func.count().label("cnt"),
-    ).where(
-        User.role == UserRole.STUDENT.value,
-        User.is_deleted == False,  # noqa: E712
-        User.father_phone.isnot(None),
-    ).group_by(User.father_phone)
+    father = (
+        select(
+            User.father_phone.label("phone"),
+            func.count().label("cnt"),
+        )
+        .where(
+            User.role == UserRole.STUDENT.value,
+            User.is_deleted == False,  # noqa: E712
+            User.father_phone.isnot(None),
+        )
+        .group_by(User.father_phone)
+    )
 
-    mother = select(
-        User.mother_phone.label("phone"),
-        func.count().label("cnt"),
-    ).where(
-        User.role == UserRole.STUDENT.value,
-        User.is_deleted == False,  # noqa: E712
-        User.mother_phone.isnot(None),
-    ).group_by(User.mother_phone)
+    mother = (
+        select(
+            User.mother_phone.label("phone"),
+            func.count().label("cnt"),
+        )
+        .where(
+            User.role == UserRole.STUDENT.value,
+            User.is_deleted == False,  # noqa: E712
+            User.mother_phone.isnot(None),
+        )
+        .group_by(User.mother_phone)
+    )
 
     return (
         select(
@@ -60,10 +68,10 @@ async def list_parents(
     total = (await db.execute(count_query)).scalar() or 0
 
     children_sq = _children_count_subquery()
-    query = (
-        select(ParentAuth, func.coalesce(children_sq.c.children_count, 0).label("children_count"))
-        .outerjoin(children_sq, ParentAuth.phone == children_sq.c.phone)
-    )
+    query = select(
+        ParentAuth,
+        func.coalesce(children_sq.c.children_count, 0).label("children_count"),
+    ).outerjoin(children_sq, ParentAuth.phone == children_sq.c.phone)
     if search:
         query = query.where(ParentAuth.phone.ilike(f"%{search}%"))
     query = query.order_by(ParentAuth.created_at.desc()).offset(skip).limit(limit)
@@ -71,8 +79,11 @@ async def list_parents(
     rows = (await db.execute(query)).all()
     data = [
         ParentRead(
-            id=p.id, phone=p.phone, is_active=p.is_active,
-            created_at=p.created_at, children_count=cnt,
+            id=p.id,
+            phone=p.phone,
+            is_active=p.is_active,
+            created_at=p.created_at,
+            children_count=cnt,
         )
         for p, cnt in rows
     ]
@@ -90,7 +101,9 @@ async def create_parent(
         select(ParentAuth).where(ParentAuth.phone == data.phone)
     )
     if existing.scalar_one_or_none():
-        raise DuplicateValueException("Bu telefon raqami bilan hisob allaqachon mavjud.")
+        raise DuplicateValueException(
+            "Bu telefon raqami bilan hisob allaqachon mavjud."
+        )
 
     parent = ParentAuth(
         phone=data.phone,
@@ -102,7 +115,9 @@ async def create_parent(
 
     # Count children
     children_count_result = await db.execute(
-        select(func.count()).select_from(User).where(
+        select(func.count())
+        .select_from(User)
+        .where(
             User.role == UserRole.STUDENT.value,
             User.is_deleted == False,  # noqa: E712
             (User.father_phone == parent.phone) | (User.mother_phone == parent.phone),
@@ -111,8 +126,11 @@ async def create_parent(
     children_count = children_count_result.scalar() or 0
 
     return ParentRead(
-        id=parent.id, phone=parent.phone, is_active=parent.is_active,
-        created_at=parent.created_at, children_count=children_count,
+        id=parent.id,
+        phone=parent.phone,
+        is_active=parent.is_active,
+        created_at=parent.created_at,
+        children_count=children_count,
     )
 
 
@@ -122,11 +140,13 @@ async def delete_parent(
     db: SessionDep,
     _: SuperUser,
 ) -> None:
-    """Ota-ona hisobini o'chirish."""
+    """Ota-ona hisobini o'chirish (soft delete — is_active=False)."""
     result = await db.execute(select(ParentAuth).where(ParentAuth.id == parent_id))
     parent = result.scalar_one_or_none()
     if not parent:
         raise NotFoundException("Ota-ona topilmadi.")
 
-    await db.delete(parent)
+    # Soft-delete: keep the row so historical audit/login logs stay
+    # referentially intact, but prevent any further authentication.
+    parent.is_active = False
     await db.commit()

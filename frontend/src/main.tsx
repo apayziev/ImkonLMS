@@ -4,10 +4,10 @@ import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 
 import { Toaster } from "@/components/ui/sonner"
-import { silentRefresh } from "@/lib/api"
+import { setUnauthorizedHandler, silentRefresh } from "@/lib/api"
 import { isParentDomain } from "@/lib/subdomain"
-import { routeTree } from "./routeTree.gen"
 import "./index.css"
+import { routeTree } from "./routeTree.gen"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +36,11 @@ declare module "@tanstack/react-router" {
     router: typeof router
   }
 }
+
+// Route 401s through the SPA router so we don't lose query cache & state.
+setUnauthorizedHandler((loginPath) => {
+  router.navigate({ to: loginPath, replace: true })
+})
 
 const rootElement = document.getElementById("root")
 

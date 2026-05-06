@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CalendarDays } from "lucide-react"
-
+import { ChildSelector } from "@/components/Common/ChildSelector"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -12,9 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ChildSelector } from "@/components/Common/ChildSelector"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
-import { parentApi, type ChildTimetableEntry } from "@/lib/api"
+import { type ChildTimetableEntry, parentApi } from "@/lib/api"
 
 export const Route = createFileRoute("/parent/_parent/timetable")({
   component: TimetablePage,
@@ -45,14 +44,13 @@ function TimetablePage() {
   })
 
   // Group by day
-  const grouped = (data?.entries ?? []).reduce<Record<number, ChildTimetableEntry[]>>(
-    (acc, entry) => {
-      if (!acc[entry.day_of_week]) acc[entry.day_of_week] = []
-      acc[entry.day_of_week].push(entry)
-      return acc
-    },
-    {},
-  )
+  const grouped = (data?.entries ?? []).reduce<
+    Record<number, ChildTimetableEntry[]>
+  >((acc, entry) => {
+    if (!acc[entry.day_of_week]) acc[entry.day_of_week] = []
+    acc[entry.day_of_week].push(entry)
+    return acc
+  }, {})
   const days = Object.keys(grouped).map(Number).sort()
 
   return (
@@ -63,14 +61,20 @@ function TimetablePage() {
           <p className="text-muted-foreground text-sm">Haftalik dars jadvali</p>
         </div>
 
-        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector
+          items={children}
+          selectedChildId={selectedChildId}
+          onSelect={setSelectedChildId}
+        />
       </div>
 
       {isLoading ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
               <CardContent className="space-y-2">
                 {Array.from({ length: 4 }).map((_, j) => (
                   <Skeleton key={j} className="h-10 w-full" />
@@ -91,7 +95,9 @@ function TimetablePage() {
           {days.map((day) => (
             <Card key={day}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">{DAY_NAMES[day] || `${day}-kun`}</CardTitle>
+                <CardTitle className="text-base">
+                  {DAY_NAMES[day] || `${day}-kun`}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -109,11 +115,16 @@ function TimetablePage() {
                       .sort((a, b) => a.period_number - b.period_number)
                       .map((entry) => (
                         <TableRow key={`${day}-${entry.period_number}`}>
-                          <TableCell className="font-medium">{entry.period_number}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {entry.start_time.slice(0, 5)} - {entry.end_time.slice(0, 5)}
+                          <TableCell className="font-medium">
+                            {entry.period_number}
                           </TableCell>
-                          <TableCell className="font-medium">{entry.subject_name}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {entry.start_time.slice(0, 5)} -{" "}
+                            {entry.end_time.slice(0, 5)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {entry.subject_name}
+                          </TableCell>
                           <TableCell>{entry.teacher_name}</TableCell>
                           <TableCell>{entry.room || "—"}</TableCell>
                         </TableRow>

@@ -1,22 +1,22 @@
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    useSidebar,
-} from "@/components/ui/sidebar";
-import useParentAuth from "@/hooks/useParentAuth";
-import { getInitials } from "@/lib/utils";
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar"
+import useParentAuth from "@/hooks/useParentAuth"
+import { getInitials } from "@/lib/utils"
 
 function ParentInfo({ name }: { name: string }) {
   return (
@@ -30,22 +30,22 @@ function ParentInfo({ name }: { name: string }) {
         <p className="text-sm font-medium truncate w-full">{name}</p>
       </div>
     </div>
-  );
+  )
 }
 
 export function ParentUser() {
-  const { parent, logout } = useParentAuth();
-  const { isMobile, setOpenMobile, state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { parent, logout } = useParentAuth()
+  const { isMobile, setOpenMobile, state } = useSidebar()
+  const isCollapsed = state === "collapsed"
 
   const handleLogout = () => {
-    if (isMobile) setOpenMobile(false);
-    logout();
-  };
+    if (isMobile) setOpenMobile(false)
+    logout()
+  }
 
-  if (!parent) return null;
+  if (!parent) return null
 
-  const displayName = parent.name || parent.phone;
+  const displayName = parent.name || parent.phone
 
   return (
     <SidebarMenu
@@ -95,5 +95,5 @@ export function ParentUser() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  );
+  )
 }

@@ -13,9 +13,19 @@ from app.core.formatting import format_time
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
-from app.schemas.lessons import SessionStatusesResponse, SessionStatusItem, TodayLessonRead, TodayLessonsResponse
+from app.schemas.lessons import (
+    SessionStatusesResponse,
+    SessionStatusItem,
+    TodayLessonRead,
+    TodayLessonsResponse,
+)
 
-from ._helpers import ENTRY_LOAD, _calc_lesson_numbers, _plan_filled_count, _require_teacher
+from ._helpers import (
+    ENTRY_LOAD,
+    _calc_lesson_numbers,
+    _plan_filled_count,
+    _require_teacher,
+)
 
 router = APIRouter()
 
@@ -31,12 +41,26 @@ async def get_session_statuses(
     """Get session statuses for given schedule entries within a date range."""
     _require_teacher(current_user)
 
+    # Restrict to entries owned by this teacher (admins/superusers see everything).
+    is_admin = current_user.is_superuser
+    if not is_admin:
+        owned = await db.execute(
+            select(ScheduleEntry.id).where(
+                ScheduleEntry.id.in_(entry_ids),
+                ScheduleEntry.teacher_id == current_user.id,
+                ScheduleEntry.is_deleted.is_(False),
+            )
+        )
+        entry_ids = [row[0] for row in owned.all()]
+        if not entry_ids:
+            return SessionStatusesResponse(data=[])
+
     result = await db.execute(
         select(LessonSession).where(
             LessonSession.schedule_entry_id.in_(entry_ids),
             LessonSession.session_date >= start_date,
             LessonSession.session_date <= end_date,
-            LessonSession.is_deleted == False,  # noqa: E712
+            LessonSession.is_deleted.is_(False),
         )
     )
     sessions = result.scalars().all()
@@ -92,12 +116,16 @@ async def get_today_lessons(
         for s in sess_result.scalars().all():
             sessions_map[s.schedule_entry_id] = s
 
-        plan_query = select(LessonPlan).options(
-            selectinload(LessonPlan.materials),
-        ).where(
-            LessonPlan.schedule_entry_id.in_(entry_ids),
-            LessonPlan.plan_date == today,
-            LessonPlan.is_deleted == False,  # noqa: E712
+        plan_query = (
+            select(LessonPlan)
+            .options(
+                selectinload(LessonPlan.materials),
+            )
+            .where(
+                LessonPlan.schedule_entry_id.in_(entry_ids),
+                LessonPlan.plan_date == today,
+                LessonPlan.is_deleted == False,  # noqa: E712
+            )
         )
         plan_result = await db.execute(plan_query)
         for p in plan_result.scalars().all():
@@ -105,7 +133,9 @@ async def get_today_lessons(
 
     # Build response sorted by period_number
     lessons = []
-    for entry in sorted(entries, key=lambda e: e.time_slot.period_number if e.time_slot else 0):
+    for entry in sorted(
+        entries, key=lambda e: e.time_slot.period_number if e.time_slot else 0
+    ):
         session = sessions_map.get(entry.id)
         plan = plans_map.get(entry.id)
         lessons.append(
@@ -116,8 +146,12 @@ async def get_today_lessons(
                 subject_id=entry.subject_id,
                 subject_name=entry.subject.name if entry.subject else "",
                 period_number=entry.time_slot.period_number if entry.time_slot else 0,
-                start_time=format_time(entry.time_slot.start_time) if entry.time_slot else "",
-                end_time=format_time(entry.time_slot.end_time) if entry.time_slot else "",
+                start_time=(
+                    format_time(entry.time_slot.start_time) if entry.time_slot else ""
+                ),
+                end_time=(
+                    format_time(entry.time_slot.end_time) if entry.time_slot else ""
+                ),
                 room=entry.room,
                 session_id=session.id if session else None,
                 session_status=session.status if session else None,
@@ -143,7 +177,12 @@ async def get_today_lessons(
             all_entries = all_entries_result.scalars().all()
             holidays_set = set(quarter.holidays or [])
             ln_map = _calc_lesson_numbers(
-                entries, all_entries, today, quarter.start_date, quarter.end_date, holidays_set,
+                entries,
+                all_entries,
+                today,
+                quarter.start_date,
+                quarter.end_date,
+                holidays_set,
             )
             for lesson in lessons:
                 nums = ln_map.get(lesson.schedule_entry_id)

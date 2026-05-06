@@ -2,7 +2,9 @@
 name = "imkon-lms"
 version = "0.1.0"
 description = "Learning Management System for IMKON Liderlar Maktabi"
-authors = [{ name = "Abdulkhay Payziev", email = "abdulkhay.payziev@gmail.com" }]
+authors = [
+    { name = "Abdulkhay Payziev", email = "abdulkhay.payziev@gmail.com" },
+]
 license = { text = "MIT" }
 requires-python = ">=3.13, <3.14"
 dependencies = [
@@ -22,6 +24,7 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.18.0",
     "structlog>=24.4.0",
     "asgi-correlation-id>=4.3.4",
+    "slowapi>=0.1.9",
 ]
 
 [dependency-groups]
@@ -51,15 +54,15 @@ fix = true
 [tool.ruff.lint]
 select = ["F", "E", "W", "C", "UP", "I"]
 ignore = [
-    "E402",   # module-level import not at top (used in some test/conftest cases)
-    "E741",   # ambiguous variable name (l, I, O) — false positives in math/grading code
-    "UP006",  # use builtin generics — kept for SQLAlchemy/Pydantic compat
-    "UP007",  # X | Y union — same reason
-    "UP040",  # use StrEnum — UserRole/SessionStatus deliberately use str+Enum mixin
-    "UP042",  # str+Enum mixin — kept for SQLAlchemy String column compat
-    "UP046",  # generic class type-param syntax — Pydantic Generics still need explicit form
-    "UP047",  # generic function type-param syntax — same
-    "C901",   # function-too-complex — sync/stats are intentionally large pipelines
+    "E402",  # module-level import not at top (used in some test/conftest cases)
+    "E741",  # ambiguous variable name (l, I, O) — false positives in math/grading code
+    "UP006", # use builtin generics — kept for SQLAlchemy/Pydantic compat
+    "UP007", # X | Y union — same reason
+    "UP040", # use StrEnum — UserRole/SessionStatus deliberately use str+Enum mixin
+    "UP042", # str+Enum mixin — kept for SQLAlchemy String column compat
+    "UP046", # generic class type-param syntax — Pydantic Generics still need explicit form
+    "UP047", # generic function type-param syntax — same
+    "C901",  # function-too-complex — sync/stats are intentionally large pipelines
 ]
 
 [tool.ruff.lint.per-file-ignores]

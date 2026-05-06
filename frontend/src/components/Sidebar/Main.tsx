@@ -52,11 +52,15 @@ export function Main({ items }: MainProps) {
                   <RouterLink
                     to={item.path}
                     onClick={handleMenuClick}
-                    className={isCollapsed ? "flex items-center justify-center" : ""}
+                    className={
+                      isCollapsed ? "flex items-center justify-center" : ""
+                    }
                   >
                     <item.icon className="size-5" />
                     {!isCollapsed && (
-                      <span className="font-medium text-base">{item.title}</span>
+                      <span className="font-medium text-base">
+                        {item.title}
+                      </span>
                     )}
                   </RouterLink>
                 </SidebarMenuButton>

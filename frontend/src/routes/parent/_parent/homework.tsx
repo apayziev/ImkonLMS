@@ -1,11 +1,16 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { BookOpen, Calendar, User } from "lucide-react"
-
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { ChildSelector } from "@/components/Common/ChildSelector"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi } from "@/lib/api"
 
@@ -40,10 +45,16 @@ function HomeworkPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Uyga vazifa</h1>
-          <p className="text-muted-foreground text-sm">Farzandingizga berilgan vazifalar</p>
+          <p className="text-muted-foreground text-sm">
+            Farzandingizga berilgan vazifalar
+          </p>
         </div>
 
-        <ChildSelector items={children} selectedChildId={selectedChildId} onSelect={setSelectedChildId} />
+        <ChildSelector
+          items={children}
+          selectedChildId={selectedChildId}
+          onSelect={setSelectedChildId}
+        />
       </div>
 
       {isLoading ? (
@@ -81,12 +92,19 @@ function HomeworkPage() {
                   <div className="flex items-center gap-2">
                     {item.homework_deadline && (
                       <Badge
-                        variant={isOverdue(item.homework_deadline) ? "destructive" : "secondary"}
+                        variant={
+                          isOverdue(item.homework_deadline)
+                            ? "destructive"
+                            : "secondary"
+                        }
                         className="gap-1"
                       >
                         <Calendar className="size-3" />
-                        {new Date(item.homework_deadline).toLocaleDateString("uz-UZ")}
-                        {isOverdue(item.homework_deadline) && " (muddati o'tgan)"}
+                        {new Date(item.homework_deadline).toLocaleDateString(
+                          "uz-UZ",
+                        )}
+                        {isOverdue(item.homework_deadline) &&
+                          " (muddati o'tgan)"}
                       </Badge>
                     )}
                   </div>

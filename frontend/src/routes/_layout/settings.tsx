@@ -3,15 +3,6 @@ import { createFileRoute } from "@tanstack/react-router"
 import { AlertTriangle, Loader2, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-
-import type { QuarterRead } from "@/lib/api"
-import { quartersApi } from "@/lib/api"
-import useAuth from "@/hooks/useAuth"
-import { Button } from "@/components/ui/button"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,17 +13,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
   getQuartersQueryOptions,
   queryKeys,
 } from "@/hooks/useQueryOptions"
+import type { QuarterRead } from "@/lib/api"
+import { quartersApi } from "@/lib/api"
 import { requireAdmin } from "@/lib/routeGuards"
 import { formatDateShortUz } from "@/lib/utils"
 
@@ -51,7 +50,12 @@ interface QuarterForm {
   holidays: string[]
 }
 
-const EMPTY_FORM: QuarterForm = { number: "", start_date: "", end_date: "", holidays: [] }
+const EMPTY_FORM: QuarterForm = {
+  number: "",
+  start_date: "",
+  end_date: "",
+  holidays: [],
+}
 
 function SettingsPage() {
   const { user } = useAuth()
@@ -62,7 +66,10 @@ function SettingsPage() {
   const [editing, setEditing] = useState<QuarterRead | null>(null)
   const [form, setForm] = useState<QuarterForm>(EMPTY_FORM)
   const [holidayPickerKey, setHolidayPickerKey] = useState(0)
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; label: string } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: number
+    label: string
+  } | null>(null)
 
   const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
   const academicYearId = currentYear?.id
@@ -73,9 +80,15 @@ function SettingsPage() {
   const quarters = quartersData?.data ?? []
 
   const today = new Date().toISOString().split("T")[0]
-  const currentQuarter = quarters.find((q) => q.start_date <= today && today <= q.end_date)
+  const currentQuarter = quarters.find(
+    (q) => q.start_date <= today && today <= q.end_date,
+  )
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true) }
+  const openCreate = () => {
+    setEditing(null)
+    setForm(EMPTY_FORM)
+    setDialogOpen(true)
+  }
   const openEdit = (q: QuarterRead) => {
     setEditing(q)
     setForm({
@@ -89,25 +102,52 @@ function SettingsPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: (data: Parameters<typeof quartersApi.create>[0]) => quartersApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.quarters(academicYearId) }); toast.success("Chorak yaratildi"); setDialogOpen(false) },
+    mutationFn: (data: Parameters<typeof quartersApi.create>[0]) =>
+      quartersApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.quarters(academicYearId),
+      })
+      toast.success("Chorak yaratildi")
+      setDialogOpen(false)
+    },
     onError: () => toast.error("Xatolik yuz berdi"),
   })
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof quartersApi.update>[1] }) => quartersApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.quarters(academicYearId) }); toast.success("Chorak yangilandi"); setDialogOpen(false) },
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number
+      data: Parameters<typeof quartersApi.update>[1]
+    }) => quartersApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.quarters(academicYearId),
+      })
+      toast.success("Chorak yangilandi")
+      setDialogOpen(false)
+    },
     onError: () => toast.error("Xatolik yuz berdi"),
   })
   const deleteMutation = useMutation({
     mutationFn: (id: number) => quartersApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.quarters(academicYearId) }); toast.success("Chorak o'chirildi") },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.quarters(academicYearId),
+      })
+      toast.success("Chorak o'chirildi")
+    },
     onError: () => toast.error("Xatolik yuz berdi"),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!academicYearId) return
-    if (!form.start_date || !form.end_date) { toast.error("Boshlanish va tugash sanasini tanlang"); return }
+    if (!form.start_date || !form.end_date) {
+      toast.error("Boshlanish va tugash sanasini tanlang")
+      return
+    }
     const payload = {
       number: Number(form.number),
       start_date: form.start_date,
@@ -129,7 +169,9 @@ function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Sozlamalar — Choraklar</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Sozlamalar — Choraklar
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {currentYear ? `${currentYear.name} o'quv yili` : "—"}
           {currentQuarter ? ` · Hozir ${currentQuarter.number}-chorak` : ""}
@@ -168,11 +210,15 @@ function SettingsPage() {
                   className={`flex items-center justify-between px-4 py-3 ${idx !== 0 ? "border-t" : ""} ${isActive ? "bg-primary/5" : ""}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`text-sm font-bold w-6 ${isActive ? "text-primary" : isPast ? "text-muted-foreground" : ""}`}>
+                    <span
+                      className={`text-sm font-bold w-6 ${isActive ? "text-primary" : isPast ? "text-muted-foreground" : ""}`}
+                    >
                       {q.number}
                     </span>
                     <div>
-                      <p className={`text-sm font-medium ${isActive ? "text-primary" : isPast ? "text-muted-foreground" : ""}`}>
+                      <p
+                        className={`text-sm font-medium ${isActive ? "text-primary" : isPast ? "text-muted-foreground" : ""}`}
+                      >
                         {q.number}-chorak
                         {isActive && (
                           <span className="ml-2 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
@@ -181,20 +227,31 @@ function SettingsPage() {
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDateShortUz(q.start_date)} – {formatDateShortUz(q.end_date)}
+                        {formatDateShortUz(q.start_date)} –{" "}
+                        {formatDateShortUz(q.end_date)}
                       </p>
                     </div>
                   </div>
                   {isAdmin && (
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(q)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEdit(q)}
+                      >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteConfirm({ id: q.id, label: `${q.number}-chorak` })}
+                        onClick={() =>
+                          setDeleteConfirm({
+                            id: q.id,
+                            label: `${q.number}-chorak`,
+                          })
+                        }
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -207,7 +264,10 @@ function SettingsPage() {
         </div>
       )}
 
-      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+      <AlertDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -215,7 +275,8 @@ function SettingsPage() {
               O'chirishni tasdiqlang
             </AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>"{deleteConfirm?.label}"</strong> ni o'chirmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.
+              <strong>"{deleteConfirm?.label}"</strong> ni o'chirmoqchimisiz? Bu
+              amalni ortga qaytarib bo'lmaydi.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -233,7 +294,9 @@ function SettingsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editing ? "Chorakni tahrirlash" : "Yangi chorak"}</DialogTitle>
+            <DialogTitle>
+              {editing ? "Chorakni tahrirlash" : "Yangi chorak"}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
@@ -245,7 +308,9 @@ function SettingsPage() {
                 max={4}
                 required
                 value={form.number}
-                onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, number: e.target.value }))
+                }
                 placeholder="1–4"
               />
             </div>
@@ -274,14 +339,22 @@ function SettingsPage() {
               {form.holidays.length > 0 && (
                 <div className="space-y-1">
                   {form.holidays.map((h) => (
-                    <div key={h} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
+                    <div
+                      key={h}
+                      className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm"
+                    >
                       <span>{formatDateShortUz(h)}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => setForm((f) => ({ ...f, holidays: f.holidays.filter((d) => d !== h) }))}
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            holidays: f.holidays.filter((d) => d !== h),
+                          }))
+                        }
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -294,7 +367,10 @@ function SettingsPage() {
                 value={null}
                 onChange={(d) => {
                   if (d && !form.holidays.includes(d)) {
-                    setForm((f) => ({ ...f, holidays: [...f.holidays, d].sort() }))
+                    setForm((f) => ({
+                      ...f,
+                      holidays: [...f.holidays, d].sort(),
+                    }))
                   }
                   setHolidayPickerKey((k) => k + 1)
                 }}
@@ -304,11 +380,17 @@ function SettingsPage() {
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
                 Bekor qilish
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                {isPending && (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                )}
                 {editing ? "Saqlash" : "Yaratish"}
               </Button>
             </div>

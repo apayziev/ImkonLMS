@@ -8,14 +8,18 @@ import anyio
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.orm import joinedload
 
 from app.models import *  # noqa: F403
 
 from .config import LOCAL_TZ, EnvironmentOption, settings
 from .db import async_engine as engine
 from .db import local_session
+from .rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -77,17 +81,25 @@ async def check_database_connection() -> None:
                 await conn.execute(text("SELECT 1"))
             logging.info(
                 "Database connection successful to %s:%s/%s",
-                settings.POSTGRES_SERVER, settings.POSTGRES_PORT, settings.POSTGRES_DB,
+                settings.POSTGRES_SERVER,
+                settings.POSTGRES_PORT,
+                settings.POSTGRES_DB,
             )
             return
         except (asyncio.CancelledError, KeyboardInterrupt):
             raise
         except Exception as e:
             if attempt == max_retries:
-                logging.error("Database connection failed after %s attempts: %s", max_retries, type(e).__name__)
+                logging.error(
+                    "Database connection failed after %s attempts: %s",
+                    max_retries,
+                    type(e).__name__,
+                )
                 raise
             delay = min(base_delay * 2 ** (attempt - 1), max_delay)
-            logging.warning("DB connection attempt %s failed. Retrying in %.1fs...", attempt, delay)
+            logging.warning(
+                "DB connection attempt %s failed. Retrying in %.1fs...", attempt, delay
+            )
             await anyio.sleep(delay)
 
 
@@ -109,7 +121,12 @@ async def _auto_sync_loop() -> None:
             logger.exception("Auto-sync failed")
             try:
                 async with local_session() as db:
-                    await _save_sync_log(db, status="failed", error_message=str(e)[:500], triggered_by="auto")
+                    await _save_sync_log(
+                        db,
+                        status="failed",
+                        error_message=str(e)[:500],
+                        triggered_by="auto",
+                    )
             except Exception:
                 logger.exception("Failed to save sync error log")
 
@@ -135,28 +152,46 @@ async def _auto_end_sessions_loop() -> None:
 
                 result = await db.execute(
                     select(LessonSession)
-                    .join(ScheduleEntry, LessonSession.schedule_entry_id == ScheduleEntry.id)
+                    .join(
+                        ScheduleEntry,
+                        LessonSession.schedule_entry_id == ScheduleEntry.id,
+                    )
                     .join(TimeSlot, ScheduleEntry.time_slot_id == TimeSlot.id)
+                    .options(
+                        joinedload(LessonSession.schedule_entry).joinedload(
+                            ScheduleEntry.time_slot
+                        )
+                    )
                     .where(
                         LessonSession.status == SessionStatus.IN_PROGRESS,
-                        LessonSession.is_deleted == False,  # noqa: E712
+                        LessonSession.is_deleted.is_(False),
                         LessonSession.session_date == today,
                     )
-                    .with_for_update(skip_locked=True)
+                    .with_for_update(skip_locked=True, of=LessonSession)
                 )
                 sessions = result.scalars().all()
 
                 ended = 0
                 for session in sessions:
-                    entry = await db.get(ScheduleEntry, session.schedule_entry_id)
-                    if not entry:
-                        continue
-                    slot = await db.get(TimeSlot, entry.time_slot_id)
+                    entry = session.schedule_entry
+                    slot = entry.time_slot if entry else None
                     if not slot:
                         continue
 
-                    # slot.end_time is a time object (TIME column)
-                    end_t = slot.end_time if isinstance(slot.end_time, time) else time.fromisoformat(str(slot.end_time))
+                    try:
+                        end_t = (
+                            slot.end_time
+                            if isinstance(slot.end_time, time)
+                            else time.fromisoformat(str(slot.end_time))
+                        )
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            "Malformed end_time for slot %s: %r; skipping",
+                            slot.id,
+                            slot.end_time,
+                        )
+                        continue
+
                     deadline_dt = datetime.combine(today, end_t, tzinfo=LOCAL_TZ)
                     grace_seconds = AUTO_END_GRACE_MINUTES * 60
 
@@ -223,7 +258,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         auto_end_task = asyncio.create_task(_auto_end_sessions_loop())
         purge_task = asyncio.create_task(_refresh_token_purge_loop())
     else:
-        logger.info("Another worker holds the background-task leader lock; loops skipped.")
+        logger.info(
+            "Another worker holds the background-task leader lock; loops skipped."
+        )
 
     yield
 
@@ -245,6 +282,8 @@ def create_application(router: APIRouter) -> FastAPI:
         kwargs.update({"docs_url": None, "redoc_url": None, "openapi_url": None})
 
     application = FastAPI(lifespan=lifespan, **kwargs)
+    application.state.limiter = limiter
+    application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     application.include_router(router)
 
     # CorrelationIdMiddleware first so the X-Request-ID is bound before CORS

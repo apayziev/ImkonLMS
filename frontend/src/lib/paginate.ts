@@ -6,20 +6,20 @@
  * the server returns fewer rows than requested.
  */
 
-import type { AxiosResponse } from "axios";
+import type { AxiosResponse } from "axios"
 
 /** Backend MAX_LIMIT — keep aligned with `app.core.pagination.MAX_LIMIT`. */
-export const PAGE_SIZE = 100;
+export const PAGE_SIZE = 100
 
 interface PageResponse<T> {
-  data: T[];
-  count: number;
+  data: T[]
+  count: number
 }
 
 type PageFetcher<T> = (
   skip: number,
   limit: number,
-) => Promise<AxiosResponse<PageResponse<T>>>;
+) => Promise<AxiosResponse<PageResponse<T>>>
 
 /**
  * Fetch every page from a paginated list endpoint and return aggregated data.
@@ -32,24 +32,24 @@ export async function fetchAll<T>(
   fetchPage: PageFetcher<T>,
   pageSize: number = PAGE_SIZE,
 ): Promise<PageResponse<T>> {
-  const all: T[] = [];
-  let totalCount: number | null = null;
-  let skip = 0;
+  const all: T[] = []
+  let totalCount: number | null = null
+  let skip = 0
 
   while (true) {
-    const { data: page } = await fetchPage(skip, pageSize);
-    all.push(...page.data);
+    const { data: page } = await fetchPage(skip, pageSize)
+    all.push(...page.data)
 
     if (totalCount === null) {
-      totalCount = page.count;
+      totalCount = page.count
     }
 
-    if (page.data.length < pageSize) break;
-    skip += pageSize;
+    if (page.data.length < pageSize) break
+    skip += pageSize
 
     // Defensive stop: avoid runaway loops if `count` is reliable.
-    if (totalCount !== null && all.length >= totalCount) break;
+    if (totalCount !== null && all.length >= totalCount) break
   }
 
-  return { data: all, count: totalCount ?? all.length };
+  return { data: all, count: totalCount ?? all.length }
 }

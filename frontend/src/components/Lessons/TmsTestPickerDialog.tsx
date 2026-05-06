@@ -7,12 +7,10 @@
  * 3. Teacher selects a test → TMS sends postMessage
  * 4. Dialog calls onSelect with { test_id, title }
  */
-import { Loader2, Unlink, ExternalLink } from "lucide-react"
+import { ExternalLink, Loader2, Unlink } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { tmsApi } from "@/lib/api"
-import { TMS } from "@/config"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,6 +19,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { TMS } from "@/config"
+import { tmsApi } from "@/lib/api"
 
 interface TmsTestPickerDialogProps {
   currentTestId: number | null
@@ -63,8 +63,9 @@ export function TmsTestPickerDialog({
   // Listen for postMessage from TMS iframe
   const handleMessage = useCallback(
     (event: MessageEvent<TmsTestMessage>) => {
-      // Validate origin
-      if (!event.origin.includes(new URL(TMS.origin).hostname)) return
+      // Strict origin check — substring match would let attacker spoof
+      // origins like "https://tms.example.com.evil.com".
+      if (event.origin !== TMS.origin) return
       if (event.data?.type !== "tms-test-selected") return
 
       onSelect(event.data.test_id, event.data.title)
@@ -86,7 +87,9 @@ export function TmsTestPickerDialog({
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0 px-3 py-2 rounded-md border bg-accent/30 text-sm">
           <span className="text-muted-foreground">Test: </span>
-          <span className="font-medium">{currentTestTitle || `#${currentTestId}`}</span>
+          <span className="font-medium">
+            {currentTestTitle || `#${currentTestId}`}
+          </span>
         </div>
         <a
           href={`${TMS.origin}/tests/${currentTestId}/questions`}

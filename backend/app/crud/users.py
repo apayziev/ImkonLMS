@@ -26,16 +26,21 @@ def _dummy_hash() -> str:
 class CRUDUser(BaseCRUD[User]):
     # Sensitive fields — must be set via dedicated methods, not generic update().
     PROTECTED_FIELDS: ClassVar[frozenset[str]] = BaseCRUD.PROTECTED_FIELDS | {
-        "hashed_password", "role", "is_superuser",
+        "hashed_password",
+        "role",
+        "is_superuser",
     }
 
     @staticmethod
     def _apply_search(query, search: str | None, fields: list):
-        """Apply ilike search across given fields."""
+        """Apply case-insensitive substring search across given fields."""
         if not search:
             return query
-        term = f"%{search}%"
-        return query.where(or_(*[f.ilike(term) for f in fields]))
+        # Escape LIKE wildcards so user input cannot widen the match
+        # (e.g. searching "%" would otherwise return every row).
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        term = f"%{escaped}%"
+        return query.where(or_(*[f.ilike(term, escape="\\") for f in fields]))
 
     async def get_by_phone_number(
         self,
@@ -45,7 +50,9 @@ class CRUDUser(BaseCRUD[User]):
         """Get user by phone number."""
         normalized = phone_number.replace(" ", "").replace("-", "")
         result = await db.execute(
-            select(User).where(User.phone_number == normalized, User.is_deleted == False)  # noqa: E712
+            select(User).where(
+                User.phone_number == normalized, User.is_deleted.is_(False)
+            )
         )
         return result.scalar_one_or_none()
 
@@ -56,7 +63,9 @@ class CRUDUser(BaseCRUD[User]):
     ) -> User | None:
         normalized = document_id.upper().replace(" ", "")
         result = await db.execute(
-            select(User).where(User.document_id == normalized, User.is_deleted == False)  # noqa: E712
+            select(User).where(
+                User.document_id == normalized, User.is_deleted.is_(False)
+            )
         )
         return result.scalar_one_or_none()
 
@@ -74,7 +83,9 @@ class CRUDUser(BaseCRUD[User]):
         if not user:
             user = await self.get_by_document_id(db, document_id=username)
 
-        hashed = user.hashed_password if user and user.hashed_password else _dummy_hash()
+        hashed = (
+            user.hashed_password if user and user.hashed_password else _dummy_hash()
+        )
         if not verify_password(password, hashed):
             return None
         if not user:
@@ -111,7 +122,7 @@ class CRUDUser(BaseCRUD[User]):
     ) -> tuple[list[User], int]:
         base = select(User).where(
             User.role == UserRole.STUDENT.value,
-            User.is_deleted == False,  # noqa: E712
+            User.is_deleted.is_(False),
         )
 
         if grade_ids is not None:
@@ -121,22 +132,31 @@ class CRUDUser(BaseCRUD[User]):
             base = base.where(User.grade_id == grade_id)
 
         if status == "active":
-            base = base.where(User.is_active == True, User.is_frozen == False)  # noqa: E712
+            base = base.where(User.is_active.is_(True), User.is_frozen.is_(False))
         elif status == "frozen":
-            base = base.where(User.is_frozen == True)  # noqa: E712
+            base = base.where(User.is_frozen.is_(True))
         elif status == "inactive":
-            base = base.where(User.is_active == False, User.is_frozen == False)  # noqa: E712
+            base = base.where(User.is_active.is_(False), User.is_frozen.is_(False))
 
-        base = self._apply_search(base, search, [
-            User.first_name, User.last_name, User.document_id,
-            User.student_id, User.phone_number,
-        ])
+        base = self._apply_search(
+            base,
+            search,
+            [
+                User.first_name,
+                User.last_name,
+                User.document_id,
+                User.student_id,
+                User.phone_number,
+            ],
+        )
 
         return await self._paginate_query(
-            db, base,
+            db,
+            base,
             options=[selectinload(User.grade)],
             order_by=User.id.desc(),
-            offset=skip, limit=limit,
+            offset=skip,
+            limit=limit,
         )
 
     async def get_deleted_students(
@@ -152,15 +172,24 @@ class CRUDUser(BaseCRUD[User]):
             User.is_deleted == True,  # noqa: E712
         )
 
-        base = self._apply_search(base, search, [
-            User.first_name, User.last_name, User.document_id, User.student_id,
-        ])
+        base = self._apply_search(
+            base,
+            search,
+            [
+                User.first_name,
+                User.last_name,
+                User.document_id,
+                User.student_id,
+            ],
+        )
 
         return await self._paginate_query(
-            db, base,
+            db,
+            base,
             options=[selectinload(User.grade)],
             order_by=User.id.desc(),
-            offset=skip, limit=limit,
+            offset=skip,
+            limit=limit,
         )
 
     async def hard_delete(self, db: AsyncSession, *, id: int) -> bool:
@@ -186,15 +215,24 @@ class CRUDUser(BaseCRUD[User]):
             User.is_deleted == False,  # noqa: E712
         )
 
-        base = self._apply_search(base, search, [
-            User.first_name, User.last_name, User.document_id, User.phone_number,
-        ])
+        base = self._apply_search(
+            base,
+            search,
+            [
+                User.first_name,
+                User.last_name,
+                User.document_id,
+                User.phone_number,
+            ],
+        )
 
         return await self._paginate_query(
-            db, base,
+            db,
+            base,
             options=[selectinload(User.class_teacher_grade)],
             order_by=(User.last_name, User.first_name),
-            offset=skip, limit=limit,
+            offset=skip,
+            limit=limit,
         )
 
 

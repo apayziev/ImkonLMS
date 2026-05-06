@@ -1,10 +1,11 @@
 """add room to schedule_entry
 
 Revision ID: g8h9i0j1k2l3
-Revises: f7a8b9c0d1e2
+Revises: a7b8c9d0e1f2
 Create Date: 2026-04-01 00:00:00.000000
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 

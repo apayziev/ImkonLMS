@@ -1,16 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  GraduationCap,
-  Snowflake,
-} from "lucide-react"
+import { GraduationCap, Snowflake } from "lucide-react"
 import { useCallback, useState } from "react"
-
-import type { GradeRead, StudentRead } from "@/lib/api"
-import { studentsApi } from "@/lib/api"
 import { SearchInput } from "@/components/Common/SearchInput"
 import { TablePagination } from "@/components/Common/TablePagination"
-import { Skeleton } from "@/components/ui/skeleton"
 import { StudentDetailDrawer } from "@/components/Students/StudentDetailDrawer"
 import { getPhotoUrl } from "@/components/Students/studentSchema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,8 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
+import type { GradeRead, StudentRead } from "@/lib/api"
+import { studentsApi } from "@/lib/api"
 import { formatDate, getInitials } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
@@ -56,15 +52,25 @@ function StudentsPage() {
   const closeModal = useCallback(() => setActiveModal(null), [])
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a: GradeRead, b: GradeRead) =>
-    a.level !== b.level ? a.level - b.level : a.section.localeCompare(b.section),
+  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort(
+    (a: GradeRead, b: GradeRead) =>
+      a.level !== b.level
+        ? a.level - b.level
+        : a.section.localeCompare(b.section),
   )
 
   const gradeId = gradeFilter !== "all" ? Number(gradeFilter) : undefined
   const status = statusFilter !== "all" ? statusFilter : undefined
 
   const { data: studentsData, isLoading } = useQuery({
-    queryKey: ["students", gradeId, status, debouncedSearch, currentPage, pageSize],
+    queryKey: [
+      "students",
+      gradeId,
+      status,
+      debouncedSearch,
+      currentPage,
+      pageSize,
+    ],
     queryFn: async () => {
       const { data } = await studentsApi.list({
         skip: (currentPage - 1) * pageSize,
@@ -205,13 +211,30 @@ function StudentsPage() {
             {isLoading ? (
               Array.from({ length: 5 }, (_, i) => (
                 <tr key={i} className="border-b">
-                  <td className="p-4"><Skeleton className="h-4 w-8" /></td>
-                  <td className="p-4"><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-32" /></div></td>
-                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-20" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-16" /></td>
-                  <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-8" />
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-24" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-20" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-16" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-4 w-24" />
+                  </td>
+                  <td className="p-4">
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </td>
                 </tr>
               ))
             ) : students.length === 0 ? (
@@ -231,7 +254,10 @@ function StudentsPage() {
                   <td className="p-4 align-middle">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
+                        <AvatarImage
+                          src={getPhotoUrl(student.photo_url)}
+                          alt={student.full_name}
+                        />
                         <AvatarFallback className="bg-[#6720FF] text-white text-sm">
                           {getInitials(student.full_name)}
                         </AvatarFallback>
@@ -239,7 +265,9 @@ function StudentsPage() {
                       <div>
                         <p className="font-medium">{student.full_name}</p>
                         {student.phone_number && (
-                          <span className="text-xs text-muted-foreground">{student.phone_number}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {student.phone_number}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -261,9 +289,7 @@ function StudentsPage() {
                     )}
                   </td>
                   <td className="p-4 align-middle text-sm text-muted-foreground">
-                    {student.birth_date
-                      ? formatDate(student.birth_date)
-                      : "—"}
+                    {student.birth_date ? formatDate(student.birth_date) : "—"}
                   </td>
                   <td className="p-4 align-middle">
                     <span className="inline-flex items-center rounded-full bg-[#6720FF]/20 px-2.5 py-0.5 text-xs font-medium text-[#6720FF]">
@@ -275,16 +301,30 @@ function StudentsPage() {
                     {(() => {
                       const parentName =
                         student.father_first_name || student.father_last_name
-                          ? [student.father_last_name, student.father_first_name].filter(Boolean).join(" ")
-                          : student.mother_first_name || student.mother_last_name
-                            ? [student.mother_last_name, student.mother_first_name].filter(Boolean).join(" ")
+                          ? [
+                              student.father_last_name,
+                              student.father_first_name,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                          : student.mother_first_name ||
+                              student.mother_last_name
+                            ? [
+                                student.mother_last_name,
+                                student.mother_first_name,
+                              ]
+                                .filter(Boolean)
+                                .join(" ")
                             : null
-                      const parentPhone = student.father_phone || student.mother_phone
+                      const parentPhone =
+                        student.father_phone || student.mother_phone
                       return parentName ? (
                         <div>
                           <p className="text-muted-foreground">{parentName}</p>
                           {parentPhone && (
-                            <p className="text-xs text-muted-foreground">{parentPhone}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {parentPhone}
+                            </p>
                           )}
                         </div>
                       ) : (
@@ -340,7 +380,11 @@ function StudentsPage() {
         student={activeModal?.type === "detail" ? activeModal.student : null}
         open={activeModal?.type === "detail"}
         onOpenChange={(open) => !open && closeModal()}
-        gradeName={activeModal?.type === "detail" ? getGradeName(activeModal.student.grade_id) : undefined}
+        gradeName={
+          activeModal?.type === "detail"
+            ? getGradeName(activeModal.student.grade_id)
+            : undefined
+        }
       />
     </div>
   )

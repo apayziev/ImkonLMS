@@ -18,5 +18,11 @@ export function useSelectedChild() {
   const selectedChild: ParentChildRead | null =
     children.find((c) => c.id === selectedChildId) ?? null
 
-  return { children, selectedChildId, setSelectedChildId, selectedChild, parent }
+  return {
+    children,
+    selectedChildId,
+    setSelectedChildId,
+    selectedChild,
+    parent,
+  }
 }

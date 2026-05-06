@@ -13,14 +13,25 @@ export function toDateString(d: Date) {
 export const todayStr = () => toDateString(new Date())
 
 export function formatTime(dt: string) {
-  return new Date(dt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+  return new Date(dt).toLocaleTimeString("uz-UZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 export function durationMin(start: string, end: string) {
-  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+  return Math.round(
+    (new Date(end).getTime() - new Date(start).getTime()) / 60000,
+  )
 }
 
-export function SaveStatusIndicator({ status, className }: { status: SaveStatus; className?: string }) {
+export function SaveStatusIndicator({
+  status,
+  className,
+}: {
+  status: SaveStatus
+  className?: string
+}) {
   return (
     <span
       className={cn(
@@ -32,14 +43,31 @@ export function SaveStatusIndicator({ status, className }: { status: SaveStatus;
         className,
       )}
     >
-      {status === "saving" && (<><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saqlanmoqda...</>)}
-      {status === "saved" && (<><Check className="h-3.5 w-3.5" /> Saqlandi</>)}
-      {status === "error" && (<><TriangleAlert className="h-3.5 w-3.5" /> Xatolik</>)}
+      {status === "saving" && (
+        <>
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saqlanmoqda...
+        </>
+      )}
+      {status === "saved" && (
+        <>
+          <Check className="h-3.5 w-3.5" /> Saqlandi
+        </>
+      )}
+      {status === "error" && (
+        <>
+          <TriangleAlert className="h-3.5 w-3.5" /> Xatolik
+        </>
+      )}
     </span>
   )
 }
 
-export function lessonStatusFlags(lesson: { session_status?: string | null; status?: string | null; plan_id?: number | null; plan_filled_count?: number }) {
+export function lessonStatusFlags(lesson: {
+  session_status?: string | null
+  status?: string | null
+  plan_id?: number | null
+  plan_filled_count?: number
+}) {
   const s = lesson.session_status ?? lesson.status ?? null
   const isInProgress = s === "in_progress"
   const isCompleted = s === "completed"

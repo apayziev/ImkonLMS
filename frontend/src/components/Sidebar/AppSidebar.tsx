@@ -1,4 +1,13 @@
-import { Activity, BookOpen, CalendarDays, FileText, GraduationCap, Home, Settings, Users } from "lucide-react"
+import {
+  Activity,
+  BookOpen,
+  CalendarDays,
+  FileText,
+  GraduationCap,
+  Home,
+  Settings,
+  Users,
+} from "lucide-react"
 import { useMemo } from "react"
 
 import { Logo } from "@/components/Common/Logo"
@@ -41,9 +50,7 @@ export function AppSidebar() {
       <SidebarContent>
         <Main items={menuItems} />
       </SidebarContent>
-      <SidebarFooter>
-        {user && <User user={user} />}
-      </SidebarFooter>
+      <SidebarFooter>{user && <User user={user} />}</SidebarFooter>
     </Sidebar>
   )
 }

@@ -9,13 +9,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import SessionDep, SuperUser
+from app.api.deps import CurrentUser, SessionDep, SuperUser
 from app.core.exceptions import DuplicateValueException, NotFoundException
 from app.core.formatting import format_time
-from app.crud.timetable import crud_schedule_entries, crud_school_settings, crud_time_slots
+from app.crud.timetable import (
+    crud_schedule_entries,
+    crud_school_settings,
+    crud_time_slots,
+)
 from app.models.schedule_entry import ScheduleEntry
 from app.models.school_settings import SchoolSettings
 from app.models.time_slot import TimeSlot
+from app.models.user import UserRole
 from app.schemas.timetable import (
     ScheduleEntryCreate,
     ScheduleEntryList,
@@ -39,8 +44,6 @@ SETTINGS_KEY = "default"
 def _parse_time(value: str) -> time:
     h, m = value.split(":")
     return time(int(h), int(m))
-
-
 
 
 async def _get_or_create_settings(db: AsyncSession) -> SchoolSettings:
@@ -77,13 +80,15 @@ def _entry_to_read(entry: ScheduleEntry) -> ScheduleEntryRead:
 
 
 @router.get("/settings", response_model=SchoolSettingsRead)
-async def get_school_settings(db: SessionDep) -> Any:
+async def get_school_settings(db: SessionDep, current_user: CurrentUser) -> Any:
     return await _get_or_create_settings(db)
 
 
 @router.patch("/settings", response_model=SchoolSettingsRead)
 async def update_school_settings(
-    body: SchoolSettingsUpdate, db: SessionDep, admin: SuperUser,
+    body: SchoolSettingsUpdate,
+    db: SessionDep,
+    admin: SuperUser,
 ) -> Any:
     settings = await _get_or_create_settings(db)
     update_data = body.model_dump(exclude_unset=True)
@@ -98,7 +103,10 @@ async def update_school_settings(
 @router.get("/time-slots", response_model=TimeSlotList)
 async def list_time_slots(db: SessionDep, academic_year_id: int) -> Any:
     result = await crud_time_slots.get_multi(
-        db, academic_year_id=academic_year_id, is_deleted=False, limit=20,
+        db,
+        academic_year_id=academic_year_id,
+        is_deleted=False,
+        limit=20,
     )
     slots = result["data"]
     return TimeSlotList(
@@ -119,12 +127,19 @@ async def list_time_slots(db: SessionDep, academic_year_id: int) -> Any:
 
 
 @router.post("/time-slots", response_model=TimeSlotRead, status_code=201)
-async def create_time_slot(body: TimeSlotCreate, db: SessionDep, admin: SuperUser) -> Any:
+async def create_time_slot(
+    body: TimeSlotCreate, db: SessionDep, admin: SuperUser
+) -> Any:
     existing = await crud_time_slots.get(
-        db, academic_year_id=body.academic_year_id, period_number=body.period_number, is_deleted=False,
+        db,
+        academic_year_id=body.academic_year_id,
+        period_number=body.period_number,
+        is_deleted=False,
     )
     if existing:
-        raise DuplicateValueException(f"{body.period_number}-dars uchun vaqt allaqachon mavjud")
+        raise DuplicateValueException(
+            f"{body.period_number}-dars uchun vaqt allaqachon mavjud"
+        )
 
     slot = TimeSlot(
         academic_year_id=body.academic_year_id,
@@ -155,7 +170,9 @@ async def delete_time_slot(slot_id: int, db: SessionDep, admin: SuperUser) -> No
 
 @router.delete("/time-slots", status_code=204)
 async def delete_all_time_slots(
-    academic_year_id: int, db: SessionDep, admin: SuperUser,
+    academic_year_id: int,
+    db: SessionDep,
+    admin: SuperUser,
 ) -> None:
     """Delete all time slots (and cascade-deletes schedule entries) for an academic year."""
     await db.execute(
@@ -220,11 +237,13 @@ def _generate_slots(
             cursor = slot_end
             continue
 
-        result.append({
-            "period_number": period,
-            "start_time": f"{slot_start // 60:02d}:{slot_start % 60:02d}",
-            "end_time": f"{slot_end // 60:02d}:{slot_end % 60:02d}",
-        })
+        result.append(
+            {
+                "period_number": period,
+                "start_time": f"{slot_start // 60:02d}:{slot_start % 60:02d}",
+                "end_time": f"{slot_end // 60:02d}:{slot_end % 60:02d}",
+            }
+        )
 
         cursor = slot_end + (0 if overlaps_break else default_break)
         period += 1
@@ -305,18 +324,31 @@ SCHEDULE_LOAD_OPTIONS = [
 @router.get("/schedule", response_model=ScheduleEntryList)
 async def list_schedule(
     db: SessionDep,
+    current_user: CurrentUser,
     academic_year_id: int,
     grade_id: int | None = None,
     teacher_id: int | None = None,
 ) -> Any:
-    filters: dict[str, Any] = {"academic_year_id": academic_year_id, "is_deleted": False}
+    filters: dict[str, Any] = {
+        "academic_year_id": academic_year_id,
+        "is_deleted": False,
+    }
     if grade_id is not None:
         filters["grade_id"] = grade_id
-    if teacher_id is not None:
-        filters["teacher_id"] = teacher_id
+
+    # Teachers can only see their own schedule; admins/superusers see anyone's.
+    is_admin = current_user.is_superuser or current_user.role == UserRole.ADMIN.value
+    if is_admin:
+        if teacher_id is not None:
+            filters["teacher_id"] = teacher_id
+    else:
+        filters["teacher_id"] = current_user.id
 
     result = await crud_schedule_entries.get_multi(
-        db, options=SCHEDULE_LOAD_OPTIONS, limit=500, **filters,
+        db,
+        options=SCHEDULE_LOAD_OPTIONS,
+        limit=500,
+        **filters,
     )
     return ScheduleEntryList(
         data=[_entry_to_read(e) for e in result["data"]],
@@ -326,7 +358,9 @@ async def list_schedule(
 
 @router.post("/schedule", response_model=ScheduleEntryRead, status_code=201)
 async def create_schedule_entry(
-    body: ScheduleEntryCreate, db: SessionDep, admin: SuperUser,
+    body: ScheduleEntryCreate,
+    db: SessionDep,
+    admin: SuperUser,
 ) -> Any:
     entry = ScheduleEntry(
         academic_year_id=body.academic_year_id,
@@ -358,7 +392,10 @@ async def create_schedule_entry(
 
 @router.patch("/schedule/{entry_id}", response_model=ScheduleEntryRead)
 async def update_schedule_entry(
-    entry_id: int, body: ScheduleEntryUpdate, db: SessionDep, admin: SuperUser,
+    entry_id: int,
+    body: ScheduleEntryUpdate,
+    db: SessionDep,
+    admin: SuperUser,
 ) -> Any:
     entry = await crud_schedule_entries.get(db, id=entry_id, is_deleted=False)
     if not entry:
@@ -394,7 +431,9 @@ async def update_schedule_entry(
 
 
 @router.delete("/schedule/{entry_id}", status_code=204)
-async def delete_schedule_entry(entry_id: int, db: SessionDep, admin: SuperUser) -> None:
+async def delete_schedule_entry(
+    entry_id: int, db: SessionDep, admin: SuperUser
+) -> None:
     deleted = await crud_schedule_entries.delete(db, id=entry_id, is_deleted=False)
     if not deleted:
         raise NotFoundException("Dars jadvali yozuvi topilmadi")

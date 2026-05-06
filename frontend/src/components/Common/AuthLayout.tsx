@@ -38,7 +38,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           className="h-8 sm:h-10"
         />
         <div className="bg-white text-[#FF3B47] px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg">
-          <span className="text-xs sm:text-sm font-bold tracking-wide">LMS</span>
+          <span className="text-xs sm:text-sm font-bold tracking-wide">
+            LMS
+          </span>
         </div>
       </div>
 

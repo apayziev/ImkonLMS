@@ -1,6 +1,12 @@
-import { Calendar, GraduationCap, MapPin, Phone, Snowflake, User, Users } from "lucide-react"
-
-import type { StudentRead } from "@/lib/api"
+import {
+  Calendar,
+  GraduationCap,
+  MapPin,
+  Phone,
+  Snowflake,
+  User,
+  Users,
+} from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -11,6 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import type { StudentRead } from "@/lib/api"
 import { formatDate, getInitials } from "@/lib/utils"
 import { getPhotoUrl } from "./studentSchema"
 
@@ -51,7 +58,10 @@ export function StudentDetailDrawer({
         <SheetHeader className="text-left">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={getPhotoUrl(student.photo_url)} alt={student.full_name} />
+              <AvatarImage
+                src={getPhotoUrl(student.photo_url)}
+                alt={student.full_name}
+              />
               <AvatarFallback className="bg-[#6720FF] text-white text-2xl">
                 {getInitials(student.full_name)}
               </AvatarFallback>
@@ -80,23 +90,36 @@ export function StudentDetailDrawer({
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Hujjat raqami</span>
+                <span className="text-sm text-muted-foreground">
+                  Hujjat raqami
+                </span>
                 <span className="text-sm font-mono">{student.document_id}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Jinsi</span>
                 <span className="text-sm">
-                  {student.gender === "male" ? "O'g'il" : student.gender === "female" ? "Qiz" : "—"}
+                  {student.gender === "male"
+                    ? "O'g'il"
+                    : student.gender === "female"
+                      ? "Qiz"
+                      : "—"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Tug'ilgan sana</span>
-                <span className="text-sm">{formatDate(student.birth_date)}</span>
+                <span className="text-sm text-muted-foreground">
+                  Tug'ilgan sana
+                </span>
+                <span className="text-sm">
+                  {formatDate(student.birth_date)}
+                </span>
               </div>
               {student.phone_number && (
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Telefon</span>
-                  <a href={`tel:${student.phone_number}`} className="text-sm text-[#6720FF] hover:underline">
+                  <a
+                    href={`tel:${student.phone_number}`}
+                    className="text-sm text-[#6720FF] hover:underline"
+                  >
                     {student.phone_number}
                   </a>
                 </div>
@@ -119,7 +142,9 @@ export function StudentDetailDrawer({
                     Otasi
                   </span>
                   <p className="text-sm font-medium">
-                    {[student.father_last_name, student.father_first_name].filter(Boolean).join(" ")}
+                    {[student.father_last_name, student.father_first_name]
+                      .filter(Boolean)
+                      .join(" ")}
                   </p>
                   {student.father_phone && (
                     <a
@@ -139,7 +164,9 @@ export function StudentDetailDrawer({
                     Onasi
                   </span>
                   <p className="text-sm font-medium">
-                    {[student.mother_last_name, student.mother_first_name].filter(Boolean).join(" ")}
+                    {[student.mother_last_name, student.mother_first_name]
+                      .filter(Boolean)
+                      .join(" ")}
                   </p>
                   {student.mother_phone && (
                     <a
@@ -157,7 +184,9 @@ export function StudentDetailDrawer({
                 !student.father_last_name &&
                 !student.mother_first_name &&
                 !student.mother_last_name && (
-                  <p className="text-sm text-muted-foreground">Ma'lumot kiritilmagan</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ma'lumot kiritilmagan
+                  </p>
                 )}
             </div>
           </div>
@@ -170,7 +199,9 @@ export function StudentDetailDrawer({
               <MapPin className="h-4 w-4" />
               Manzil
             </h4>
-            <p className="text-sm">{student.address || "Ma'lumot kiritilmagan"}</p>
+            <p className="text-sm">
+              {student.address || "Ma'lumot kiritilmagan"}
+            </p>
           </div>
 
           <Separator />
@@ -183,8 +214,12 @@ export function StudentDetailDrawer({
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Qabul qilingan sana</span>
-                <span className="text-sm">{formatDate(student.enrollment_date)}</span>
+                <span className="text-sm text-muted-foreground">
+                  Qabul qilingan sana
+                </span>
+                <span className="text-sm">
+                  {formatDate(student.enrollment_date)}
+                </span>
               </div>
               {student.is_frozen && (
                 <>
@@ -196,13 +231,17 @@ export function StudentDetailDrawer({
                     </div>
                     {student.frozen_at && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Muzlatilgan sana</span>
+                        <span className="text-muted-foreground">
+                          Muzlatilgan sana
+                        </span>
                         <span>{formatDate(student.frozen_at)}</span>
                       </div>
                     )}
                     {student.departure_date && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Ketgan sana</span>
+                        <span className="text-muted-foreground">
+                          Ketgan sana
+                        </span>
                         <span>{formatDate(student.departure_date)}</span>
                       </div>
                     )}

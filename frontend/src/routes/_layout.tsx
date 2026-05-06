@@ -1,63 +1,63 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-    createFileRoute,
-    Outlet,
-    redirect,
-    useNavigate,
-    useRouterState,
-} from "@tanstack/react-router";
-import { GraduationCap, RefreshCw } from "lucide-react";
-import { useEffect } from "react";
-import { ErrorBoundary } from "react-error-boundary";
-import { toast } from "sonner";
+  createFileRoute,
+  Outlet,
+  redirect,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router"
+import { GraduationCap, RefreshCw } from "lucide-react"
+import { useEffect } from "react"
+import { ErrorBoundary } from "react-error-boundary"
+import { toast } from "sonner"
 
-import { ErrorComponent } from "@/components/Common/ErrorComponent";
-import { Footer } from "@/components/Common/Footer";
-import { AppSidebar } from "@/components/Sidebar/AppSidebar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ErrorComponent } from "@/components/Common/ErrorComponent"
+import { Footer } from "@/components/Common/Footer"
+import { AppSidebar } from "@/components/Sidebar/AppSidebar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-import useAuth, { isLoggedIn } from "@/hooks/useAuth";
-import { getCurrentAcademicYearQueryOptions } from "@/hooks/useQueryOptions";
-import { syncApi } from "@/lib/api";
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
+import { getCurrentAcademicYearQueryOptions } from "@/hooks/useQueryOptions"
+import { syncApi } from "@/lib/api"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
-      throw redirect({ to: "/login" });
+      throw redirect({ to: "/login" })
     }
   },
   errorComponent: ({ error }) => <ErrorComponent error={error} />,
-});
+})
 
 const BG_PATTERN_STYLE = {
   backgroundImage: "url(/images/patterns/Patterns-02.png)",
   backgroundSize: "cover",
   backgroundPosition: "left center",
   backgroundRepeat: "no-repeat",
-} as const;
+} as const
 
-const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"] as const;
+const TEACHER_ALLOWED = ["/lessons", "/lesson-plan", "/"] as const
 
 function Layout() {
-  const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions());
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const router = useRouterState();
-  const currentPath = router.location.pathname;
+  const { data: currentYear } = useQuery(getCurrentAcademicYearQueryOptions())
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const router = useRouterState()
+  const currentPath = router.location.pathname
 
   // Teacher subdomain: non-teacher → stays on admin home (different subdomain is just cosmetic for admin)
   // Teacher user (any subdomain): block admin-only routes
-  const isTeacher = user?.role === "teacher";
+  const isTeacher = user?.role === "teacher"
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
 
     if (
       isTeacher &&
@@ -65,34 +65,34 @@ function Layout() {
         r === "/" ? currentPath === "/" : currentPath.startsWith(r),
       )
     ) {
-      navigate({ to: "/lessons" });
+      navigate({ to: "/lessons" })
     }
-  }, [user, currentPath, isTeacher, navigate]);
+  }, [user, currentPath, isTeacher, navigate])
 
   const syncMutation = useMutation({
     mutationFn: () => syncApi.runSync(),
     onSuccess: (res) => {
-      const d = res.data as Record<string, number>;
+      const d = res.data as Record<string, number>
       const parts = [
         d.students_created && `${d.students_created} yangi o'quvchi`,
         d.students_updated && `${d.students_updated} o'quvchi yangilandi`,
         d.teachers_created && `${d.teachers_created} yangi o'qituvchi`,
         d.teachers_updated && `${d.teachers_updated} o'qituvchi yangilandi`,
         d.parents_created && `${d.parents_created} yangi ota-ona`,
-      ].filter(Boolean);
+      ].filter(Boolean)
       toast.success("Sync muvaffaqiyatli!", {
         description: parts.length
           ? parts.join(", ")
           : "Barcha ma'lumotlar dolzarb — o'zgarish yo'q",
-      });
-      queryClient.invalidateQueries();
+      })
+      queryClient.invalidateQueries()
     },
     onError: () => {
       toast.error("Sync xatolik!", {
         description: "Payment tizimidan ma'lumot olishda xatolik yuz berdi",
-      });
+      })
     },
-  });
+  })
 
   return (
     <SidebarProvider>
@@ -132,22 +132,7 @@ function Layout() {
         </header>
         <main className="flex-1 p-6 md:p-8 relative z-[1]">
           <ErrorBoundary
-            FallbackComponent={({ error }) => (
-              <ErrorComponent
-                error={error}
-                componentStack={
-                  (error as { componentStack?: string })?.componentStack ?? null
-                }
-              />
-            )}
-            onError={(error, info) => {
-              (error as { componentStack?: string }).componentStack =
-                info.componentStack ?? undefined;
-              console.error("[ErrorBoundary]", error, info);
-              console.log(
-                "[componentStack]\n" + (info.componentStack ?? "(none)"),
-              );
-            }}
+            FallbackComponent={({ error }) => <ErrorComponent error={error} />}
           >
             <Outlet />
           </ErrorBoundary>
@@ -155,7 +140,7 @@ function Layout() {
         <Footer />
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
 }
 
-export default Layout;
+export default Layout

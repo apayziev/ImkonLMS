@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Check, Clock, Eye, Loader2, TriangleAlert, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { queryKeys } from "@/hooks/useQueryOptions"
 import type {
   AttendanceStatus,
   SessionDetailRead,
@@ -12,8 +13,6 @@ import type {
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { queryKeys } from "@/hooks/useQueryOptions"
 import { ATTENDANCE_OPTIONS } from "./constants"
 import { PhotoZoomDialog } from "./PhotoZoomDialog"
 
@@ -26,7 +25,11 @@ const ATTENDANCE_ICONS = {
 type Dim = "knowing" | "applying" | "reasoning"
 
 const DIM_MAX: Record<Dim, number> = { knowing: 4, applying: 4, reasoning: 2 }
-const DIM_LABEL: Record<Dim, string> = { knowing: "B", applying: "Q", reasoning: "M" }
+const DIM_LABEL: Record<Dim, string> = {
+  knowing: "B",
+  applying: "Q",
+  reasoning: "M",
+}
 
 const computeTotal = (a: SessionStudentAssessment) =>
   (a.knowing ?? 0) + (a.applying ?? 0) + (a.reasoning ?? 0)
@@ -50,7 +53,9 @@ export function StudentRow({
 }) {
   const queryClient = useQueryClient()
 
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle")
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [photoOpen, setPhotoOpen] = useState(false)
 
@@ -59,14 +64,22 @@ export function StudentRow({
   // user is actively editing — server values for those are *not* applied
   // until the edit blurs (which clears the flag), so a save on one input
   // can't wipe an unblurred change in another.
-  const [scores, setScores] = useState<SessionStudentAssessment>(student.assessment)
+  const [scores, setScores] = useState<SessionStudentAssessment>(
+    student.assessment,
+  )
   const dirtyRef = useRef<Set<Dim>>(new Set())
 
   useEffect(() => {
     setScores((prev) => ({
-      knowing: dirtyRef.current.has("knowing") ? prev.knowing : student.assessment.knowing,
-      applying: dirtyRef.current.has("applying") ? prev.applying : student.assessment.applying,
-      reasoning: dirtyRef.current.has("reasoning") ? prev.reasoning : student.assessment.reasoning,
+      knowing: dirtyRef.current.has("knowing")
+        ? prev.knowing
+        : student.assessment.knowing,
+      applying: dirtyRef.current.has("applying")
+        ? prev.applying
+        : student.assessment.applying,
+      reasoning: dirtyRef.current.has("reasoning")
+        ? prev.reasoning
+        : student.assessment.reasoning,
     }))
   }, [student.assessment])
 
@@ -115,7 +128,10 @@ export function StudentRow({
 
   const assessmentMutation = useMutation({
     mutationFn: (data: Partial<Record<Dim, number | null>>) =>
-      lessonsApi.updateAssessment(sessionId, { student_id: student.student_id, ...data }),
+      lessonsApi.updateAssessment(sessionId, {
+        student_id: student.student_id,
+        ...data,
+      }),
     onMutate: () => {
       clearTimeout(saveTimerRef.current)
       setSaveStatus("saving")
@@ -142,7 +158,8 @@ export function StudentRow({
 
   const handleStatusChange = (newStatus: AttendanceStatus) => {
     if (disabled) return
-    const resolved = newStatus === student.status ? ("unmarked" as const) : newStatus
+    const resolved =
+      newStatus === student.status ? ("unmarked" as const) : newStatus
     attendanceMutation.mutate({ status: resolved })
   }
 
@@ -184,7 +201,8 @@ export function StudentRow({
       className={cn(
         "transition-colors hover:bg-muted/50",
         isLate && "bg-amber-50/50 dark:bg-amber-950/10",
-        (attendanceMutation.isPending || assessmentMutation.isPending) && "opacity-70",
+        (attendanceMutation.isPending || assessmentMutation.isPending) &&
+          "opacity-70",
       )}
     >
       {/* Number + Save Status */}
@@ -208,7 +226,10 @@ export function StudentRow({
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative group shrink-0">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={student.photo_url ?? undefined} alt={student.full_name} />
+              <AvatarImage
+                src={student.photo_url ?? undefined}
+                alt={student.full_name}
+              />
               <AvatarFallback className="text-xs">
                 {student.first_name[0]}
                 {student.last_name[0]}

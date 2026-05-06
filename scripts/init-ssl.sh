@@ -2,7 +2,7 @@
 # SSL initializatsiyasi — birinchi marta ishga tushiriladi
 # Foydalanish: bash scripts/init-ssl.sh
 
-set -e
+set -euo pipefail
 
 DOMAIN="lms.imkonschool.uz"
 EMAIL="admin@imkonschool.uz"
