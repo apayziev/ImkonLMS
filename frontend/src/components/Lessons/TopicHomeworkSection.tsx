@@ -1,9 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { CalendarDays, FileText, Plus, Target, X } from "lucide-react"
+import { CalendarDays, FileText, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { FileUploadSection } from "@/components/Common/FileUploadSection"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -23,12 +22,13 @@ import { lessonsApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import {
   ASSESSMENT_METHODS,
-  BLOOM_LEVELS,
   LESSON_TYPES,
   RESOURCE_TYPES,
-  SUGGESTED_KEYWORDS,
 } from "./constants"
 import { SaveStatusIndicator } from "./formatters"
+import { ChipMultiSelect } from "./PlanEditor/ChipMultiSelect"
+import { KeywordsEditor } from "./PlanEditor/KeywordsEditor"
+import { ObjectivesEditor } from "./PlanEditor/ObjectivesEditor"
 import { TmsTestPickerDialog } from "./TmsTestPickerDialog"
 
 export function TopicHomeworkSection({
@@ -348,137 +348,24 @@ export function TopicHomeworkSection({
         </div>
 
         {/* Row 2: Objectives */}
-        <div className="space-y-2 border-t pt-4">
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-muted-foreground" />
-            <label className="text-sm font-medium text-muted-foreground">
-              Dars maqsadlari
-            </label>
-          </div>
-          <div className="space-y-2">
-            {objectives.map((obj, i) => (
-              <div key={i} className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-5 text-right shrink-0">
-                    {i + 1}.
-                  </span>
-                  <Input
-                    placeholder={`${i + 1}-maqsadni kiriting...`}
-                    value={obj.text}
-                    onChange={(e) => updateObjectiveText(i, e.target.value)}
-                    disabled={disabled}
-                    className="flex-1"
-                  />
-                  {!disabled && (objectives.length > 1 || obj.text.trim()) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => removeObjective(i)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                {obj.text.trim() && !disabled && (
-                  <div className="flex items-center gap-1.5 ml-7">
-                    <span className="text-[10px] text-muted-foreground/60 mr-0.5">
-                      Daraja:
-                    </span>
-                    {BLOOM_LEVELS.map((bl) => (
-                      <button
-                        key={bl.value}
-                        type="button"
-                        onClick={() => updateObjectiveBloom(i, bl.value)}
-                        className={cn(
-                          "text-[11px] px-2 py-0.5 rounded-full border transition-colors",
-                          obj.bloom_level === bl.value
-                            ? "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)] border-[var(--imkon-purple)]/30 font-medium"
-                            : "text-muted-foreground border-border hover:bg-accent",
-                        )}
-                        title={bl.description}
-                      >
-                        {bl.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {objectives.length < 3 && !disabled && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-muted-foreground border-dashed"
-                onClick={addObjective}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Maqsad qo'shish
-              </Button>
-            )}
-          </div>
-        </div>
+        <ObjectivesEditor
+          objectives={objectives}
+          disabled={disabled}
+          onTextChange={updateObjectiveText}
+          onBloomChange={updateObjectiveBloom}
+          onAdd={addObjective}
+          onRemove={removeObjective}
+        />
 
         {/* Row 3: Keywords */}
-        <div className="space-y-2 border-t pt-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-muted-foreground">
-              Kalit so'zlar
-            </label>
-            <span className="text-xs text-muted-foreground/60">
-              Enter yoki vergul bilan qo'shing
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {keywords.map((kw, i) => (
-              <Badge key={i} variant="secondary" className="text-sm gap-1 pr-1">
-                {kw}
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={() => removeKeyword(i)}
-                    className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </Badge>
-            ))}
-            {!disabled && (
-              <Input
-                placeholder="Kalit so'z..."
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
-                    e.preventDefault()
-                    addKeyword(keywordInput)
-                  }
-                }}
-                onBlur={() => {
-                  if (keywordInput.trim()) addKeyword(keywordInput)
-                }}
-                className="w-36 h-8 text-sm"
-              />
-            )}
-          </div>
-          {/* Suggested tags */}
-          {!disabled && keywords.length < 5 && (
-            <div className="flex flex-wrap gap-1.5">
-              {SUGGESTED_KEYWORDS.filter((kw) => !keywords.includes(kw))
-                .slice(0, 8)
-                .map((kw) => (
-                  <button
-                    key={kw}
-                    type="button"
-                    onClick={() => addKeyword(kw)}
-                    className="text-xs px-2 py-1 rounded-full border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                  >
-                    + {kw}
-                  </button>
-                ))}
-            </div>
-          )}
-        </div>
+        <KeywordsEditor
+          keywords={keywords}
+          keywordInput={keywordInput}
+          disabled={disabled}
+          onInputChange={setKeywordInput}
+          onAdd={addKeyword}
+          onRemove={removeKeyword}
+        />
 
         {/* Row 4: Homework + Deadline */}
         <div className="grid gap-4 md:grid-cols-[1fr_200px] border-t pt-4">
@@ -549,71 +436,33 @@ export function TopicHomeworkSection({
             <label className="text-sm font-medium text-muted-foreground">
               Resurslar
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {RESOURCE_TYPES.map((r) => {
-                const selected = resources.includes(r.value)
-                return (
-                  <button
-                    key={r.value}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-                      const next = selected
-                        ? resources.filter((v) => v !== r.value)
-                        : [...resources, r.value]
-                      setResources(next)
-                      saveImmediate({
-                        resources: next.length > 0 ? next : null,
-                      })
-                    }}
-                    className={cn(
-                      "text-xs px-2.5 py-1.5 rounded-md border transition-colors",
-                      selected
-                        ? "bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)] border-[var(--imkon-teal)]/30 font-medium"
-                        : "text-muted-foreground border-border hover:bg-accent",
-                      disabled && "opacity-60 cursor-not-allowed",
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                )
-              })}
-            </div>
+            <ChipMultiSelect
+              options={RESOURCE_TYPES}
+              selected={resources}
+              disabled={disabled}
+              activeClass="bg-[var(--imkon-teal)]/15 text-[var(--imkon-teal-dark)] border-[var(--imkon-teal)]/30 font-medium"
+              onChange={(next) => {
+                setResources(next)
+                saveImmediate({ resources: next.length > 0 ? next : null })
+              }}
+            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">
               Baholash usullari
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {ASSESSMENT_METHODS.map((m) => {
-                const selected = assessmentMethods.includes(m.value)
-                return (
-                  <button
-                    key={m.value}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-                      const next = selected
-                        ? assessmentMethods.filter((v) => v !== m.value)
-                        : [...assessmentMethods, m.value]
-                      setAssessmentMethods(next)
-                      saveImmediate({
-                        assessment_methods: next.length > 0 ? next : null,
-                      })
-                    }}
-                    className={cn(
-                      "text-xs px-2.5 py-1.5 rounded-md border transition-colors",
-                      selected
-                        ? "bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)] border-[var(--imkon-purple)]/30 font-medium"
-                        : "text-muted-foreground border-border hover:bg-accent",
-                      disabled && "opacity-60 cursor-not-allowed",
-                    )}
-                  >
-                    {m.label}
-                  </button>
-                )
-              })}
-            </div>
+            <ChipMultiSelect
+              options={ASSESSMENT_METHODS}
+              selected={assessmentMethods}
+              disabled={disabled}
+              activeClass="bg-[var(--imkon-purple)]/15 text-[var(--imkon-purple)] border-[var(--imkon-purple)]/30 font-medium"
+              onChange={(next) => {
+                setAssessmentMethods(next)
+                saveImmediate({
+                  assessment_methods: next.length > 0 ? next : null,
+                })
+              }}
+            />
           </div>
         </div>
 
