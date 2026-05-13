@@ -7,6 +7,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// ─── Local-date helpers ─────────────────────────────────────────────────────
+// Project rule: always use local (Asia/Tashkent) timezone for user-facing
+// date logic. Never `new Date().toISOString().split("T")[0]` — that's UTC and
+// rolls over to the next day at 19:00 Tashkent. Use these helpers instead.
+
+/** Format a local Date as YYYY-MM-DD using local components (no UTC shift). */
+export function toDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+/** Today's date as YYYY-MM-DD in the browser's local timezone. */
+export const todayStr = (): string => toDateString(new Date())
+
 function toDate(date: string | Date | null | undefined): Date | null {
   if (!date) return null
   // YYYY-MM-DD: parse as local date — `new Date("2026-04-28")` is UTC midnight

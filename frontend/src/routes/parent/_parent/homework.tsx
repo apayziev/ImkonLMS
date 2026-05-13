@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { parentApi } from "@/lib/api"
+import { formatDate, todayStr } from "@/lib/utils"
 
 export const Route = createFileRoute("/parent/_parent/homework")({
   component: HomeworkPage,
@@ -35,9 +36,10 @@ function HomeworkPage() {
 
   const items = data?.items ?? []
 
+  // Compare YYYY-MM-DD strings lexicographically — TZ-safe (always local).
   const isOverdue = (deadline: string | null) => {
     if (!deadline) return false
-    return new Date(deadline) < new Date(new Date().toDateString())
+    return deadline < todayStr()
   }
 
   return (
@@ -100,9 +102,7 @@ function HomeworkPage() {
                         className="gap-1"
                       >
                         <Calendar className="size-3" />
-                        {new Date(item.homework_deadline).toLocaleDateString(
-                          "uz-UZ",
-                        )}
+                        {formatDate(item.homework_deadline)}
                         {isOverdue(item.homework_deadline) &&
                           " (muddati o'tgan)"}
                       </Badge>
@@ -112,7 +112,7 @@ function HomeworkPage() {
                 <CardDescription className="flex items-center gap-3 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Calendar className="size-3" />
-                    {new Date(item.plan_date).toLocaleDateString("uz-UZ")}
+                    {formatDate(item.plan_date)}
                   </span>
                   {item.teacher_name && (
                     <span className="flex items-center gap-1">

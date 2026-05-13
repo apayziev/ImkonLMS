@@ -33,7 +33,7 @@ import {
 import type { QuarterRead } from "@/lib/api"
 import { quartersApi } from "@/lib/api"
 import { requireAdmin } from "@/lib/routeGuards"
-import { formatDateShortUz } from "@/lib/utils"
+import { formatDateShortUz, todayStr } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/settings")({
   beforeLoad: requireAdmin,
@@ -79,7 +79,7 @@ function SettingsPage() {
   )
   const quarters = quartersData?.data ?? []
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayStr()
   const currentQuarter = quarters.find(
     (q) => q.start_date <= today && today <= q.end_date,
   )

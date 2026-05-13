@@ -207,7 +207,7 @@ function AttendancePage() {
             <Card key={date}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  {new Date(date).toLocaleDateString("uz-UZ", {
+                  {new Date(`${date}T00:00:00`).toLocaleDateString("uz-UZ", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",

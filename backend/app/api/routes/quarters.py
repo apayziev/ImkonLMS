@@ -1,10 +1,10 @@
 """Quarter routes — admin only CRUD."""
 
-from datetime import date
-
 from fastapi import APIRouter
+from sqlalchemy import select
 
 from app.api.deps import CurrentUser, SessionDep, SuperUser
+from app.core.config import today_local
 from app.core.exceptions import NotFoundException
 from app.crud.quarters import crud_quarters
 from app.models.quarter import Quarter
@@ -32,12 +32,16 @@ async def list_quarters(
 @router.get("/current", response_model=QuarterRead | None)
 async def get_current_quarter(db: SessionDep, _: CurrentUser) -> QuarterRead | None:
     """Bugungi sanaga mos aktiv chorakni qaytaradi."""
-    today = date.today()
-    result = await crud_quarters.get_multi(db, is_deleted=False)
-    for q in result["data"]:
-        if q.start_date <= today <= q.end_date:
-            return QuarterRead.model_validate(q)
-    return None
+    today = today_local()
+    result = await db.execute(
+        select(Quarter).where(
+            Quarter.is_deleted.is_(False),
+            Quarter.start_date <= today,
+            Quarter.end_date >= today,
+        )
+    )
+    quarter = result.scalar_one_or_none()
+    return QuarterRead.model_validate(quarter) if quarter else None
 
 
 @router.post("/", response_model=QuarterRead, status_code=201)

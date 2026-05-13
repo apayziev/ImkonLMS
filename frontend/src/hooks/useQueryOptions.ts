@@ -8,6 +8,7 @@ import {
   timetableApi,
 } from "@/lib/api"
 import { fetchAll } from "@/lib/paginate"
+import { todayStr } from "@/lib/utils"
 
 export const queryKeys = {
   grades: ["grades"] as const,
@@ -180,7 +181,7 @@ export function getLessonPlanQueryOptions(planId: number) {
 }
 
 export function getAttendanceQueryOptions(gradeId: number, date: string) {
-  const isToday = date === new Date().toISOString().split("T")[0]
+  const isToday = date === todayStr()
   return {
     queryKey: queryKeys.attendance(gradeId, date),
     queryFn: async () => {
