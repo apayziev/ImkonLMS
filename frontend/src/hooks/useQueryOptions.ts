@@ -1,5 +1,6 @@
 import {
   academicYearsApi,
+  configApi,
   gradesApi,
   lessonsApi,
   quartersApi,
@@ -11,6 +12,7 @@ import { fetchAll } from "@/lib/paginate"
 import { todayStr } from "@/lib/utils"
 
 export const queryKeys = {
+  appConfig: ["app-config"] as const,
   grades: ["grades"] as const,
   subjects: ["subjects"] as const,
   students: ["students"] as const,
@@ -34,6 +36,15 @@ export const queryKeys = {
   teacherStats: (startDate: string, endDate: string) =>
     ["teacher-stats", startDate, endDate] as const,
 } as const
+
+export function getAppConfigQueryOptions() {
+  return {
+    queryKey: queryKeys.appConfig,
+    queryFn: async () => (await configApi.get()).data,
+    staleTime: 60 * 60 * 1000, // 1h — static between deploys
+    retry: false,
+  }
+}
 
 export function getGradesQueryOptions() {
   return {

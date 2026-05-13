@@ -892,6 +892,17 @@ export const syncApi = {
   status: () => api.get<Record<string, unknown>>("/api/v1/sync/status"),
 }
 
+// ─── App config (mirror of backend constants) ──────────────────────────────
+
+export interface AppConfigRead {
+  max_file_size_mb: number
+  plan_total_fields: number
+}
+
+export const configApi = {
+  get: () => api.get<AppConfigRead>("/api/v1/config/"),
+}
+
 export const parentApi = {
   login: (data: ParentLoginRequest) =>
     api

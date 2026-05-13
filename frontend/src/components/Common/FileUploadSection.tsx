@@ -1,12 +1,13 @@
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { Loader2, Paperclip, Trash2, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { getAppConfigQueryOptions } from "@/hooks/useQueryOptions"
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
+const DEFAULT_MAX_MB = 20 // fallback when /config hasn't loaded yet
 
 export interface FileItem {
   id: number
@@ -45,6 +46,10 @@ export function FileUploadSection({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [uploadingName, setUploadingName] = useState<string>("")
 
+  const { data: config } = useQuery(getAppConfigQueryOptions())
+  const maxMb = config?.max_file_size_mb ?? DEFAULT_MAX_MB
+  const maxBytes = maxMb * 1024 * 1024
+
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       setUploadingName(file.name)
@@ -76,8 +81,8 @@ export function FileUploadSection({
     const selected = e.target.files
     if (!selected) return
     for (const file of Array.from(selected)) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(`"${file.name}" hajmi 20MB dan oshib ketdi`)
+      if (file.size > maxBytes) {
+        toast.error(`"${file.name}" hajmi ${maxMb}MB dan oshib ketdi`)
         continue
       }
       uploadMutation.mutate(file)

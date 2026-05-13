@@ -14,7 +14,6 @@ from app.core.exceptions import DuplicateValueException, NotFoundException
 from app.core.formatting import format_time
 from app.crud.timetable import (
     crud_schedule_entries,
-    crud_school_settings,
     crud_time_slots,
 )
 from app.models.schedule_entry import ScheduleEntry
@@ -35,8 +34,6 @@ from app.schemas.timetable import (
 
 router = APIRouter(prefix="/timetable", tags=["timetable"])
 
-SETTINGS_KEY = "default"
-
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -47,9 +44,13 @@ def _parse_time(value: str) -> time:
 
 
 async def _get_or_create_settings(db: AsyncSession) -> SchoolSettings:
-    settings = await crud_school_settings.get(db, key=SETTINGS_KEY, is_deleted=False)
+    """Fetch the single SchoolSettings row, creating defaults if missing."""
+    result = await db.execute(
+        select(SchoolSettings).where(SchoolSettings.is_deleted.is_(False)).limit(1)
+    )
+    settings = result.scalar_one_or_none()
     if not settings:
-        settings = SchoolSettings(key=SETTINGS_KEY)
+        settings = SchoolSettings()
         db.add(settings)
         await db.flush()
     return settings
@@ -92,9 +93,11 @@ async def update_school_settings(
 ) -> Any:
     settings = await _get_or_create_settings(db)
     update_data = body.model_dump(exclude_unset=True)
-    if not update_data:
-        return settings
-    return await crud_school_settings.update(db, settings, update_data)
+    for field, value in update_data.items():
+        setattr(settings, field, value)
+    await db.commit()
+    await db.refresh(settings)
+    return settings
 
 
 # ─── Time Slots ─────────────────────────────────────────────────────────────

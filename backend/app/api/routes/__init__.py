@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import get_current_user
 
 from .academic_years import router as academic_years_router
+from .config import router as config_router
 from .grades import router as grades_router
 from .health import router as health_router
 from .lessons import router as lessons_router
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/v1")
 
 # Public routes
 router.include_router(health_router)
+router.include_router(config_router)
 router.include_router(login_router)
 
 # Protected routes

@@ -9,7 +9,6 @@ from app.api.deps import CurrentUser, SessionDep
 from app.core.config import today_local
 from app.core.enums import AttendanceStatus, SessionStatus
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
-from app.crud.lessons import crud_lesson_sessions
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
 from app.models.schedule_entry import ScheduleEntry
@@ -132,9 +131,15 @@ async def start_session(
         raise BadRequestException("Kelajakdagi darsni boshlash mumkin emas")
 
     # Check if session already exists for this date
-    existing = await crud_lesson_sessions.get(
-        db, schedule_entry_id=body.schedule_entry_id, session_date=today, is_deleted=False,
-    )
+    existing = (
+        await db.execute(
+            select(LessonSession).where(
+                LessonSession.schedule_entry_id == body.schedule_entry_id,
+                LessonSession.session_date == today,
+                LessonSession.is_deleted.is_(False),
+            )
+        )
+    ).scalar_one_or_none()
     if existing and existing.status == SessionStatus.COMPLETED:
         raise BadRequestException("Bu dars uchun bugun sessiya allaqachon tugallangan")
 
