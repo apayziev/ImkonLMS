@@ -249,10 +249,10 @@ export function TeacherStatsTab() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Mavzu yozilgan darslar soni. Sifat: 9 ta maydon
-                            to'ldirilishi (mavzu, maqsadlar, kalit so'zlar, uy
-                            vazifasi, muddat, dars turi, bosqichlar, resurslar,
-                            baholash usuli)
+                            Mavzu yozilgan darslar soni. Sifat: {PLAN_TOTAL_FIELDS} ta
+                            maydon to'ldirilishi (dars turi, mavzu, maqsadlar,
+                            kalit so'zlar, uy vazifasi, materiallar, resurslar,
+                            baholash usullari)
                           </p>
                         </TooltipContent>
                       </Tooltip>

@@ -29,7 +29,7 @@ const useAuth = () => {
     })
   }
 
-  const persistTokenAndNavigate = async <T>(
+  const persistToken = async <T>(
     loginFn: (data: T) => Promise<{ data: { access_token: string } }>,
     data: T,
   ) => {
@@ -40,7 +40,7 @@ const useAuth = () => {
 
   const loginMutation = useMutation({
     mutationFn: (data: Parameters<typeof loginApi.login>[0]) =>
-      persistTokenAndNavigate(loginApi.login, data),
+      persistToken(loginApi.login, data),
     onSuccess: () => {
       navigate({ to: "/" })
     },
@@ -49,7 +49,7 @@ const useAuth = () => {
 
   const loginStudentMutation = useMutation({
     mutationFn: (data: Parameters<typeof loginApi.loginStudent>[0]) =>
-      persistTokenAndNavigate(loginApi.loginStudent, data),
+      persistToken(loginApi.loginStudent, data),
     onSuccess: () => {
       navigate({ to: "/" })
     },

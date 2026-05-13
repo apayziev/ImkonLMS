@@ -1,26 +1,10 @@
 import type { BreakItem, ScheduleEntryRead, TimeSlotRead } from "@/lib/api"
+import { UZ_WEEKDAYS_BY_DOW, UZ_WEEKDAYS_SHORT_BY_DOW } from "@/lib/locale"
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// ─── Re-exported locale (canonical home: @/lib/locale) ─────────────────────
 
-export const DAY_NAMES: Record<number, string> = {
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
-  7: "Yakshanba",
-}
-
-export const DAY_SHORT: Record<number, string> = {
-  1: "Dush",
-  2: "Sesh",
-  3: "Chor",
-  4: "Pay",
-  5: "Jum",
-  6: "Shan",
-  7: "Yak",
-}
+export const DAY_NAMES = UZ_WEEKDAYS_BY_DOW
+export const DAY_SHORT = UZ_WEEKDAYS_SHORT_BY_DOW
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

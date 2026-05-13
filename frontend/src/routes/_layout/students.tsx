@@ -19,9 +19,11 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
 import type { GradeRead, StudentRead } from "@/lib/api"
 import { studentsApi } from "@/lib/api"
+import { requireAdmin } from "@/lib/routeGuards"
 import { formatDate, getInitials } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/students")({
+  beforeLoad: requireAdmin,
   component: StudentsPage,
   head: () => ({
     meta: [{ title: "O'quvchilar - IMKON LMS" }],

@@ -1,9 +1,8 @@
 """Teacher statistics for monitoring — aggregated from sessions + schedule."""
 
-from datetime import date, datetime, time
+from datetime import date, time
 
 from fastapi import APIRouter
-from pydantic import BaseModel as PydanticBase
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -12,67 +11,19 @@ from app.core.enums import SessionStatus
 from app.core.exceptions import NotFoundException
 from app.models.lesson_plan import LessonPlan
 from app.models.lesson_session import LessonSession
+from app.models.quarter import Quarter
 from app.models.schedule_entry import ScheduleEntry
 from app.models.user import User
+from app.schemas.monitoring import (
+    TeacherDetailResponse,
+    TeacherSessionDetail,
+    TeacherStatRead,
+    TeacherStatsResponse,
+)
 
 from ._helpers import PLAN_TOTAL_FIELDS, _plan_filled_count, count_weekday_between
 
 router = APIRouter()
-
-# ─── Schemas ────────────────────────────────────────────────────────────────
-
-class TeacherStatRead(PydanticBase):
-    teacher_id: int
-    teacher_name: str
-    photo_url: str | None
-    total_expected: int
-    total_conducted: int
-    total_completed: int
-    total_planned: int       # dars rejasi mavjud
-    on_time_starts: int
-    avg_duration_minutes: float | None
-    avg_plan_score: float | None  # 0-100 (filled/total %)
-
-
-class TeacherStatsResponse(PydanticBase):
-    teachers: list[TeacherStatRead]
-
-
-class TeacherSessionMaterial(PydanticBase):
-    id: int
-    file_url: str
-    original_name: str
-
-
-class TeacherSessionDetail(PydanticBase):
-    session_id: int
-    session_date: date
-    status: str
-    subject_name: str
-    grade_display: str
-    period_number: int
-    start_time: str
-    end_time: str
-    started_at: datetime | None
-    ended_at: datetime | None
-    # Plan info (from linked LessonPlan)
-    plan_id: int | None = None
-    topic: str | None = None
-    lesson_type: str | None = None
-    objectives: list | None = None
-    keywords: list[str] | None = None
-    homework: str | None = None
-    resources: list[str] | None = None
-    assessment_methods: list[str] | None = None
-    plan_filled_count: int = 0
-    lesson_number: int = 0  # chorakdagi dars raqami
-
-
-class TeacherDetailResponse(PydanticBase):
-    teacher_id: int
-    teacher_name: str
-    photo_url: str | None
-    sessions: list[TeacherSessionDetail]
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
@@ -178,7 +129,6 @@ async def get_teacher_stats(
 
     # Build stats
     # Get holidays from current quarter (if any)
-    from app.models.quarter import Quarter
     quarter_q = await db.execute(
         select(Quarter).where(
             Quarter.start_date <= ed,
@@ -301,7 +251,6 @@ async def get_teacher_detail(
     entry_ids = {e.id for e in entries}
 
     # Get holidays
-    from app.models.quarter import Quarter
     quarter_q = await db.execute(
         select(Quarter).where(
             Quarter.start_date <= ed,
@@ -354,7 +303,7 @@ async def get_teacher_detail(
     for entry in entries:
         ts = entry.time_slot
         js_dow = entry.day_of_week
-        py_dow = js_dow - 1 if js_dow < 7 else 6
+        py_dow = (js_dow - 1) % 7
         cur = sd
         while cur <= ed:
             if cur.weekday() == py_dow and cur not in holiday_set:

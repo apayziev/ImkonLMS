@@ -3,17 +3,6 @@ import { CalendarDays, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { buildGrid } from "@/components/timetable/helpers"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const DAY_FULL: Record<number, string> = {
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
-  7: "Yakshanba",
-}
-
 import useAuth from "@/hooks/useAuth"
 import {
   getCurrentAcademicYearQueryOptions,
@@ -26,6 +15,7 @@ import {
   getEffectiveWeekDate,
   useWeekNavigation,
 } from "@/hooks/useWeekNavigation"
+import { UZ_WEEKDAYS_BY_DOW as DAY_FULL } from "@/lib/locale"
 
 import { toDateString, todayStr } from "./formatters"
 

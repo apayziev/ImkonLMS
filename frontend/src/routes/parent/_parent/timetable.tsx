@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table"
 import { useSelectedChild } from "@/hooks/useSelectedChild"
 import { type ChildTimetableEntry, parentApi } from "@/lib/api"
+import { UZ_WEEKDAYS_BY_DOW as DAY_NAMES } from "@/lib/locale"
 
 export const Route = createFileRoute("/parent/_parent/timetable")({
   component: TimetablePage,
@@ -21,15 +22,6 @@ export const Route = createFileRoute("/parent/_parent/timetable")({
     meta: [{ title: "Dars jadvali - Ota-ona paneli" }],
   }),
 })
-
-const DAY_NAMES: Record<number, string> = {
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
-}
 
 function TimetablePage() {
   const { children, selectedChildId, setSelectedChildId } = useSelectedChild()
