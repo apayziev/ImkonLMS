@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -23,13 +23,7 @@ import type {
   SchoolSettingsUpdate,
 } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
-import {
-  DAY_SHORT,
-  formatTimeInput,
-  generatePreviewSlots,
-  isValidTime,
-  parseHHMM,
-} from "./helpers"
+import { DAY_SHORT, formatTimeInput, isValidTime, parseHHMM } from "./helpers"
 
 export function SettingsSection({
   settings,
@@ -62,13 +56,37 @@ export function SettingsSection({
   const [newBreak, setNewBreak] = useState({ start: "", end: "", name: "" })
   const [showAddBreak, setShowAddBreak] = useState(false)
 
-  const preview = generatePreviewSlots(
-    dayStart,
-    dayEnd,
-    lessonDur,
-    defaultBreak,
-    breaks,
-  )
+  // Settings validity gates the preview query so we don't spam the server
+  // with malformed inputs while the admin is mid-type.
+  const isSettingsValid =
+    isValidTime(dayStart) &&
+    isValidTime(dayEnd) &&
+    parseHHMM(dayStart) < parseHHMM(dayEnd)
+
+  const { data: previewData } = useQuery({
+    queryKey: [
+      "time-slot-preview",
+      dayStart,
+      dayEnd,
+      lessonDur,
+      defaultBreak,
+      breaks,
+    ],
+    queryFn: async () =>
+      (
+        await timetableApi.previewTimeSlots({
+          day_start_time: dayStart,
+          day_end_time: dayEnd,
+          lesson_duration_minutes: lessonDur,
+          default_break_minutes: defaultBreak,
+          breaks,
+        })
+      ).data,
+    enabled: isSettingsValid,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  })
+  const preview = previewData?.slots ?? []
 
   const updateMutation = useMutation({
     mutationFn: (data: SchoolSettingsUpdate) =>
@@ -99,11 +117,6 @@ export function SettingsSection({
     breaks,
     working_days: workingDays,
   }
-
-  const isSettingsValid =
-    isValidTime(dayStart) &&
-    isValidTime(dayEnd) &&
-    parseHHMM(dayStart) < parseHHMM(dayEnd)
 
   const handleSaveAndGenerate = () => {
     if (!academicYearId || !isSettingsValid) return

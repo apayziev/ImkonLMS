@@ -44,6 +44,24 @@ class TimeSlotCreate(BaseModel):
     end_time: str = Field(pattern=r"^\d{2}:\d{2}$")
 
 
+class TimeSlotPreviewRequest(BaseModel):
+    """Optional overrides; falls back to saved SchoolSettings when fields omit."""
+
+    day_start_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    day_end_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    lesson_duration_minutes: int | None = Field(default=None, ge=15, le=120)
+    default_break_minutes: int | None = Field(default=None, ge=1, le=30)
+    breaks: list[BreakItem] | None = None
+
+
+class TimeSlotPreviewItem(BaseModel):
+    period_number: int
+    start_time: str
+    end_time: str
+
+
+class TimeSlotPreviewResponse(BaseModel):
+    slots: list[TimeSlotPreviewItem]
 
 
 class TimeSlotRead(TimestampSchema):

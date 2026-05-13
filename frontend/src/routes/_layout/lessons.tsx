@@ -26,6 +26,7 @@ import {
 } from "@/hooks/useWeekNavigation"
 import { lessonsApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
+import { generateLessonDates } from "@/lib/dates"
 import { UZ_MONTHS_SHORT } from "@/lib/locale"
 import { cn } from "@/lib/utils"
 
@@ -37,31 +38,6 @@ function formatWeekRange(days: Date[]): string {
     return `${first.getDate()} – ${last.getDate()} ${UZ_MONTHS_SHORT[first.getMonth()]}`
   }
   return `${first.getDate()} ${UZ_MONTHS_SHORT[first.getMonth()]} – ${last.getDate()} ${UZ_MONTHS_SHORT[last.getMonth()]}`
-}
-
-function generateLessonDates(
-  start: string,
-  end: string,
-  scheduleEntries: { id: number; dow: number }[],
-  holidays: string[],
-): { ds: string; entryId: number }[] {
-  const holidaySet = new Set(holidays)
-  const endDate = new Date(`${end}T00:00:00`)
-  const result: { ds: string; entryId: number }[] = []
-  for (const { id, dow } of scheduleEntries) {
-    const jsDow = dow === 7 ? 0 : dow
-    const cur = new Date(`${start}T00:00:00`)
-    while (cur <= endDate) {
-      if (cur.getDay() === jsDow) {
-        const ds = toDateStr(cur)
-        if (!holidaySet.has(ds)) result.push({ ds, entryId: id })
-        cur.setDate(cur.getDate() + 7)
-      } else {
-        cur.setDate(cur.getDate() + 1)
-      }
-    }
-  }
-  return result.sort((a, b) => (a.ds < b.ds ? -1 : a.ds > b.ds ? 1 : 0))
 }
 
 export const Route = createFileRoute("/_layout/lessons")({

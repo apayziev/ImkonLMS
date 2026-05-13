@@ -24,11 +24,6 @@ export function parseHHMM(v: string): number {
   return h * 60 + m
 }
 
-/** Format total minutes → "HH:MM" */
-export function fmtHHMM(m: number): string {
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
-}
-
 /** Validate HH:MM string is a real time (00:00–23:59) */
 export function isValidTime(v: string): boolean {
   if (!/^\d{2}:\d{2}$/.test(v)) return false
@@ -104,63 +99,3 @@ export function getBreakAfter(
   }
 }
 
-/** Generate preview slots from settings (pure function, same logic as backend). */
-export function generatePreviewSlots(
-  dayStart: string,
-  dayEnd: string,
-  lessonDur: number,
-  defaultBreak: number,
-  breaks: BreakItem[],
-): { period_number: number; start_time: string; end_time: string }[] {
-  const parsed = breaks
-    .map((b) => ({
-      start: parseHHMM(b.start_time),
-      end: parseHHMM(b.end_time),
-      name: b.name,
-    }))
-    .sort((a, b) => a.start - b.start)
-
-  let cursor = parseHHMM(dayStart)
-  const endMin = parseHHMM(dayEnd)
-
-  const result: {
-    period_number: number
-    start_time: string
-    end_time: string
-  }[] = []
-  let period = 1
-
-  while (cursor + lessonDur <= endMin) {
-    const activeBreak = parsed.find((b) => b.start <= cursor && cursor < b.end)
-    if (activeBreak) {
-      cursor = activeBreak.end
-      continue
-    }
-
-    let slotEnd = cursor + lessonDur
-
-    let overlaps = false
-    for (const b of parsed) {
-      if (cursor < b.start && b.start < slotEnd) {
-        slotEnd = b.start
-        overlaps = true
-        break
-      }
-    }
-
-    if (slotEnd - cursor < 10) {
-      cursor = slotEnd
-      continue
-    }
-
-    result.push({
-      period_number: period,
-      start_time: fmtHHMM(cursor),
-      end_time: fmtHHMM(slotEnd),
-    })
-    cursor = slotEnd + (overlaps ? 0 : defaultBreak)
-    period++
-  }
-
-  return result
-}

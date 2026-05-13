@@ -40,9 +40,10 @@ import {
   getTimeSlotsQueryOptions,
   queryKeys,
 } from "@/hooks/useQueryOptions"
-import type { GradeRead, ScheduleEntryRead } from "@/lib/api"
+import type { ScheduleEntryRead } from "@/lib/api"
 import { timetableApi } from "@/lib/api"
 import { getErrorDetail } from "@/lib/apiError"
+import { sortGrades } from "@/lib/grades"
 import { requireAdmin } from "@/lib/routeGuards"
 
 export const Route = createFileRoute("/_layout/timetable")({
@@ -81,12 +82,7 @@ function TimetablePage() {
     getTimeSlotsQueryOptions(academicYearId),
   )
 
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort(
-    (a: GradeRead, b: GradeRead) =>
-      a.level !== b.level
-        ? a.level - b.level
-        : a.section.localeCompare(b.section),
-  )
+  const grades = sortGrades(gradesData?.data ?? [])
   const allowedGradeIds =
     isTeacher && teacherGradeIds.length > 0 ? new Set(teacherGradeIds) : null
   const defaultGrade = allowedGradeIds

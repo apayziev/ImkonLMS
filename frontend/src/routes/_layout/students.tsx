@@ -17,8 +17,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getGradesQueryOptions } from "@/hooks/useQueryOptions"
-import type { GradeRead, StudentRead } from "@/lib/api"
+import type { StudentRead } from "@/lib/api"
 import { studentsApi } from "@/lib/api"
+import { sortGrades } from "@/lib/grades"
 import { requireAdmin } from "@/lib/routeGuards"
 import { formatDate, getInitials } from "@/lib/utils"
 
@@ -54,12 +55,7 @@ function StudentsPage() {
   const closeModal = useCallback(() => setActiveModal(null), [])
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort(
-    (a: GradeRead, b: GradeRead) =>
-      a.level !== b.level
-        ? a.level - b.level
-        : a.section.localeCompare(b.section),
-  )
+  const grades = sortGrades(gradesData?.data ?? [])
 
   const gradeId = gradeFilter !== "all" ? Number(gradeFilter) : undefined
   const status = statusFilter !== "all" ? statusFilter : undefined

@@ -80,12 +80,42 @@ export const scheduleEntryListSchema = z.object({
 })
 export type ScheduleEntryList = z.infer<typeof scheduleEntryListSchema>
 
+// ─── TimeSlot preview ──────────────────────────────────────────────────────
+
+export const timeSlotPreviewItemSchema = z.object({
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+})
+export type TimeSlotPreviewItem = z.infer<typeof timeSlotPreviewItemSchema>
+
+export const timeSlotPreviewResponseSchema = z.object({
+  slots: z.array(timeSlotPreviewItemSchema),
+})
+export type TimeSlotPreviewResponse = z.infer<
+  typeof timeSlotPreviewResponseSchema
+>
+
+export interface TimeSlotPreviewRequest {
+  day_start_time?: string
+  day_end_time?: string
+  lesson_duration_minutes?: number
+  default_break_minutes?: number
+  breaks?: BreakItem[]
+}
+
 export const timetableApi = {
   // Settings
   getSettings: () =>
     api
       .get<unknown>("/api/v1/timetable/settings")
       .then(validated<SchoolSettingsRead>(schoolSettingsReadSchema)),
+  previewTimeSlots: (data: TimeSlotPreviewRequest) =>
+    api
+      .post<unknown>("/api/v1/timetable/time-slots/preview", data)
+      .then(
+        validated<TimeSlotPreviewResponse>(timeSlotPreviewResponseSchema),
+      ),
   updateSettings: (data: SchoolSettingsUpdate) =>
     api
       .patch<unknown>("/api/v1/timetable/settings", data)

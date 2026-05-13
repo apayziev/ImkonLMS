@@ -8,7 +8,8 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { ATTENDANCE_OPTIONS } from "@/components/Lessons/constants"
-import { toDateString } from "@/components/Lessons/formatters"
+import { formatTime, toDateString } from "@/components/Lessons/formatters"
+import { sortGrades } from "@/lib/grades"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -35,7 +36,6 @@ import { getWeekDays } from "@/hooks/useWeekNavigation"
 import type {
   AttendanceSessionRead,
   AttendanceStudentRead,
-  GradeRead,
 } from "@/lib/api"
 import { UZ_MONTHS, UZ_WEEKDAYS_SHORT } from "@/lib/locale"
 import { cn, formatDateShortUz, getInitials } from "@/lib/utils"
@@ -53,13 +53,6 @@ const STATUS_CONFIG = Object.fromEntries([
   ],
 ]) as Record<string, { label: string; className: string }>
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("uz-UZ", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function AttendanceTab() {
@@ -70,11 +63,7 @@ export function AttendanceTab() {
   const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]
 
   const { data: gradesData } = useQuery(getGradesQueryOptions())
-  const grades: GradeRead[] = [...(gradesData?.data ?? [])].sort((a, b) =>
-    a.level !== b.level
-      ? a.level - b.level
-      : a.section.localeCompare(b.section),
-  )
+  const grades = sortGrades(gradesData?.data ?? [])
 
   const dateStr = toDateString(selectedDate)
   const todayStr = toDateString(new Date())

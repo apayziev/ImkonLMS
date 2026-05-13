@@ -29,6 +29,8 @@ from app.schemas.timetable import (
     SchoolSettingsUpdate,
     TimeSlotCreate,
     TimeSlotList,
+    TimeSlotPreviewRequest,
+    TimeSlotPreviewResponse,
     TimeSlotRead,
 )
 
@@ -252,6 +254,29 @@ def _generate_slots(
         period += 1
 
     return result
+
+
+@router.post("/time-slots/preview", response_model=TimeSlotPreviewResponse)
+async def preview_time_slots(
+    body: TimeSlotPreviewRequest,
+    db: SessionDep,
+    _: CurrentUser,
+) -> TimeSlotPreviewResponse:
+    """Compute slot layout from given (or saved) settings without persisting.
+
+    Frontend uses this for live preview while the admin tunes settings,
+    so the slot-generation algorithm stays a single source of truth (this
+    endpoint).
+    """
+    settings = await _get_or_create_settings(db)
+    slots = _generate_slots(
+        day_start=body.day_start_time or settings.day_start_time,
+        day_end=body.day_end_time or settings.day_end_time,
+        lesson_dur=body.lesson_duration_minutes or settings.lesson_duration_minutes,
+        default_break=body.default_break_minutes or settings.default_break_minutes,
+        breaks=[b.model_dump() for b in body.breaks] if body.breaks is not None else (settings.breaks or []),
+    )
+    return TimeSlotPreviewResponse(slots=slots)
 
 
 @router.post("/time-slots/generate", response_model=TimeSlotList)
