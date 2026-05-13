@@ -1,10 +1,16 @@
-import { api } from "./client"
+import { z } from "zod"
 
-export interface AppConfigRead {
-  max_file_size_mb: number
-  plan_total_fields: number
-}
+import { api, validated } from "./client"
+
+export const appConfigReadSchema = z.object({
+  max_file_size_mb: z.number(),
+  plan_total_fields: z.number(),
+})
+export type AppConfigRead = z.infer<typeof appConfigReadSchema>
 
 export const configApi = {
-  get: () => api.get<AppConfigRead>("/api/v1/config/"),
+  get: () =>
+    api
+      .get<unknown>("/api/v1/config/")
+      .then(validated<AppConfigRead>(appConfigReadSchema)),
 }

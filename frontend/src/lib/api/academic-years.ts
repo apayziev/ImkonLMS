@@ -1,17 +1,23 @@
-import { api } from "./client"
+import { z } from "zod"
 
-export interface AcademicYearRead {
-  id: number
-  name: string
-  start_year: number
-  end_year: number
-  start_month: number
-  end_month: number
-  is_current: boolean
-  created_at: string
-  updated_at: string | null
-}
+import { api, validated } from "./client"
+
+export const academicYearReadSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  start_year: z.number(),
+  end_year: z.number(),
+  start_month: z.number(),
+  end_month: z.number(),
+  is_current: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+})
+export type AcademicYearRead = z.infer<typeof academicYearReadSchema>
 
 export const academicYearsApi = {
-  current: () => api.get<AcademicYearRead>("/api/v1/academic-years/current"),
+  current: () =>
+    api
+      .get<unknown>("/api/v1/academic-years/current")
+      .then(validated<AcademicYearRead>(academicYearReadSchema)),
 }

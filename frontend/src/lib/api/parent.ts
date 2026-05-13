@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 import {
   type ParentMeRead,
   type ParentTokenResponse,
@@ -5,60 +7,78 @@ import {
   parentTokenResponseSchema,
 } from "@/lib/authSchemas"
 
-import { api, type AttendanceStatus, parentAxiosInstance, validated } from "./client"
+import { api, parentAxiosInstance, validated } from "./client"
+
+const attendanceStatusSchema = z.enum([
+  "unmarked",
+  "present",
+  "late",
+  "absent",
+])
 
 export interface ParentLoginRequest {
   phone: string
   password: string
 }
 
-export interface ChildAttendanceRecord {
-  date: string
-  subject_name: string
-  period_number: number
-  start_time: string
-  end_time: string
-  status: AttendanceStatus
-}
+export const childAttendanceRecordSchema = z.object({
+  date: z.string(),
+  subject_name: z.string(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  status: attendanceStatusSchema,
+})
+export type ChildAttendanceRecord = z.infer<typeof childAttendanceRecordSchema>
 
-export interface AttendanceSummary {
-  total: number
-  present: number
-  late: number
-  absent: number
-}
+export const attendanceSummarySchema = z.object({
+  total: z.number(),
+  present: z.number(),
+  late: z.number(),
+  absent: z.number(),
+})
+export type AttendanceSummary = z.infer<typeof attendanceSummarySchema>
 
-export interface ChildAttendanceResponse {
-  records: ChildAttendanceRecord[]
-  summary: AttendanceSummary
-}
+export const childAttendanceResponseSchema = z.object({
+  records: z.array(childAttendanceRecordSchema),
+  summary: attendanceSummarySchema,
+})
+export type ChildAttendanceResponse = z.infer<
+  typeof childAttendanceResponseSchema
+>
 
-export interface ChildTimetableEntry {
-  day_of_week: number
-  period_number: number
-  start_time: string
-  end_time: string
-  subject_name: string
-  teacher_name: string
-  room: string | null
-}
+export const childTimetableEntrySchema = z.object({
+  day_of_week: z.number(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  subject_name: z.string(),
+  teacher_name: z.string(),
+  room: z.string().nullable(),
+})
+export type ChildTimetableEntry = z.infer<typeof childTimetableEntrySchema>
 
-export interface ChildTimetableResponse {
-  entries: ChildTimetableEntry[]
-}
+export const childTimetableResponseSchema = z.object({
+  entries: z.array(childTimetableEntrySchema),
+})
+export type ChildTimetableResponse = z.infer<
+  typeof childTimetableResponseSchema
+>
 
-export interface ChildHomeworkItem {
-  subject_name: string
-  topic: string | null
-  homework: string
-  homework_deadline: string | null
-  plan_date: string
-  teacher_name: string | null
-}
+export const childHomeworkItemSchema = z.object({
+  subject_name: z.string(),
+  topic: z.string().nullable(),
+  homework: z.string(),
+  homework_deadline: z.string().nullable(),
+  plan_date: z.string(),
+  teacher_name: z.string().nullable(),
+})
+export type ChildHomeworkItem = z.infer<typeof childHomeworkItemSchema>
 
-export interface ChildHomeworkResponse {
-  items: ChildHomeworkItem[]
-}
+export const childHomeworkResponseSchema = z.object({
+  items: z.array(childHomeworkItemSchema),
+})
+export type ChildHomeworkResponse = z.infer<typeof childHomeworkResponseSchema>
 
 export const parentApi = {
   login: (data: ParentLoginRequest) =>
@@ -75,19 +95,21 @@ export const parentApi = {
     studentId: number,
     params?: { start_date?: string; end_date?: string },
   ) =>
-    parentAxiosInstance.get<ChildAttendanceResponse>(
-      `/api/v1/parent/children/${studentId}/attendance`,
-      { params },
-    ),
+    parentAxiosInstance
+      .get<unknown>(`/api/v1/parent/children/${studentId}/attendance`, {
+        params,
+      })
+      .then(validated<ChildAttendanceResponse>(childAttendanceResponseSchema)),
 
   timetable: (studentId: number) =>
-    parentAxiosInstance.get<ChildTimetableResponse>(
-      `/api/v1/parent/children/${studentId}/timetable`,
-    ),
+    parentAxiosInstance
+      .get<unknown>(`/api/v1/parent/children/${studentId}/timetable`)
+      .then(validated<ChildTimetableResponse>(childTimetableResponseSchema)),
 
   homework: (studentId: number, limit = 20) =>
-    parentAxiosInstance.get<ChildHomeworkResponse>(
-      `/api/v1/parent/children/${studentId}/homework`,
-      { params: { limit } },
-    ),
+    parentAxiosInstance
+      .get<unknown>(`/api/v1/parent/children/${studentId}/homework`, {
+        params: { limit },
+      })
+      .then(validated<ChildHomeworkResponse>(childHomeworkResponseSchema)),
 }

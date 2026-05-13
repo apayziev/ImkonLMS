@@ -1,43 +1,47 @@
-import { api } from "./client"
+import { z } from "zod"
 
-export interface StudentRead {
-  id: number
-  document_id: string
-  first_name: string
-  last_name: string
-  middle_name: string | null
-  full_name: string
-  student_id: string | null
-  grade_id: number | null
-  birth_date: string | null
-  gender: string | null
-  phone_number: string | null
-  photo_url: string | null
-  father_first_name: string | null
-  father_last_name: string | null
-  father_phone: string | null
-  father_full_name: string | null
-  mother_first_name: string | null
-  mother_last_name: string | null
-  mother_phone: string | null
-  mother_full_name: string | null
-  address: string | null
-  enrollment_date: string | null
-  withdrawal_date: string | null
-  is_active: boolean
-  is_frozen: boolean
-  frozen_at: string | null
-  frozen_reason: string | null
-  departure_date: string | null
-  return_date: string | null
-  is_deleted: boolean
-  deleted_at: string | null
-}
+import { api, validated } from "./client"
 
-export interface StudentList {
-  data: StudentRead[]
-  count: number
-}
+export const studentReadSchema = z.object({
+  id: z.number(),
+  document_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  middle_name: z.string().nullable(),
+  full_name: z.string(),
+  student_id: z.string().nullable(),
+  grade_id: z.number().nullable(),
+  birth_date: z.string().nullable(),
+  gender: z.string().nullable(),
+  phone_number: z.string().nullable(),
+  photo_url: z.string().nullable(),
+  father_first_name: z.string().nullable(),
+  father_last_name: z.string().nullable(),
+  father_phone: z.string().nullable(),
+  father_full_name: z.string().nullable(),
+  mother_first_name: z.string().nullable(),
+  mother_last_name: z.string().nullable(),
+  mother_phone: z.string().nullable(),
+  mother_full_name: z.string().nullable(),
+  address: z.string().nullable(),
+  enrollment_date: z.string().nullable(),
+  withdrawal_date: z.string().nullable(),
+  is_active: z.boolean(),
+  is_frozen: z.boolean(),
+  frozen_at: z.string().nullable(),
+  frozen_reason: z.string().nullable(),
+  departure_date: z.string().nullable(),
+  return_date: z.string().nullable(),
+  is_deleted: z.boolean(),
+  deleted_at: z.string().nullable(),
+})
+export type StudentRead = z.infer<typeof studentReadSchema>
+
+export const studentListSchema = z.object({
+  data: z.array(studentReadSchema),
+  count: z.number(),
+})
+export type StudentList = z.infer<typeof studentListSchema>
 
 export const studentsApi = {
   list: (
@@ -48,5 +52,8 @@ export const studentsApi = {
       search?: string
       status?: string
     } = {},
-  ) => api.get<StudentList>("/api/v1/students/", { params }),
+  ) =>
+    api
+      .get<unknown>("/api/v1/students/", { params })
+      .then(validated<StudentList>(studentListSchema)),
 }

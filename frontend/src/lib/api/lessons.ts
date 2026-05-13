@@ -1,93 +1,110 @@
-import {
-  api,
-  arrayParamsSerializer,
-  type AttendanceStatus,
-  type SessionStatus,
-} from "./client"
+import { z } from "zod"
+
+import { api, arrayParamsSerializer, validated } from "./client"
+
+const sessionStatusSchema = z.enum(["in_progress", "completed"])
+const attendanceStatusSchema = z.enum([
+  "unmarked",
+  "present",
+  "late",
+  "absent",
+])
 
 // ─── Today's lesson (schedule-derived) ─────────────────────────────────────
 
-export interface TodayLessonRead {
-  schedule_entry_id: number
-  grade_id: number
-  grade_display: string
-  subject_id: number
-  subject_name: string
-  period_number: number
-  start_time: string
-  end_time: string
-  room: string | null
-  session_id: number | null
-  session_status: SessionStatus | null
-  plan_id: number | null
-  plan_filled_count: number // 0-8
-  lesson_number: number
-  total_lessons: number
-}
+export const todayLessonReadSchema = z.object({
+  schedule_entry_id: z.number(),
+  grade_id: z.number(),
+  grade_display: z.string(),
+  subject_id: z.number(),
+  subject_name: z.string(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  room: z.string().nullable(),
+  session_id: z.number().nullable(),
+  session_status: sessionStatusSchema.nullable(),
+  plan_id: z.number().nullable(),
+  plan_filled_count: z.number(), // 0-8
+  lesson_number: z.number(),
+  total_lessons: z.number(),
+})
+export type TodayLessonRead = z.infer<typeof todayLessonReadSchema>
 
-export interface TodayLessonsResponse {
-  data: TodayLessonRead[]
-  date: string
-}
+export const todayLessonsResponseSchema = z.object({
+  data: z.array(todayLessonReadSchema),
+  date: z.string(),
+})
+export type TodayLessonsResponse = z.infer<typeof todayLessonsResponseSchema>
 
 // ─── Lesson plan ───────────────────────────────────────────────────────────
 
-export interface LessonPlanObjectiveRead {
-  text: string
-  bloom_level: string | null
-}
+export const lessonPlanObjectiveReadSchema = z.object({
+  text: z.string(),
+  bloom_level: z.string().nullable(),
+})
+export type LessonPlanObjectiveRead = z.infer<
+  typeof lessonPlanObjectiveReadSchema
+>
 
-export interface LessonPlanStageRead {
-  title: string
-  duration_min: number
-  activity: string
-}
+export const lessonPlanStageReadSchema = z.object({
+  title: z.string(),
+  duration_min: z.number(),
+  activity: z.string(),
+})
+export type LessonPlanStageRead = z.infer<typeof lessonPlanStageReadSchema>
 
-export interface LessonMaterialRead {
-  id: number
-  file_url: string
-  original_name: string
-  file_size: number
-}
+export const lessonMaterialReadSchema = z.object({
+  id: z.number(),
+  file_url: z.string(),
+  original_name: z.string(),
+  file_size: z.number(),
+})
+export type LessonMaterialRead = z.infer<typeof lessonMaterialReadSchema>
 
-export interface LessonPlanRead {
-  id: number
-  schedule_entry_id: number | null
-  plan_date: string
-  topic: string | null
-  lesson_type: string | null
-  objectives: LessonPlanObjectiveRead[] | null
-  keywords: string[] | null
-  homework: string | null
-  homework_deadline: string | null
-  stages: LessonPlanStageRead[] | null
-  resources: string[] | null
-  assessment_methods: string[] | null
-  homework_test_id: number | null
-  homework_test_title: string | null
-  materials: LessonMaterialRead[]
-  plan_filled_count: number
-}
+export const lessonPlanReadSchema = z.object({
+  id: z.number(),
+  schedule_entry_id: z.number().nullable(),
+  plan_date: z.string(),
+  topic: z.string().nullable(),
+  lesson_type: z.string().nullable(),
+  objectives: z.array(lessonPlanObjectiveReadSchema).nullable(),
+  keywords: z.array(z.string()).nullable(),
+  homework: z.string().nullable(),
+  homework_deadline: z.string().nullable(),
+  stages: z.array(lessonPlanStageReadSchema).nullable(),
+  resources: z.array(z.string()).nullable(),
+  assessment_methods: z.array(z.string()).nullable(),
+  homework_test_id: z.number().nullable(),
+  homework_test_title: z.string().nullable(),
+  materials: z.array(lessonMaterialReadSchema),
+  plan_filled_count: z.number(),
+})
+export type LessonPlanRead = z.infer<typeof lessonPlanReadSchema>
 
 // ─── Session / assessment / attendance ─────────────────────────────────────
 
-export interface SessionStudentAssessment {
-  knowing: number | null // 0-4
-  applying: number | null // 0-4
-  reasoning: number | null // 0-2
-}
+export const sessionStudentAssessmentSchema = z.object({
+  knowing: z.number().nullable(), // 0-4
+  applying: z.number().nullable(), // 0-4
+  reasoning: z.number().nullable(), // 0-2
+})
+export type SessionStudentAssessment = z.infer<
+  typeof sessionStudentAssessmentSchema
+>
 
-export interface SessionStudentRead {
-  attendance_id: number
-  student_id: number
-  first_name: string
-  last_name: string
-  full_name: string
-  photo_url: string | null
-  status: AttendanceStatus
-  marked_at: string | null
-  assessment: SessionStudentAssessment
-}
+export const sessionStudentReadSchema = z.object({
+  attendance_id: z.number(),
+  student_id: z.number(),
+  first_name: z.string(),
+  last_name: z.string(),
+  full_name: z.string(),
+  photo_url: z.string().nullable(),
+  status: attendanceStatusSchema,
+  marked_at: z.string().nullable(),
+  assessment: sessionStudentAssessmentSchema,
+})
+export type SessionStudentRead = z.infer<typeof sessionStudentReadSchema>
 
 export interface AssessmentUpdateRequest {
   student_id: number
@@ -97,96 +114,112 @@ export interface AssessmentUpdateRequest {
   reasoning?: number | null
 }
 
-export interface SessionDetailRead {
-  id: number
-  schedule_entry_id: number
-  session_date: string
-  started_at: string
-  ended_at: string | null
-  status: SessionStatus
-  grade_display: string
-  subject_name: string
-  period_number: number
-  start_time: string
-  end_time: string
-  teacher_name: string
-  plan: LessonPlanRead | null
-  students: SessionStudentRead[]
-}
+export const sessionDetailReadSchema = z.object({
+  id: z.number(),
+  schedule_entry_id: z.number(),
+  session_date: z.string(),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+  status: sessionStatusSchema,
+  grade_display: z.string(),
+  subject_name: z.string(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  teacher_name: z.string(),
+  plan: lessonPlanReadSchema.nullable(),
+  students: z.array(sessionStudentReadSchema),
+})
+export type SessionDetailRead = z.infer<typeof sessionDetailReadSchema>
 
 export interface AttendanceUpdateRequest {
   student_id: number
-  status: AttendanceStatus
+  status: z.infer<typeof attendanceStatusSchema>
 }
 
 // Admin attendance view
-export interface AttendanceStudentRead {
-  student_id: number
-  full_name: string
-  photo_url: string | null
-  status: AttendanceStatus
-  marked_at: string | null
-}
+export const attendanceStudentReadSchema = z.object({
+  student_id: z.number(),
+  full_name: z.string(),
+  photo_url: z.string().nullable(),
+  status: attendanceStatusSchema,
+  marked_at: z.string().nullable(),
+})
+export type AttendanceStudentRead = z.infer<typeof attendanceStudentReadSchema>
 
-export interface AttendanceSessionRead {
-  session_id: number
-  subject_name: string
-  period_number: number
-  start_time: string
-  end_time: string
-  started_at: string
-  ended_at: string | null
-  teacher_name: string
-  status: SessionStatus
-  students: AttendanceStudentRead[]
-}
+export const attendanceSessionReadSchema = z.object({
+  session_id: z.number(),
+  subject_name: z.string(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+  teacher_name: z.string(),
+  status: sessionStatusSchema,
+  students: z.array(attendanceStudentReadSchema),
+})
+export type AttendanceSessionRead = z.infer<typeof attendanceSessionReadSchema>
 
-export interface AttendanceDayResponse {
-  date: string
-  grade_display: string
-  sessions: AttendanceSessionRead[]
-}
+export const attendanceDayResponseSchema = z.object({
+  date: z.string(),
+  grade_display: z.string(),
+  sessions: z.array(attendanceSessionReadSchema),
+})
+export type AttendanceDayResponse = z.infer<typeof attendanceDayResponseSchema>
 
-export interface SessionStatusItem {
-  schedule_entry_id: number
-  session_date: string
-  status: SessionStatus
-}
+export const sessionStatusItemSchema = z.object({
+  schedule_entry_id: z.number(),
+  session_date: z.string(),
+  status: sessionStatusSchema,
+})
+export type SessionStatusItem = z.infer<typeof sessionStatusItemSchema>
 
-export interface SessionStatusesResponse {
-  data: SessionStatusItem[]
-}
+export const sessionStatusesResponseSchema = z.object({
+  data: z.array(sessionStatusItemSchema),
+})
+export type SessionStatusesResponse = z.infer<
+  typeof sessionStatusesResponseSchema
+>
 
-export interface AttendanceHistoryStudent {
-  student_id: number
-  full_name: string
-  photo_url: string | null
-  records: Record<string, AttendanceStatus>
-}
+export const attendanceHistoryStudentSchema = z.object({
+  student_id: z.number(),
+  full_name: z.string(),
+  photo_url: z.string().nullable(),
+  records: z.record(z.string(), attendanceStatusSchema),
+})
+export type AttendanceHistoryStudent = z.infer<
+  typeof attendanceHistoryStudentSchema
+>
 
-export interface AttendanceHistoryResponse {
-  dates: string[]
-  students: AttendanceHistoryStudent[]
-}
+export const attendanceHistoryResponseSchema = z.object({
+  dates: z.array(z.string()),
+  students: z.array(attendanceHistoryStudentSchema),
+})
+export type AttendanceHistoryResponse = z.infer<
+  typeof attendanceHistoryResponseSchema
+>
 
 // ─── Teacher stats ─────────────────────────────────────────────────────────
 
-export interface TeacherStatRead {
-  teacher_id: number
-  teacher_name: string
-  photo_url: string | null
-  total_expected: number
-  total_conducted: number
-  total_completed: number
-  total_planned: number
-  on_time_starts: number
-  avg_duration_minutes: number | null
-  avg_plan_score: number | null
-}
+export const teacherStatReadSchema = z.object({
+  teacher_id: z.number(),
+  teacher_name: z.string(),
+  photo_url: z.string().nullable(),
+  total_expected: z.number(),
+  total_conducted: z.number(),
+  total_completed: z.number(),
+  total_planned: z.number(),
+  on_time_starts: z.number(),
+  avg_duration_minutes: z.number().nullable(),
+  avg_plan_score: z.number().nullable(),
+})
+export type TeacherStatRead = z.infer<typeof teacherStatReadSchema>
 
-export interface TeacherStatsResponse {
-  teachers: TeacherStatRead[]
-}
+export const teacherStatsResponseSchema = z.object({
+  teachers: z.array(teacherStatReadSchema),
+})
+export type TeacherStatsResponse = z.infer<typeof teacherStatsResponseSchema>
 
 export interface TeacherSessionMaterial {
   id: number
@@ -194,54 +227,70 @@ export interface TeacherSessionMaterial {
   original_name: string
 }
 
-export interface TeacherSessionDetail {
-  session_id: number
-  session_date: string
-  status: string
-  subject_name: string
-  grade_display: string
-  period_number: number
-  start_time: string
-  end_time: string
-  started_at: string | null
-  ended_at: string | null
-  plan_id: number | null
-  topic: string | null
-  lesson_type: string | null
-  objectives: { text: string; bloom_level: string | null }[] | null
-  keywords: string[] | null
-  homework: string | null
-  resources: string[] | null
-  assessment_methods: string[] | null
-  plan_filled_count: number
-  lesson_number: number
-}
+export const teacherSessionDetailSchema = z.object({
+  session_id: z.number(),
+  session_date: z.string(),
+  status: z.string(),
+  subject_name: z.string(),
+  grade_display: z.string(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  started_at: z.string().nullable(),
+  ended_at: z.string().nullable(),
+  plan_id: z.number().nullable(),
+  topic: z.string().nullable(),
+  lesson_type: z.string().nullable(),
+  objectives: z
+    .array(z.object({ text: z.string(), bloom_level: z.string().nullable() }))
+    .nullable(),
+  keywords: z.array(z.string()).nullable(),
+  homework: z.string().nullable(),
+  resources: z.array(z.string()).nullable(),
+  assessment_methods: z.array(z.string()).nullable(),
+  plan_filled_count: z.number(),
+  lesson_number: z.number(),
+})
+export type TeacherSessionDetail = z.infer<typeof teacherSessionDetailSchema>
 
-export interface TeacherDetailResponse {
-  teacher_id: number
-  teacher_name: string
-  photo_url: string | null
-  sessions: TeacherSessionDetail[]
-}
+export const teacherDetailResponseSchema = z.object({
+  teacher_id: z.number(),
+  teacher_name: z.string(),
+  photo_url: z.string().nullable(),
+  sessions: z.array(teacherSessionDetailSchema),
+})
+export type TeacherDetailResponse = z.infer<typeof teacherDetailResponseSchema>
 
 export const lessonsApi = {
   today: (date?: string) =>
-    api.get<TodayLessonsResponse>("/api/v1/lessons/today", {
-      params: date ? { date } : undefined,
-    }),
+    api
+      .get<unknown>("/api/v1/lessons/today", {
+        params: date ? { date } : undefined,
+      })
+      .then(validated<TodayLessonsResponse>(todayLessonsResponseSchema)),
   sessionStatuses: (entryIds: number[], startDate: string, endDate: string) =>
-    api.get<SessionStatusesResponse>("/api/v1/lessons/sessions/statuses", {
-      params: { entry_id: entryIds, start_date: startDate, end_date: endDate },
-      paramsSerializer: arrayParamsSerializer,
-    }),
+    api
+      .get<unknown>("/api/v1/lessons/sessions/statuses", {
+        params: {
+          entry_id: entryIds,
+          start_date: startDate,
+          end_date: endDate,
+        },
+        paramsSerializer: arrayParamsSerializer,
+      })
+      .then(validated<SessionStatusesResponse>(sessionStatusesResponseSchema)),
   // Plans
   createPlan: (schedule_entry_id: number, target_date?: string) =>
-    api.post<LessonPlanRead>("/api/v1/lessons/plans", {
-      schedule_entry_id,
-      target_date,
-    }),
+    api
+      .post<unknown>("/api/v1/lessons/plans", {
+        schedule_entry_id,
+        target_date,
+      })
+      .then(validated<LessonPlanRead>(lessonPlanReadSchema)),
   getPlan: (planId: number) =>
-    api.get<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`),
+    api
+      .get<unknown>(`/api/v1/lessons/plans/${planId}`)
+      .then(validated<LessonPlanRead>(lessonPlanReadSchema)),
   updatePlan: (
     planId: number,
     data: Partial<{
@@ -257,25 +306,38 @@ export const lessonsApi = {
       homework_test_id: number | null
       homework_test_title: string | null
     }>,
-  ) => api.patch<LessonPlanRead>(`/api/v1/lessons/plans/${planId}`, data),
+  ) =>
+    api
+      .patch<unknown>(`/api/v1/lessons/plans/${planId}`, data)
+      .then(validated<LessonPlanRead>(lessonPlanReadSchema)),
   // Sessions
   startSession: (schedule_entry_id: number, target_date?: string) =>
-    api.post<SessionDetailRead>("/api/v1/lessons/sessions", {
-      schedule_entry_id,
-      target_date,
-    }),
+    api
+      .post<unknown>("/api/v1/lessons/sessions", {
+        schedule_entry_id,
+        target_date,
+      })
+      .then(validated<SessionDetailRead>(sessionDetailReadSchema)),
   getSession: (sessionId: number) =>
-    api.get<SessionDetailRead>(`/api/v1/lessons/sessions/${sessionId}`),
+    api
+      .get<unknown>(`/api/v1/lessons/sessions/${sessionId}`)
+      .then(validated<SessionDetailRead>(sessionDetailReadSchema)),
   updateAttendance: (sessionId: number, data: AttendanceUpdateRequest) =>
-    api.patch<SessionStudentRead>(
-      `/api/v1/lessons/sessions/${sessionId}/attendance`,
-      data,
-    ),
+    api
+      .patch<unknown>(
+        `/api/v1/lessons/sessions/${sessionId}/attendance`,
+        data,
+      )
+      .then(validated<SessionStudentRead>(sessionStudentReadSchema)),
   updateAssessment: (sessionId: number, data: AssessmentUpdateRequest) =>
-    api.patch<SessionStudentAssessment>(
-      `/api/v1/lessons/sessions/${sessionId}/assessment`,
-      data,
-    ),
+    api
+      .patch<unknown>(
+        `/api/v1/lessons/sessions/${sessionId}/assessment`,
+        data,
+      )
+      .then(
+        validated<SessionStudentAssessment>(sessionStudentAssessmentSchema),
+      ),
   endSession: (sessionId: number) =>
     api.post(`/api/v1/lessons/sessions/${sessionId}/end`),
   uploadMaterial: (
@@ -285,38 +347,51 @@ export const lessonsApi = {
   ) => {
     const formData = new FormData()
     formData.append("file", file)
-    return api.post<LessonMaterialRead>(
-      `/api/v1/lessons/plans/${planId}/materials`,
-      formData,
-      {
-        onUploadProgress: onProgress
-          ? (e) => {
-              if (e.total) onProgress(Math.round((e.loaded / e.total) * 100))
-            }
-          : undefined,
-      },
-    )
+    return api
+      .post<unknown>(
+        `/api/v1/lessons/plans/${planId}/materials`,
+        formData,
+        {
+          onUploadProgress: onProgress
+            ? (e) => {
+                if (e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+              }
+            : undefined,
+        },
+      )
+      .then(validated<LessonMaterialRead>(lessonMaterialReadSchema))
   },
   deleteMaterial: (planId: number, materialId: number) =>
     api.delete(`/api/v1/lessons/plans/${planId}/materials/${materialId}`),
   getAttendance: (gradeId: number, date?: string) =>
-    api.get<AttendanceDayResponse>("/api/v1/lessons/attendance", {
-      params: { grade_id: gradeId, ...(date ? { date } : {}) },
-    }),
+    api
+      .get<unknown>("/api/v1/lessons/attendance", {
+        params: { grade_id: gradeId, ...(date ? { date } : {}) },
+      })
+      .then(validated<AttendanceDayResponse>(attendanceDayResponseSchema)),
   attendanceHistory: (entryIds: number[], startDate: string, endDate: string) =>
-    api.get<AttendanceHistoryResponse>("/api/v1/lessons/attendance/history", {
-      params: { entry_id: entryIds, start_date: startDate, end_date: endDate },
-      paramsSerializer: arrayParamsSerializer,
-    }),
+    api
+      .get<unknown>("/api/v1/lessons/attendance/history", {
+        params: {
+          entry_id: entryIds,
+          start_date: startDate,
+          end_date: endDate,
+        },
+        paramsSerializer: arrayParamsSerializer,
+      })
+      .then(
+        validated<AttendanceHistoryResponse>(attendanceHistoryResponseSchema),
+      ),
   teacherStats: (startDate: string, endDate: string) =>
-    api.get<TeacherStatsResponse>("/api/v1/lessons/teacher-stats", {
-      params: { start_date: startDate, end_date: endDate },
-    }),
-  teacherDetail: (teacherId: number, startDate: string, endDate: string) =>
-    api.get<TeacherDetailResponse>(
-      `/api/v1/lessons/teacher-stats/${teacherId}`,
-      {
+    api
+      .get<unknown>("/api/v1/lessons/teacher-stats", {
         params: { start_date: startDate, end_date: endDate },
-      },
-    ),
+      })
+      .then(validated<TeacherStatsResponse>(teacherStatsResponseSchema)),
+  teacherDetail: (teacherId: number, startDate: string, endDate: string) =>
+    api
+      .get<unknown>(`/api/v1/lessons/teacher-stats/${teacherId}`, {
+        params: { start_date: startDate, end_date: endDate },
+      })
+      .then(validated<TeacherDetailResponse>(teacherDetailResponseSchema)),
 }

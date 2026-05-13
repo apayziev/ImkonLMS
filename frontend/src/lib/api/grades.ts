@@ -1,20 +1,26 @@
-import { api } from "./client"
+import { z } from "zod"
 
-export interface GradeRead {
-  id: number
-  level: number
-  section: string
-  display_name: string
-  created_at: string
-  updated_at: string | null
-}
+import { api, validated } from "./client"
 
-export interface GradeList {
-  data: GradeRead[]
-  count: number
-}
+export const gradeReadSchema = z.object({
+  id: z.number(),
+  level: z.number(),
+  section: z.string(),
+  display_name: z.string(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+})
+export type GradeRead = z.infer<typeof gradeReadSchema>
+
+export const gradeListSchema = z.object({
+  data: z.array(gradeReadSchema),
+  count: z.number(),
+})
+export type GradeList = z.infer<typeof gradeListSchema>
 
 export const gradesApi = {
   list: (skip = 0, limit = 100) =>
-    api.get<GradeList>("/api/v1/grades/", { params: { skip, limit } }),
+    api
+      .get<unknown>("/api/v1/grades/", { params: { skip, limit } })
+      .then(validated<GradeList>(gradeListSchema)),
 }

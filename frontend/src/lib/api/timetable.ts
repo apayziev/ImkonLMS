@@ -1,24 +1,28 @@
-import { api } from "./client"
+import { z } from "zod"
+
+import { api, validated } from "./client"
 
 // ─── School Settings ───────────────────────────────────────────────────────
 
-export interface BreakItem {
-  start_time: string
-  end_time: string
-  name: string
-}
+export const breakItemSchema = z.object({
+  start_time: z.string(),
+  end_time: z.string(),
+  name: z.string(),
+})
+export type BreakItem = z.infer<typeof breakItemSchema>
 
-export interface SchoolSettingsRead {
-  id: number
-  day_start_time: string
-  day_end_time: string
-  lesson_duration_minutes: number
-  default_break_minutes: number
-  working_days: number[]
-  breaks: BreakItem[]
-  created_at: string
-  updated_at: string | null
-}
+export const schoolSettingsReadSchema = z.object({
+  id: z.number(),
+  day_start_time: z.string(),
+  day_end_time: z.string(),
+  lesson_duration_minutes: z.number(),
+  default_break_minutes: z.number(),
+  working_days: z.array(z.number()),
+  breaks: z.array(breakItemSchema),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+})
+export type SchoolSettingsRead = z.infer<typeof schoolSettingsReadSchema>
 
 export interface SchoolSettingsUpdate {
   day_start_time?: string
@@ -31,64 +35,78 @@ export interface SchoolSettingsUpdate {
 
 // ─── TimeSlot ──────────────────────────────────────────────────────────────
 
-export interface TimeSlotRead {
-  id: number
-  academic_year_id: number
-  period_number: number
-  start_time: string
-  end_time: string
-  created_at: string
-  updated_at: string | null
-}
+export const timeSlotReadSchema = z.object({
+  id: z.number(),
+  academic_year_id: z.number(),
+  period_number: z.number(),
+  start_time: z.string(),
+  end_time: z.string(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+})
+export type TimeSlotRead = z.infer<typeof timeSlotReadSchema>
 
-export interface TimeSlotList {
-  data: TimeSlotRead[]
-  count: number
-}
+export const timeSlotListSchema = z.object({
+  data: z.array(timeSlotReadSchema),
+  count: z.number(),
+})
+export type TimeSlotList = z.infer<typeof timeSlotListSchema>
 
 // ─── ScheduleEntry ─────────────────────────────────────────────────────────
 
-export interface ScheduleEntryRead {
-  id: number
-  academic_year_id: number
-  grade_id: number
-  subject_id: number
-  teacher_id: number
-  time_slot_id: number
-  day_of_week: number
-  room: string | null
-  subject_name: string | null
-  teacher_name: string | null
-  grade_display: string | null
-  period_number: number | null
-  start_time: string | null
-  end_time: string | null
-  created_at: string
-  updated_at: string | null
-}
+export const scheduleEntryReadSchema = z.object({
+  id: z.number(),
+  academic_year_id: z.number(),
+  grade_id: z.number(),
+  subject_id: z.number(),
+  teacher_id: z.number(),
+  time_slot_id: z.number(),
+  day_of_week: z.number(),
+  room: z.string().nullable(),
+  subject_name: z.string().nullable(),
+  teacher_name: z.string().nullable(),
+  grade_display: z.string().nullable(),
+  period_number: z.number().nullable(),
+  start_time: z.string().nullable(),
+  end_time: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+})
+export type ScheduleEntryRead = z.infer<typeof scheduleEntryReadSchema>
 
-export interface ScheduleEntryList {
-  data: ScheduleEntryRead[]
-  count: number
-}
+export const scheduleEntryListSchema = z.object({
+  data: z.array(scheduleEntryReadSchema),
+  count: z.number(),
+})
+export type ScheduleEntryList = z.infer<typeof scheduleEntryListSchema>
 
 export const timetableApi = {
   // Settings
-  getSettings: () => api.get<SchoolSettingsRead>("/api/v1/timetable/settings"),
+  getSettings: () =>
+    api
+      .get<unknown>("/api/v1/timetable/settings")
+      .then(validated<SchoolSettingsRead>(schoolSettingsReadSchema)),
   updateSettings: (data: SchoolSettingsUpdate) =>
-    api.patch<SchoolSettingsRead>("/api/v1/timetable/settings", data),
+    api
+      .patch<unknown>("/api/v1/timetable/settings", data)
+      .then(validated<SchoolSettingsRead>(schoolSettingsReadSchema)),
 
   // Time Slots
   listTimeSlots: (academicYearId: number) =>
-    api.get<TimeSlotList>("/api/v1/timetable/time-slots", {
-      params: { academic_year_id: academicYearId },
-    }),
+    api
+      .get<unknown>("/api/v1/timetable/time-slots", {
+        params: { academic_year_id: academicYearId },
+      })
+      .then(validated<TimeSlotList>(timeSlotListSchema)),
   createTimeSlot: (data: {
     academic_year_id: number
     period_number: number
     start_time: string
     end_time: string
-  }) => api.post<TimeSlotRead>("/api/v1/timetable/time-slots", data),
+  }) =>
+    api
+      .post<unknown>("/api/v1/timetable/time-slots", data)
+      .then(validated<TimeSlotRead>(timeSlotReadSchema)),
   deleteTimeSlot: (id: number) =>
     api.delete(`/api/v1/timetable/time-slots/${id}`),
   deleteAllTimeSlots: (academicYearId: number) =>
@@ -96,16 +114,21 @@ export const timetableApi = {
       `/api/v1/timetable/time-slots?academic_year_id=${academicYearId}`,
     ),
   generateTimeSlots: (academicYearId: number) =>
-    api.post<TimeSlotList>(
-      `/api/v1/timetable/time-slots/generate?academic_year_id=${academicYearId}`,
-    ),
+    api
+      .post<unknown>(
+        `/api/v1/timetable/time-slots/generate?academic_year_id=${academicYearId}`,
+      )
+      .then(validated<TimeSlotList>(timeSlotListSchema)),
 
   // Schedule
   listSchedule: (params: {
     academic_year_id: number
     grade_id?: number
     teacher_id?: number
-  }) => api.get<ScheduleEntryList>("/api/v1/timetable/schedule", { params }),
+  }) =>
+    api
+      .get<unknown>("/api/v1/timetable/schedule", { params })
+      .then(validated<ScheduleEntryList>(scheduleEntryListSchema)),
   createEntry: (data: {
     academic_year_id: number
     grade_id: number
@@ -114,10 +137,16 @@ export const timetableApi = {
     time_slot_id: number
     day_of_week: number
     room?: string | null
-  }) => api.post<ScheduleEntryRead>("/api/v1/timetable/schedule", data),
+  }) =>
+    api
+      .post<unknown>("/api/v1/timetable/schedule", data)
+      .then(validated<ScheduleEntryRead>(scheduleEntryReadSchema)),
   updateEntry: (
     id: number,
     data: { subject_id?: number; teacher_id?: number; room?: string | null },
-  ) => api.patch<ScheduleEntryRead>(`/api/v1/timetable/schedule/${id}`, data),
+  ) =>
+    api
+      .patch<unknown>(`/api/v1/timetable/schedule/${id}`, data)
+      .then(validated<ScheduleEntryRead>(scheduleEntryReadSchema)),
   deleteEntry: (id: number) => api.delete(`/api/v1/timetable/schedule/${id}`),
 }

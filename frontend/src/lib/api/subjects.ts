@@ -1,21 +1,27 @@
-import { api } from "./client"
+import { z } from "zod"
 
-export interface SubjectRead {
-  id: number
-  name: string
-  name_uz: string | null
-  icon: string | null
-  color: string | null
-  created_at: string
-  updated_at: string | null
-}
+import { api, validated } from "./client"
 
-export interface SubjectList {
-  data: SubjectRead[]
-  count: number
-}
+export const subjectReadSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  name_uz: z.string().nullable(),
+  icon: z.string().nullable(),
+  color: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+})
+export type SubjectRead = z.infer<typeof subjectReadSchema>
+
+export const subjectListSchema = z.object({
+  data: z.array(subjectReadSchema),
+  count: z.number(),
+})
+export type SubjectList = z.infer<typeof subjectListSchema>
 
 export const subjectsApi = {
   list: (skip = 0, limit = 100) =>
-    api.get<SubjectList>("/api/v1/subjects/", { params: { skip, limit } }),
+    api
+      .get<unknown>("/api/v1/subjects/", { params: { skip, limit } })
+      .then(validated<SubjectList>(subjectListSchema)),
 }

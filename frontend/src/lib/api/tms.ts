@@ -1,10 +1,16 @@
-import { api } from "./client"
+import { z } from "zod"
 
-export interface TMSTokenResponse {
-  access_token: string
-  embed_url: string
-}
+import { api, validated } from "./client"
+
+export const tmsTokenResponseSchema = z.object({
+  access_token: z.string(),
+  embed_url: z.string(),
+})
+export type TMSTokenResponse = z.infer<typeof tmsTokenResponseSchema>
 
 export const tmsApi = {
-  getEmbedToken: () => api.post<TMSTokenResponse>("/api/v1/tms/embed-token"),
+  getEmbedToken: () =>
+    api
+      .post<unknown>("/api/v1/tms/embed-token")
+      .then(validated<TMSTokenResponse>(tmsTokenResponseSchema)),
 }
