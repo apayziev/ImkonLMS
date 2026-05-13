@@ -10,11 +10,7 @@ import {
   PatternCardTitle,
 } from "@/components/Common/PatternCard"
 import useAuth from "@/hooks/useAuth"
-import {
-  getGradesQueryOptions,
-  getSubjectsQueryOptions,
-} from "@/hooks/useQueryOptions"
-import { studentsApi, teachersApi } from "@/lib/api"
+import { getDashboardStatsQueryOptions } from "@/hooks/useQueryOptions"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -45,65 +41,40 @@ function Dashboard() {
 }
 
 function AdminCards() {
-  const { data: studentsData, isLoading: loadingStudents } = useQuery({
-    queryKey: ["dashboard-students"],
-    queryFn: async () => {
-      const { data } = await studentsApi.list({ limit: 1 })
-      return data
-    },
-  })
-
-  const { data: teachersData, isLoading: loadingTeachers } = useQuery({
-    queryKey: ["dashboard-teachers"],
-    queryFn: async () => {
-      const { data } = await teachersApi.list({ limit: 1 })
-      return data
-    },
-  })
-
-  const { data: gradesData, isLoading: loadingGrades } = useQuery(
-    getGradesQueryOptions(),
-  )
-  const { data: subjectsData, isLoading: loadingSubjects } = useQuery(
-    getSubjectsQueryOptions(),
-  )
+  const { data, isLoading } = useQuery(getDashboardStatsQueryOptions())
 
   const cards = [
     {
       title: "O'quvchilar",
-      value: studentsData?.count ?? 0,
+      value: data?.students ?? 0,
       description: "Jami o'quvchilar soni",
       icon: GraduationCap,
       color: "text-[#6720FF]",
-      isLoading: loadingStudents,
     },
     {
       title: "O'qituvchilar",
-      value: teachersData?.count ?? 0,
+      value: data?.teachers ?? 0,
       description: "Jami o'qituvchilar soni",
       icon: Users2,
       color: "text-[#00A27D]",
-      isLoading: loadingTeachers,
     },
     {
       title: "Fanlar",
-      value: subjectsData?.count ?? 0,
+      value: data?.subjects ?? 0,
       description: "Jami fanlar soni",
       icon: BookOpen,
       color: "text-[#FF3B47]",
-      isLoading: loadingSubjects,
     },
     {
       title: "Sinflar",
-      value: gradesData?.count ?? 0,
+      value: data?.grades ?? 0,
       description: "Jami sinflar soni",
       icon: Users,
       color: "text-[#321A94]",
-      isLoading: loadingGrades,
     },
   ]
 
-  return <StatsGrid cards={cards} />
+  return <StatsGrid cards={cards} isLoading={isLoading} />
 }
 
 interface StatCard {
@@ -112,10 +83,15 @@ interface StatCard {
   description: string
   icon: React.ElementType
   color: string
-  isLoading: boolean
 }
 
-function StatsGrid({ cards }: { cards: StatCard[] }) {
+function StatsGrid({
+  cards,
+  isLoading,
+}: {
+  cards: StatCard[]
+  isLoading: boolean
+}) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {cards.map((card) => (
@@ -127,7 +103,7 @@ function StatsGrid({ cards }: { cards: StatCard[] }) {
             <card.icon className={`h-5 w-5 ${card.color}`} />
           </PatternCardHeader>
           <PatternCardContent>
-            {card.isLoading ? (
+            {isLoading ? (
               <div className="h-8 w-20 bg-muted animate-pulse rounded" />
             ) : (
               <AnimatedNumber

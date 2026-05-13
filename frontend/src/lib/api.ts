@@ -903,6 +903,19 @@ export const configApi = {
   get: () => api.get<AppConfigRead>("/api/v1/config/"),
 }
 
+// ─── Dashboard stats ───────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  students: number
+  teachers: number
+  subjects: number
+  grades: number
+}
+
+export const statsApi = {
+  dashboard: () => api.get<DashboardStats>("/api/v1/stats/dashboard"),
+}
+
 export const parentApi = {
   login: (data: ParentLoginRequest) =>
     api

@@ -14,6 +14,7 @@ from .logout import router as logout_router
 from .parent import router as parent_router
 from .parents import router as parents_router
 from .quarters import router as quarters_router
+from .stats import router as stats_router
 from .students import router as students_router
 from .subjects import router as subjects_router
 from .sync import router as sync_router
@@ -40,6 +41,7 @@ router.include_router(teachers_router, dependencies=[Depends(get_current_user)])
 router.include_router(timetable_router, dependencies=[Depends(get_current_user)])
 router.include_router(lessons_router, dependencies=[Depends(get_current_user)])
 router.include_router(quarters_router, dependencies=[Depends(get_current_user)])
+router.include_router(stats_router, dependencies=[Depends(get_current_user)])
 router.include_router(sync_router, dependencies=[Depends(get_current_user)])
 router.include_router(tms_router, dependencies=[Depends(get_current_user)])
 router.include_router(parents_router, dependencies=[Depends(get_current_user)])

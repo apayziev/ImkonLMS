@@ -4,6 +4,7 @@ import {
   gradesApi,
   lessonsApi,
   quartersApi,
+  statsApi,
   subjectsApi,
   teachersApi,
   timetableApi,
@@ -13,6 +14,7 @@ import { todayStr } from "@/lib/utils"
 
 export const queryKeys = {
   appConfig: ["app-config"] as const,
+  dashboardStats: ["dashboard-stats"] as const,
   grades: ["grades"] as const,
   subjects: ["subjects"] as const,
   students: ["students"] as const,
@@ -43,6 +45,14 @@ export function getAppConfigQueryOptions() {
     queryFn: async () => (await configApi.get()).data,
     staleTime: 60 * 60 * 1000, // 1h — static between deploys
     retry: false,
+  }
+}
+
+export function getDashboardStatsQueryOptions() {
+  return {
+    queryKey: queryKeys.dashboardStats,
+    queryFn: async () => (await statsApi.dashboard()).data,
+    staleTime: 60_000,
   }
 }
 
